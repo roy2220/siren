@@ -8,34 +8,35 @@
 #include "helper_macros.h"
 
 
-#define SIREN_TEST_NAME UNIQUE_NAME(Test)
+#define _SIREN_TEST_NAME UNIQUE_NAME(Test)
 
 #define SIREN_TEST(DESCRIPTION)                                                  \
-    class SIREN_TEST_NAME final                                                  \
+    class _SIREN_TEST_NAME final                                                 \
     {                                                                            \
-        SIREN_TEST_NAME(const SIREN_TEST_NAME &) = delete;                       \
-        void operator=(const SIREN_TEST_NAME &) = delete;                        \
+        _SIREN_TEST_NAME(const _SIREN_TEST_NAME &) = delete;                     \
+        void operator=(const _SIREN_TEST_NAME &) = delete;                       \
                                                                                  \
     public:                                                                      \
-        explicit SIREN_TEST_NAME();                                              \
+        explicit _SIREN_TEST_NAME();                                             \
                                                                                  \
     private:                                                                     \
         static void Do();                                                        \
-    } SIREN_TEST_NAME;                                                           \
+    } _SIREN_TEST_NAME;                                                          \
                                                                                  \
                                                                                  \
-    SIREN_TEST_NAME::SIREN_TEST_NAME()                                           \
+    _SIREN_TEST_NAME::_SIREN_TEST_NAME()                                         \
     {                                                                            \
         try {                                                                    \
             Do();                                                                \
         } catch (const std::exception &exception) {                              \
             std::cerr << __FILE__ ":" STR(__LINE__) ": " DESCRIPTION " failed: " \
             << exception.what() << std::endl;                                    \
+            ++_FailedTestCount;                                                  \
         }                                                                        \
     }                                                                            \
                                                                                  \
                                                                                  \
-    void SIREN_TEST_NAME::Do()
+    void _SIREN_TEST_NAME::Do()
 
 #define SIREN_TEST_ASSERT(EXPRESSION)                                \
     do {                                                             \
@@ -66,6 +67,12 @@ private:
     std::string description_;
 };
 
+
+extern int _FailedTestCount;
+
+
+inline int GetFailedTestCount();
+
 }
 
 
@@ -95,6 +102,12 @@ const char *
 TestAssertion::what() const noexcept
 {
     return description_.data();
+}
+
+
+int GetFailedTestCount()
+{
+    return _FailedTestCount;
 }
 
 }

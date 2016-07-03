@@ -358,7 +358,6 @@ Archive::operator<<(float floatingPoint)
 Archive &
 Archive::operator>>(float &floatingPoint)
 {
-    unsigned char temp;
     static_assert(sizeof(float) == sizeof(std::uint32_t)
                   && alignof(float) == alignof(std::uint32_t), "");
     operator>>(reinterpret_cast<std::uint32_t &>(floatingPoint));

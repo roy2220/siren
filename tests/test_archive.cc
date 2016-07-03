@@ -8,8 +8,9 @@ namespace {
 using namespace siren;
 
 
-GINK_TEST("")
+SIREN_TEST("TODO")
 {
+    // TODO
 }
 
 }
