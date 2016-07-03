@@ -12,7 +12,7 @@ Archive::serializeVariableLengthInteger(std::uintmax_t integer)
     constexpr int k2 = std::numeric_limits<unsigned char>::digits - 1;
     constexpr unsigned char k3 = std::numeric_limits<unsigned char>::max() >> 1;
 
-    serializeInteger(static_cast<unsigned char>(integer & k3));
+    serializeInteger<unsigned char>(integer & k3);
 
     for (int n = k1 - k2; n >= 1; n -= k2) {
         if ((((integer >> k2) ^ (integer >> (k2 - 1))) & ((UINTMAX_C(1) << n) - 1)) == 0) {
@@ -21,7 +21,7 @@ Archive::serializeVariableLengthInteger(std::uintmax_t integer)
             return;
         }
 
-        serializeInteger(static_cast<unsigned char>((integer >>= k2) & k3));
+        serializeInteger<unsigned char>((integer >>= k2) & k3);
     }
 }
 

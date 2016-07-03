@@ -7,7 +7,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Insert/Replace/Remove list items")
+SIREN_TEST("Insert/Replace/Remove list nodes")
 {
     struct Dummy : List::Node {
     };
@@ -64,7 +64,7 @@ SIREN_TEST("Iterate lists")
 }
 
 
-SIREN_TEST("Iterate lists while removing items")
+SIREN_TEST("Iterate lists while removing nodes")
 {
     struct Dummy : List::Node {
         int val;

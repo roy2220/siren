@@ -30,7 +30,7 @@ UnsignedToSigned(T x)
     constexpr T k1 = std::numeric_limits<U>::max();
     constexpr T k2 = std::numeric_limits<T>::max();
 
-    return x <= k1 ? x : -static_cast<U>(k2 - x) - 1;
+    return x <= k1 ? static_cast<U>(x) : -static_cast<U>(k2 - x) - 1;
 }
 
 }

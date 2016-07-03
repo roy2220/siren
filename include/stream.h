@@ -12,12 +12,12 @@ class Stream final
 public:
     inline explicit Stream();
 
-    inline const void *getData(std::ptrdiff_t = 0) const;
-    inline void *getData(std::ptrdiff_t = 0);
+    inline const void *getData(std::size_t = 0) const;
+    inline void *getData(std::size_t = 0);
     inline std::size_t getDataSize() const;
     inline void pickData(std::size_t);
     inline void dropData(std::size_t);
-    inline void *getBuffer(std::ptrdiff_t = 0);
+    inline void *getBuffer(std::size_t = 0);
     inline std::size_t getBufferSize() const;
     inline void growBuffer(std::size_t);
 
@@ -54,14 +54,14 @@ Stream::Stream()
 
 
 const void *
-Stream::getData(std::ptrdiff_t offset) const
+Stream::getData(std::size_t offset) const
 {
     return base_.data() + rSize_ + offset;
 }
 
 
 void *
-Stream::getData(std::ptrdiff_t offset)
+Stream::getData(std::size_t offset)
 {
     return base_.data() + rSize_ + offset;
 }
@@ -97,7 +97,7 @@ Stream::dropData(std::size_t size)
 
 
 void *
-Stream::getBuffer(std::ptrdiff_t offset)
+Stream::getBuffer(std::size_t offset)
 {
     return base_.data() + wSize_ + offset;
 }

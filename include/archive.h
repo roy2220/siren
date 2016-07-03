@@ -33,11 +33,13 @@ public:
     inline explicit Archive(Stream *);
 
     template <class T>
-    inline std::enable_if_t<std::is_unsigned<T>::value || std::is_signed<T>::value
-                            , Archive &> operator<<(T);
+    inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator<<(T);
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator>>(T &);
+
+    template <class T>
+    inline std::enable_if_t<std::is_signed<T>::value, Archive &> operator<<(T);
 
     template <class T>
     inline std::enable_if_t<std::is_signed<T>::value, Archive &> operator>>(T &);
@@ -111,10 +113,10 @@ private:
     std::size_t readByteCount_;
 
     template <class T>
-    inline void serializeInteger(T);
+    inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
 
     template <class T>
-    inline void deserializeInteger(T *);
+    inline std::enable_if_t<std::is_unsigned<T>::value, void> deserializeInteger(T *);
 
     void serializeVariableLengthInteger(std::uintmax_t);
     void deserializeVariableLengthInteger(std::uintmax_t *);
@@ -203,7 +205,7 @@ Archive::Archive(Stream *stream)
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value || std::is_signed<T>::value, Archive &>
+std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator<<(T integer)
 {
     serializeInteger(integer);
@@ -216,6 +218,17 @@ std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator>>(T &integer)
 {
     deserializeInteger(&integer);
+    return *this;
+}
+
+
+template <class T>
+std::enable_if_t<std::is_signed<T>::value, Archive &>
+Archive::operator<<(T integer)
+{
+    typedef std::make_unsigned_t<T> U;
+
+    serializeInteger<U>(integer);
     return *this;
 }
 
@@ -460,7 +473,7 @@ Archive::flush()
 
 
 template <class T>
-void
+std::enable_if_t<std::is_unsigned<T>::value, void>
 Archive::serializeInteger(T integer)
 {
     constexpr int k1 = std::numeric_limits<T>::digits;
@@ -484,7 +497,7 @@ Archive::serializeInteger(T integer)
 
 
 template <class T>
-void
+std::enable_if_t<std::is_unsigned<T>::value, void>
 Archive::deserializeInteger(T *integer)
 {
     constexpr int k1 = std::numeric_limits<T>::digits;
