@@ -9,7 +9,7 @@ using namespace siren;
 
 SIREN_TEST("Insert/Replace/Remove list items")
 {
-    struct Dummy : ListItem {
+    struct Dummy : List::Node {
     };
 
     List l;
@@ -36,7 +36,7 @@ SIREN_TEST("Insert/Replace/Remove list items")
 
 SIREN_TEST("Iterate lists")
 {
-    struct Dummy : ListItem {
+    struct Dummy : List::Node {
         int val;
 
         Dummy(int x) : val(x) {
@@ -52,13 +52,13 @@ SIREN_TEST("Iterate lists")
     l.insertTail(&d2);
     l.insertTail(&d3);
 
-    SIREN_LIST_FOR_EACH_ITEM_REVERSE(li, l) {
-        auto d = static_cast<Dummy *>(li);
+    SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {
+        auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
     }
 
-    SIREN_LIST_FOR_EACH_ITEM(li, l) {
-        auto d = static_cast<Dummy *>(li);
+    SIREN_LIST_FOR_EACH_NODE(ln, l) {
+        auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
     }
 }
@@ -66,7 +66,7 @@ SIREN_TEST("Iterate lists")
 
 SIREN_TEST("Iterate lists while removing items")
 {
-    struct Dummy : ListItem {
+    struct Dummy : List::Node {
         int val;
 
         Dummy(int x) : val(x) {
@@ -82,8 +82,8 @@ SIREN_TEST("Iterate lists while removing items")
     l.insertTail(&d2);
     l.insertTail(&d3);
 
-    SIREN_LIST_FOR_EACH_ITEM_SAFE_REVERSE(li, l) {
-        auto d = static_cast<Dummy *>(li);
+    SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(ln, l) {
+        auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
         d->remove();
     }
@@ -93,8 +93,8 @@ SIREN_TEST("Iterate lists while removing items")
     l.insertTail(&d2);
     l.insertTail(&d3);
 
-    SIREN_LIST_FOR_EACH_ITEM_SAFE(li, l) {
-        auto d = static_cast<Dummy *>(li);
+    SIREN_LIST_FOR_EACH_NODE_SAFE(ln, l) {
+        auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
         d->remove();
     }

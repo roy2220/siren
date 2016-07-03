@@ -1,21 +1,21 @@
 #pragma once
 
 
-#define SIREN_LIST_FOR_EACH_ITEM_REVERSE(LIST_ITEM, LIST)                              \
-    for (::siren::List::Item *LIST_ITEM = (LIST).getTail(); !(LIST).isNil((LIST_ITEM)) \
-         ; (LIST_ITEM) = (LIST_ITEM)->getPrev())
+#define SIREN_LIST_FOR_EACH_NODE_REVERSE(LIST_NODE, LIST)              \
+    for (auto LIST_NODE = (LIST).getTail(); !(LIST).isNil((LIST_NODE)) \
+         ; (LIST_NODE) = (LIST_NODE)->getPrev())
 
-#define SIREN_LIST_FOR_EACH_ITEM(LIST_ITEM, LIST)                                      \
-    for (::siren::List::Item *LIST_ITEM = (LIST).getHead(); !(LIST).isNil((LIST_ITEM)) \
-         ; (LIST_ITEM) = (LIST_ITEM)->getNext())
+#define SIREN_LIST_FOR_EACH_NODE(LIST_NODE, LIST)                      \
+    for (auto LIST_NODE = (LIST).getHead(); !(LIST).isNil((LIST_NODE)) \
+         ; (LIST_NODE) = (LIST_NODE)->getNext())
 
-#define SIREN_LIST_FOR_EACH_ITEM_SAFE_REVERSE(LIST_ITEM, LIST)                              \
-    for (::siren::List::Item *LIST_ITEM = (LIST).getTail(), *temp_ = (LIST_ITEM)->getPrev() \
-         ; !(LIST).isNil((LIST_ITEM)); (LIST_ITEM) = temp_, temp_ = (LIST_ITEM)->getPrev())
+#define SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(LIST_NODE, LIST)             \
+    for (auto LIST_NODE = (LIST).getTail(), temp_ = (LIST_NODE)->getPrev() \
+         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = temp_, temp_ = (LIST_NODE)->getPrev())
 
-#define SIREN_LIST_FOR_EACH_ITEM_SAFE(LIST_ITEM, LIST)                                      \
-    for (::siren::List::Item *LIST_ITEM = (LIST).getHead(), *temp_ = (LIST_ITEM)->getNext() \
-         ; !(LIST).isNil((LIST_ITEM)); (LIST_ITEM) = temp_, temp_ = (LIST_ITEM)->getNext())
+#define SIREN_LIST_FOR_EACH_NODE_SAFE(LIST_NODE, LIST)                     \
+    for (auto LIST_NODE = (LIST).getHead(), temp_ = (LIST_NODE)->getNext() \
+         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = temp_, temp_ = (LIST_NODE)->getNext())
 
 
 namespace siren {
@@ -23,34 +23,36 @@ namespace siren {
 class List;
 
 
-class ListItem
+class ListNode
 {
 public:
-    inline ListItem *getPrev() const;
-    inline ListItem *getNext() const;
-    inline void insertBefore(ListItem *);
-    inline void insertAfter(ListItem *);
-    inline void replace(ListItem *);
+    inline const ListNode *getPrev() const;
+    inline ListNode *getPrev();
+    inline const ListNode *getNext() const;
+    inline ListNode *getNext();
+    inline void insertBefore(ListNode *);
+    inline void insertAfter(ListNode *);
+    inline void replace(ListNode *);
     inline void remove();
 
 protected:
-    inline explicit ListItem();
-    inline ListItem(const ListItem &);
-    inline ListItem(ListItem &&);
-    inline ListItem &operator=(const ListItem &);
-    inline ListItem &operator=(ListItem &&);
+    inline explicit ListNode();
+    inline ListNode(const ListNode &);
+    inline ListNode(ListNode &&);
+    inline ListNode &operator=(const ListNode &);
+    inline ListNode &operator=(ListNode &&);
 
-    ~ListItem() = default;
-    
+    ~ListNode() = default;
+
 private:
-    ListItem *prev_;
-    ListItem *next_;
+    ListNode *prev_;
+    ListNode *next_;
 
 #ifndef NDEBUG
     inline bool isLinked() const;
     inline bool isUnlinked() const;
 #endif
-    inline void insert(ListItem *, ListItem *);
+    inline void insert(ListNode *, ListNode *);
 
     friend List;
 };
@@ -59,19 +61,21 @@ private:
 class List final
 {
 public:
-    typedef ListItem Item;
+    typedef ListNode Node;
 
     inline explicit List();
 
     inline bool isEmpty() const;
-    inline Item *getTail() const;
-    inline Item *getHead() const;
-    inline bool isNil(const Item *) const;
-    inline void insertTail(Item *);
-    inline void insertHead(Item *);
+    inline const Node *getTail() const;
+    inline Node *getTail();
+    inline const Node *getHead() const;
+    inline Node *getHead();
+    inline bool isNil(const Node *) const;
+    inline void insertTail(Node *);
+    inline void insertHead(Node *);
 
 private:
-    Item nil_;
+    Node nil_;
 
     List(const List &) = delete;
     List &operator=(const List &) = delete;
@@ -90,7 +94,7 @@ private:
 
 namespace siren {
 
-ListItem::ListItem()
+ListNode::ListNode()
 #ifndef NDEBUG
   : prev_(nullptr),
     next_(nullptr)
@@ -99,30 +103,30 @@ ListItem::ListItem()
 }
 
 
-ListItem::ListItem(const ListItem &other)
-  : ListItem()
+ListNode::ListNode(const ListNode &other)
+  : ListNode()
 {
     static_cast<void>(other);
 }
 
 
-ListItem::ListItem(ListItem &&other)
-  : ListItem()
+ListNode::ListNode(ListNode &&other)
+  : ListNode()
 {
     static_cast<void>(other);
 }
 
 
-ListItem &
-ListItem::operator=(const ListItem &other)
+ListNode &
+ListNode::operator=(const ListNode &other)
 {
     static_cast<void>(other);
     return *this;
 }
 
 
-ListItem &
-ListItem::operator=(ListItem &&other)
+ListNode &
+ListNode::operator=(ListNode &&other)
 {
     static_cast<void>(other);
     return *this;
@@ -131,30 +135,46 @@ ListItem::operator=(ListItem &&other)
 
 #ifndef NDEBUG
 bool
-ListItem::isLinked() const
+ListNode::isLinked() const
 {
     return prev_ != nullptr && next_ != nullptr;
 }
 
 
 bool
-ListItem::isUnlinked() const
+ListNode::isUnlinked() const
 {
     return prev_ == nullptr && next_ == nullptr;
 }
 #endif
 
 
-ListItem *
-ListItem::getPrev() const
+const ListNode *
+ListNode::getPrev() const
 {
     assert(isLinked());
     return prev_;
 }
 
 
-ListItem *
-ListItem::getNext() const
+ListNode *
+ListNode::getPrev()
+{
+    assert(isLinked());
+    return prev_;
+}
+
+
+const ListNode *
+ListNode::getNext() const
+{
+    assert(isLinked());
+    return next_;
+}
+
+
+ListNode *
+ListNode::getNext()
 {
     assert(isLinked());
     return next_;
@@ -162,7 +182,7 @@ ListItem::getNext() const
 
 
 void
-ListItem::insertBefore(ListItem *other)
+ListNode::insertBefore(ListNode *other)
 {
     assert(isUnlinked());
     assert(other != nullptr);
@@ -172,7 +192,7 @@ ListItem::insertBefore(ListItem *other)
 
 
 void
-ListItem::insertAfter(ListItem *other)
+ListNode::insertAfter(ListNode *other)
 {
     assert(isUnlinked());
     assert(other != nullptr);
@@ -182,7 +202,7 @@ ListItem::insertAfter(ListItem *other)
 
 
 void
-ListItem::replace(ListItem *other)
+ListNode::replace(ListNode *other)
 {
     assert(isLinked());
     assert(other != nullptr);
@@ -196,7 +216,7 @@ ListItem::replace(ListItem *other)
 
 
 void
-ListItem::insert(ListItem *prev, ListItem *next)
+ListNode::insert(ListNode *prev, ListNode *next)
 {
     (prev_ = prev)->next_ = this;
     (next_ = next)->prev_ = this;
@@ -204,7 +224,7 @@ ListItem::insert(ListItem *prev, ListItem *next)
 
 
 void
-ListItem::remove()
+ListNode::remove()
 {
     assert(isLinked());
     prev_->next_ = next_;
@@ -230,42 +250,56 @@ List::isEmpty() const
 }
 
 
-List::Item *
+const List::Node *
 List::getTail() const
 {
     return nil_.prev_;
 }
 
 
-List::Item *
+List::Node *
+List::getTail()
+{
+    return nil_.prev_;
+}
+
+
+const List::Node *
 List::getHead() const
 {
     return nil_.next_;
 }
 
 
+List::Node *
+List::getHead()
+{
+    return nil_.next_;
+}
+
+
 bool
-List::isNil(const Item *item) const
+List::isNil(const Node *node) const
 {
-    return item == &nil_;
+    return node == &nil_;
 }
 
 
 void
-List::insertTail(Item *item)
+List::insertTail(Node *node)
 {
-    assert(item != nullptr);
-    assert(item->isUnlinked());
-    item->insert(getTail(), &nil_);
+    assert(node != nullptr);
+    assert(node->isUnlinked());
+    node->insert(getTail(), &nil_);
 }
 
 
 void
-List::insertHead(Item *item)
+List::insertHead(Node *node)
 {
-    assert(item != nullptr);
-    assert(item->isUnlinked());
-    item->insert(&nil_, getHead());
+    assert(node != nullptr);
+    assert(node->isUnlinked());
+    node->insert(&nil_, getHead());
 }
 
 }
