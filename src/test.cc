@@ -1,7 +1,7 @@
 #include "test.h"
 
+#include <cstdio>
 #include <exception>
-#include <iostream>
 #include <vector>
 
 
@@ -9,7 +9,7 @@ namespace siren {
 
 namespace {
 
-std::vector<Test *> Tests;
+std::vector<Test_ *> Tests;
 
 }
 
@@ -18,21 +18,25 @@ int RunTests()
 {
     int failedTestCount = 0;
 
-    for (Test *test : Tests) {
+    for (Test_ *test : Tests) {
         try {
             test->run();
         } catch (const std::exception &exception) {
-            std::cerr << test->getFileName() << ':' << test->getLineNumber() << ": "
-            << test->getDescription() << " failed: " << exception.what() << std::endl;
+            std::fprintf(stderr, "*FAILED* %s:%d: %s: %s\n", test->getFileName()
+                         , test->getLineNumber(), test->getDescription(), exception.what());
             ++failedTestCount;
+            continue;
         }
+
+        std::printf("*PASSED* %s:%d: %s\n", test->getFileName(), test->getLineNumber()
+                    , test->getDescription());
     }
 
     return failedTestCount;
 }
 
 
-void _AddTest(Test *test)
+void AddTest_(Test_ *test)
 {
     Tests.push_back(test);
 }

@@ -7,86 +7,85 @@
 #include "helper_macros.h"
 
 
-#define _SIREN_TEST UNIQUE_ID(_Test)
+#define SIREN_TEST_ UNIQUE_ID(Test_)
 
 #define SIREN_TEST(DESCRIPTION)                               \
-    class _SIREN_TEST final                                   \
-      : public Test                                           \
+    class SIREN_TEST_ final                                   \
+      : public Test_                                          \
     {                                                         \
-        _SIREN_TEST(const _SIREN_TEST &) = delete;            \
-        void operator=(const _SIREN_TEST &) = delete;         \
+        SIREN_TEST_(const SIREN_TEST_ &) = delete;            \
+        void operator=(const SIREN_TEST_ &) = delete;         \
                                                               \
     public:                                                   \
-        explicit _SIREN_TEST() = default;                     \
+        explicit SIREN_TEST_() = default;                     \
                                                               \
         const char *getFileName() const noexcept override;    \
         int getLineNumber() const noexcept override;          \
         const char *getDescription() const noexcept override; \
         void run() const override;                            \
-    } _SIREN_TEST;                                            \
+    } SIREN_TEST_;                                            \
                                                               \
                                                               \
     const char *                                              \
-    _SIREN_TEST::getFileName() const noexcept                 \
+    SIREN_TEST_::getFileName() const noexcept                 \
     {                                                         \
         return __FILE__;                                      \
     }                                                         \
                                                               \
                                                               \
     int                                                       \
-    _SIREN_TEST::getLineNumber() const noexcept               \
+    SIREN_TEST_::getLineNumber() const noexcept               \
     {                                                         \
         return __LINE__;                                      \
     }                                                         \
                                                               \
                                                               \
     const char *                                              \
-    _SIREN_TEST::getDescription() const noexcept              \
+    SIREN_TEST_::getDescription() const noexcept              \
     {                                                         \
         return DESCRIPTION;                                   \
     }                                                         \
                                                               \
                                                               \
     void                                                      \
-    _SIREN_TEST::run() const
+    SIREN_TEST_::run() const
 
-#define SIREN_TEST_ASSERT(EXPRESSION)                                \
-    do {                                                             \
-        if (!(EXPRESSION)) {                                         \
-            throw ::siren::TestAssertion(STR(EXPRESSION), __LINE__); \
-        }                                                            \
+#define SIREN_TEST_ASSERT(EXPRESSION)                                 \
+    do {                                                              \
+        if (!(EXPRESSION)) {                                          \
+            throw ::siren::TestAssertion_(STR(EXPRESSION), __LINE__); \
+        }                                                             \
     } while (false)
 
 
 namespace siren {
 
-class Test
+class Test_
 {
-    Test(const Test &) = delete;
-    void operator=(const Test &) = delete;
+    Test_(const Test_ &) = delete;
+    void operator=(const Test_ &) = delete;
 
 public:
-    inline explicit Test();
-
     virtual const char *getFileName() const noexcept = 0;
     virtual int getLineNumber() const noexcept = 0;
     virtual const char *getDescription() const noexcept = 0;
     virtual void run() const = 0;
 
 protected:
-    inline ~Test() = default;
+    inline explicit Test_();
+    inline ~Test_() = default;
 };
 
 
-class TestAssertion final
+class TestAssertion_ final
   : public std::exception
 {
-    TestAssertion(const TestAssertion &) = delete;
-    void operator=(const TestAssertion &) = delete;
+    TestAssertion_(const TestAssertion_ &) = delete;
+    void operator=(const TestAssertion_ &) = delete;
 
 public:
-    inline explicit TestAssertion(const char *, int);
-    inline TestAssertion(TestAssertion &&);
+    inline explicit TestAssertion_(const char *, int);
+    inline TestAssertion_(TestAssertion_ &&);
 
     inline const char *what() const noexcept override;
 
@@ -97,7 +96,7 @@ private:
 
 int RunTests();
 
-void _AddTest(Test *);
+void AddTest_(Test_ *);
 
 }
 
@@ -112,13 +111,13 @@ void _AddTest(Test *);
 
 namespace siren {
 
-Test::Test()
+Test_::Test_()
 {
-    _AddTest(this);
+    AddTest_(this);
 }
 
 
-TestAssertion::TestAssertion(const char *expression, int lineNumber)
+TestAssertion_::TestAssertion_(const char *expression, int lineNumber)
 {
     description_ = "SIREN_TEST_ASSERT(";
     description_ += expression;
@@ -127,14 +126,14 @@ TestAssertion::TestAssertion(const char *expression, int lineNumber)
 }
 
 
-TestAssertion::TestAssertion(TestAssertion &&other)
+TestAssertion_::TestAssertion_(TestAssertion_ &&other)
   : description_(std::move(other.description_))
 {
 }
 
 
 const char *
-TestAssertion::what() const noexcept
+TestAssertion_::what() const noexcept
 {
     return description_.data();
 }
