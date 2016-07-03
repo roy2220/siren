@@ -27,9 +27,6 @@ class Stream;
 
 class Archive final
 {
-    Archive(const Archive &) = delete;
-    void operator=(const Archive &) = delete;
-
 public:
     typedef ArchiveEndOfStream EndOfStream;
 
@@ -123,22 +120,26 @@ private:
     void deserializeVariableLengthInteger(std::uintmax_t *);
     void serializeBytes(const void *, std::size_t);
     void deserializeBytes(void *, std::size_t);
+
+    Archive(const Archive &) = delete;
+    Archive &operator=(const Archive &) = delete;
 };
 
 
 class ArchiveEndOfStream final
   : public std::exception
 {
-    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
-    void operator=(const ArchiveEndOfStream &) = delete;
-
 public:
-    inline ArchiveEndOfStream(ArchiveEndOfStream &&);
-
     inline const char *what() const noexcept override;
 
+    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
+    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
+
 private:
-    inline explicit ArchiveEndOfStream() = default;
+    inline explicit ArchiveEndOfStream();
+
+    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
+    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
 
     friend Archive;
 };
@@ -146,9 +147,6 @@ private:
 
 class Serializer_ final
 {
-    Serializer_(const Serializer_ &) = delete;
-    void operator=(const Serializer_ &) = delete;
-
 public:
     inline explicit Serializer_(Archive *);
 
@@ -157,14 +155,14 @@ public:
 
 private:
     Archive *const archive_;
+
+    Serializer_(const Serializer_ &) = delete;
+    Serializer_ &operator=(const Serializer_ &) = delete;
 };
 
 
 class Deserializer_ final
 {
-    Deserializer_(const Deserializer_ &) = delete;
-    void operator=(const Deserializer_ &) = delete;
-
 public:
     inline explicit Deserializer_(Archive *);
 
@@ -173,6 +171,9 @@ public:
 
 private:
     Archive *const archive_;
+
+    Deserializer_(const Deserializer_ &) = delete;
+    Deserializer_ &operator=(const Deserializer_ &) = delete;
 };
 
 }
@@ -504,9 +505,8 @@ Archive::deserializeInteger(T *integer)
 }
 
 
-ArchiveEndOfStream::ArchiveEndOfStream(ArchiveEndOfStream &&other)
+ArchiveEndOfStream::ArchiveEndOfStream()
 {
-    static_cast<void>(other);
 }
 
 

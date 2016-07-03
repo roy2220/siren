@@ -7,23 +7,29 @@
 #include "helper_macros.h"
 
 
-#define SIREN_TEST_ UNIQUE_ID(Test_)
+#define SIREN_TEST_ UNIQUE_ID(Test, _)
 
 #define SIREN_TEST(DESCRIPTION)                               \
     class SIREN_TEST_ final                                   \
-      : public Test_                                          \
+      : public siren::Test_                                   \
     {                                                         \
-        SIREN_TEST_(const SIREN_TEST_ &) = delete;            \
-        void operator=(const SIREN_TEST_ &) = delete;         \
-                                                              \
     public:                                                   \
-        explicit SIREN_TEST_() = default;                     \
+        explicit SIREN_TEST_();                               \
                                                               \
         const char *getFileName() const noexcept override;    \
         int getLineNumber() const noexcept override;          \
         const char *getDescription() const noexcept override; \
         void run() const override;                            \
+                                                              \
+    private:                                                  \
+        SIREN_TEST_(const SIREN_TEST_ &) = delete;            \
+        SIREN_TEST_ &operator=(const SIREN_TEST_ &) = delete; \
     } SIREN_TEST_;                                            \
+                                                              \
+                                                              \
+    SIREN_TEST_::SIREN_TEST_()                                \
+    {                                                         \
+    }                                                         \
                                                               \
                                                               \
     const char *                                              \
@@ -62,9 +68,6 @@ namespace siren {
 
 class Test_
 {
-    Test_(const Test_ &) = delete;
-    void operator=(const Test_ &) = delete;
-
 public:
     virtual const char *getFileName() const noexcept = 0;
     virtual int getLineNumber() const noexcept = 0;
@@ -73,24 +76,31 @@ public:
 
 protected:
     inline explicit Test_();
-    inline ~Test_() = default;
+
+    ~Test_() = default;
+
+private:
+    Test_(const Test_ &) = delete;
+    Test_ &operator=(const Test_ &) = delete;
 };
 
 
 class TestAssertion_ final
   : public std::exception
 {
-    TestAssertion_(const TestAssertion_ &) = delete;
-    void operator=(const TestAssertion_ &) = delete;
-
 public:
     inline explicit TestAssertion_(const char *, int);
-    inline TestAssertion_(TestAssertion_ &&);
 
     inline const char *what() const noexcept override;
 
+    TestAssertion_(TestAssertion_ &&) = default;
+    TestAssertion_ &operator=(TestAssertion_ &&) = default;
+
 private:
     std::string description_;
+
+    TestAssertion_(const TestAssertion_ &) = delete;
+    TestAssertion_ &operator=(const TestAssertion_ &) = delete;
 };
 
 
@@ -123,12 +133,6 @@ TestAssertion_::TestAssertion_(const char *expression, int lineNumber)
     description_ += expression;
     description_ += ") at line ";
     description_ += std::to_string(lineNumber);
-}
-
-
-TestAssertion_::TestAssertion_(TestAssertion_ &&other)
-  : description_(std::move(other.description_))
-{
 }
 
 

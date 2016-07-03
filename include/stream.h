@@ -9,9 +9,6 @@ namespace siren {
 
 class Stream final
 {
-    Stream(const Stream &) = delete;
-    void operator=(const Stream &) = delete;
-
 public:
     inline explicit Stream();
 
@@ -28,6 +25,9 @@ private:
     std::vector<char> base_;
     std::size_t rSize_;
     std::size_t wSize_;
+
+    Stream(const Stream &) = delete;
+    Stream &operator=(const Stream &) = delete;
 };
 
 }
