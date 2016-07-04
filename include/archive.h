@@ -51,43 +51,35 @@ public:
     inline std::enable_if_t<std::is_enum<T>::value, Archive &> operator>>(T &);
 
     template <class T, std::size_t N>
-    inline std::enable_if_t<std::is_same<T, unsigned char>::value
-                            || std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
     template <class T, std::size_t N>
-    inline std::enable_if_t<std::is_same<T, unsigned char>::value
-                            || std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
     template <class T, std::size_t N>
-    inline std::enable_if_t<!std::is_same<T, unsigned char>::value
-                            && !std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
     template <class T, std::size_t N>
-    inline std::enable_if_t<!std::is_same<T, unsigned char>::value
-                            && !std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
     template <class T>
-    inline std::enable_if_t<std::is_same<T, unsigned char>::value
-                            || std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator<<(const std::vector<T> &);
 
     template <class T>
-    inline std::enable_if_t<std::is_same<T, unsigned char>::value
-                            || std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator>>(std::vector<T> &);
 
     template <class T>
-    inline std::enable_if_t<!std::is_same<T, unsigned char>::value
-                            && !std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator<<(const std::vector<T> &);
 
     template <class T>
-    inline std::enable_if_t<!std::is_same<T, unsigned char>::value
-                            && !std::is_same<T, signed char>::value
+    inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator>>(std::vector<T> &);
 
     template <class T>
@@ -269,8 +261,7 @@ Archive::operator>>(T &enumerator)
 
 
 template <class T, std::size_t N>
-std::enable_if_t<std::is_same<T, unsigned char>::value || std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
     serializeBytes(array, N);
@@ -279,8 +270,7 @@ Archive::operator<<(const T (&array)[N])
 
 
 template <class T, std::size_t N>
-std::enable_if_t<std::is_same<T, unsigned char>::value || std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
     deserializeBytes(array, N);
@@ -289,8 +279,7 @@ Archive::operator>>(T (&array)[N])
 
 
 template <class T, std::size_t N>
-std::enable_if_t<!std::is_same<T, unsigned char>::value && !std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
     for (const T &x : array) {
@@ -302,8 +291,7 @@ Archive::operator<<(const T (&array)[N])
 
 
 template <class T, std::size_t N>
-std::enable_if_t<!std::is_same<T, unsigned char>::value && !std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
     for (T &x : array) {
@@ -315,8 +303,7 @@ Archive::operator>>(T (&array)[N])
 
 
 template <class T>
-std::enable_if_t<std::is_same<T, unsigned char>::value || std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
     serializeVariableLengthInteger(vector.size());
@@ -326,8 +313,7 @@ Archive::operator<<(const std::vector<T> &vector)
 
 
 template <class T>
-std::enable_if_t<std::is_same<T, unsigned char>::value || std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
     std::size_t temp;
@@ -338,8 +324,7 @@ Archive::operator>>(std::vector<T> &vector)
 
 
 template <class T>
-std::enable_if_t<!std::is_same<T, unsigned char>::value && !std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
     serializeVariableLengthInteger(vector.size());
@@ -353,8 +338,7 @@ Archive::operator<<(const std::vector<T> &vector)
 
 
 template <class T>
-std::enable_if_t<!std::is_same<T, unsigned char>::value && !std::is_same<T, signed char>::value
-                 , Archive &>
+std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
     std::size_t temp;
@@ -528,7 +512,7 @@ ArchiveEndOfStream::ArchiveEndOfStream()
 const char *
 ArchiveEndOfStream::what() const noexcept
 {
-    return "End of stream";
+    return "Archive: End of stream";
 }
 
 
