@@ -8,13 +8,13 @@ namespace siren {
 void
 Archive::serializeVariableLengthInteger(std::uintmax_t integer)
 {
-    constexpr int k1 = std::numeric_limits<std::uintmax_t>::digits;
-    constexpr int k2 = std::numeric_limits<unsigned char>::digits - 1;
+    constexpr unsigned int k1 = std::numeric_limits<std::uintmax_t>::digits;
+    constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits - 1;
     constexpr unsigned char k3 = std::numeric_limits<unsigned char>::max() >> 1;
 
     serializeInteger<unsigned char>(integer & k3);
 
-    for (int n = k1 - k2; n >= 1; n -= k2) {
+    for (unsigned int n = k1 - k2; UnsignedToSigned(n) >= 1; n -= k2) {
         if ((((integer >> k2) ^ (integer >> (k2 - 1))) & ((UINTMAX_C(1) << n) - 1)) == 0) {
             auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_ - 1));
             *buffer |= k3 + 1;
@@ -29,14 +29,14 @@ Archive::serializeVariableLengthInteger(std::uintmax_t integer)
 void
 Archive::deserializeVariableLengthInteger(std::uintmax_t *integer)
 {
-    constexpr int k1 = std::numeric_limits<std::uintmax_t>::digits;
-    constexpr int k2 = std::numeric_limits<unsigned char>::digits - 1;
+    constexpr unsigned int k1 = std::numeric_limits<std::uintmax_t>::digits;
+    constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits - 1;
     constexpr unsigned char k3 = std::numeric_limits<unsigned char>::max() >> 1;
 
     unsigned char temp;
     *integer = (deserializeInteger(&temp), temp & k3);
 
-    for (int n = k2; n < k1; n += k2) {
+    for (unsigned int n = k2; n < k1; n += k2) {
         if ((temp & (k3 + 1)) != 0) {
             *integer |= -(*integer & (UINTMAX_C(1) << (n - 1)));
             return;
@@ -48,7 +48,7 @@ Archive::deserializeVariableLengthInteger(std::uintmax_t *integer)
 
 
 void
-Archive::serializeBytes(const void *bytes, std::ptrdiff_t numberOfBytes)
+Archive::serializeBytes(const void *bytes, std::size_t numberOfBytes)
 {
     stream_->reserveBuffer(writtenByteCount_ + numberOfBytes);
     void *buffer = stream_->getBuffer(writtenByteCount_);
@@ -58,7 +58,7 @@ Archive::serializeBytes(const void *bytes, std::ptrdiff_t numberOfBytes)
 
 
 void
-Archive::deserializeBytes(void *bytes, std::ptrdiff_t numberOfBytes)
+Archive::deserializeBytes(void *bytes, std::size_t numberOfBytes)
 {
     if (stream_->getDataSize() < readByteCount_ + numberOfBytes) {
         throw EndOfStream();

@@ -16,7 +16,8 @@ std::list<detail::Test *> Tests;
 
 namespace detail {
 
-void AddTest(Test *test)
+void
+AddTest(Test *test)
 {
     Tests.push_back(test);
 }
@@ -24,9 +25,10 @@ void AddTest(Test *test)
 }
 
 
-int RunTests()
+std::size_t
+RunTests()
 {
-    int failedTestCount = 0;
+    std::size_t failedTestCount = 0;
 
     for (detail::Test *test : Tests) {
         try {

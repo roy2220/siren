@@ -23,8 +23,6 @@ namespace siren {
 class List;
 
 
-namespace detail {
-
 class ListNode
 {
 public:
@@ -59,13 +57,11 @@ private:
     friend List;
 };
 
-}
-
 
 class List final
 {
 public:
-    typedef detail::ListNode Node;
+    typedef ListNode Node;
 
     inline explicit List();
 
@@ -97,8 +93,6 @@ private:
 
 
 namespace siren {
-
-namespace detail {
 
 ListNode::ListNode()
 #ifndef NDEBUG
@@ -239,8 +233,6 @@ ListNode::remove()
     prev_ = nullptr;
     next_ = nullptr;
 #endif
-}
-
 }
 
 

@@ -5,5 +5,5 @@ int main()
 {
     using namespace siren;
 
-    return RunTests();
+    return RunTests() == 0 ? 0 : 1;
 }

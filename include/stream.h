@@ -12,20 +12,22 @@ class Stream final
 {
 public:
     inline explicit Stream();
+    inline Stream(Stream &&);
+    inline Stream &operator=(Stream &&);
 
-    inline const void *getData(std::ptrdiff_t = 0) const;
-    inline void *getData(std::ptrdiff_t = 0);
-    inline std::ptrdiff_t getDataSize() const;
-    inline void pickData(std::ptrdiff_t);
-    inline void dropData(std::ptrdiff_t);
-    inline void *getBuffer(std::ptrdiff_t = 0);
-    inline std::ptrdiff_t getBufferSize() const;
-    inline void reserveBuffer(std::ptrdiff_t);
+    inline const void *getData(std::size_t = 0) const;
+    inline void *getData(std::size_t = 0);
+    inline std::size_t getDataSize() const;
+    inline void pickData(std::size_t);
+    inline void dropData(std::size_t);
+    inline void *getBuffer(std::size_t = 0);
+    inline std::size_t getBufferSize() const;
+    inline void reserveBuffer(std::size_t);
 
 private:
     Buffer<char> buffer_;
-    std::ptrdiff_t readerIndex_;
-    std::ptrdiff_t writerIndex_;
+    std::size_t readerIndex_;
+    std::size_t writerIndex_;
 
     Stream(const Stream &) = delete;
     Stream &operator=(const Stream &) = delete;
@@ -41,6 +43,7 @@ private:
 
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 #include "next_power_of_two.h"
 
@@ -54,21 +57,46 @@ Stream::Stream()
 }
 
 
+Stream::Stream(Stream &&other)
+  : buffer_(std::move(other.buffer_)),
+    readerIndex_(other.readerIndex_),
+    writerIndex_(other.writerIndex_)
+{
+    other.readerIndex_ = 0;
+    other.writerIndex_ = 0;
+}
+
+
+Stream &
+Stream::operator=(Stream &&other)
+{
+    if (&other != this) {
+        buffer_ = std::move(other.buffer_);
+        readerIndex_ = other.readerIndex_;
+        writerIndex_ = other.writerIndex_;
+        other.readerIndex_ = 0;
+        other.writerIndex_ = 0;
+    }
+
+    return *this;
+}
+
+
 const void *
-Stream::getData(std::ptrdiff_t dataOffset) const
+Stream::getData(std::size_t dataOffset) const
 {
     return buffer_.get() + readerIndex_ + dataOffset;
 }
 
 
 void *
-Stream::getData(std::ptrdiff_t dataOffset)
+Stream::getData(std::size_t dataOffset)
 {
     return buffer_.get() + readerIndex_ + dataOffset;
 }
 
 
-std::ptrdiff_t
+std::size_t
 Stream::getDataSize() const
 {
     return writerIndex_ - readerIndex_;
@@ -76,18 +104,16 @@ Stream::getDataSize() const
 
 
 void
-Stream::pickData(std::ptrdiff_t dataSize)
+Stream::pickData(std::size_t dataSize)
 {
-    assert(dataSize >= 0);
     assert(writerIndex_ + dataSize <= buffer_.getLength());
     writerIndex_ += dataSize;
 }
 
 
 void
-Stream::dropData(std::ptrdiff_t dataSize)
+Stream::dropData(std::size_t dataSize)
 {
-    assert(dataSize >= 0);
     assert(readerIndex_ + dataSize <= writerIndex_);
     readerIndex_ += dataSize;
 
@@ -100,13 +126,13 @@ Stream::dropData(std::ptrdiff_t dataSize)
 
 
 void *
-Stream::getBuffer(std::ptrdiff_t bufferOffset)
+Stream::getBuffer(std::size_t bufferOffset)
 {
     return buffer_.get() + writerIndex_ + bufferOffset;
 }
 
 
-std::ptrdiff_t
+std::size_t
 Stream::getBufferSize() const
 {
     return buffer_.getLength() - writerIndex_;
@@ -114,10 +140,8 @@ Stream::getBufferSize() const
 
 
 void
-Stream::reserveBuffer(std::ptrdiff_t bufferSize)
+Stream::reserveBuffer(std::size_t bufferSize)
 {
-    assert(bufferSize >= 0);
-
     if (buffer_.getLength() < writerIndex_ + bufferSize) {
         buffer_.setLength(writerIndex_ + bufferSize);
     }

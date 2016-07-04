@@ -37,7 +37,7 @@ SIREN_TEST("Serialize/Deserialize structures")
 
     Stream s;
     Archive a(&s);
-    Dummy input{'a', 1, 2, 3, "hello", Flag::B};
+    Dummy input{'a', 1, -2, 3, "hello", Flag::B};
     a << input;
     a.flush();
     Dummy output;

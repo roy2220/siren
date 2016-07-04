@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <cstddef>
 #include <exception>
 #include <string>
 
@@ -17,7 +18,7 @@
         explicit SIREN_TEST_IMPL();                                   \
                                                                       \
         const char *getFileName() const noexcept override;            \
-        int getLineNumber() const noexcept override;                  \
+        unsigned int getLineNumber() const noexcept override;         \
         const char *getDescription() const noexcept override;         \
         void run() const override;                                    \
                                                                       \
@@ -39,7 +40,7 @@
     }                                                                 \
                                                                       \
                                                                       \
-    int                                                               \
+    unsigned int                                                      \
     SIREN_TEST_IMPL::getLineNumber() const noexcept                   \
     {                                                                 \
         return __LINE__;                                              \
@@ -72,7 +73,7 @@ class Test
 {
 public:
     virtual const char *getFileName() const noexcept = 0;
-    virtual int getLineNumber() const noexcept = 0;
+    virtual unsigned int getLineNumber() const noexcept = 0;
     virtual const char *getDescription() const noexcept = 0;
     virtual void run() const = 0;
 
@@ -91,7 +92,7 @@ class TestAssertionFailure final
   : public std::exception
 {
 public:
-    inline explicit TestAssertionFailure(const char *, int);
+    inline explicit TestAssertionFailure(const char *, unsigned int);
 
     inline const char *what() const noexcept override;
 
@@ -111,7 +112,7 @@ void AddTest(Test *);
 }
 
 
-int RunTests();
+std::size_t RunTests();
 
 }
 
@@ -134,7 +135,7 @@ Test::Test()
 }
 
 
-TestAssertionFailure::TestAssertionFailure(const char *expression, int lineNumber)
+TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber)
 {
     description_ = "SIREN_TEST_ASSERT(";
     description_ += expression;

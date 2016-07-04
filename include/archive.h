@@ -22,29 +22,11 @@
 namespace siren {
 
 class Archive;
+class ArchiveEndOfStream;
 class Stream;
 
 
 namespace detail {
-
-class ArchiveEndOfStream final
-  : public std::exception
-{
-public:
-    inline const char *what() const noexcept override;
-
-    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
-    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
-
-private:
-    inline explicit ArchiveEndOfStream();
-
-    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
-    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
-
-    friend Archive;
-};
-
 
 class Serializer final
 {
@@ -83,7 +65,7 @@ private:
 class Archive final
 {
 public:
-    typedef detail::ArchiveEndOfStream EndOfStream;
+    typedef ArchiveEndOfStream EndOfStream;
 
     inline explicit Archive(Stream *);
 
@@ -105,19 +87,19 @@ public:
     template <class T>
     inline std::enable_if_t<std::is_enum<T>::value, Archive &> operator>>(T &);
 
-    template <class T, std::ptrdiff_t N>
+    template <class T, std::size_t N>
     inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
-    template <class T, std::ptrdiff_t N>
+    template <class T, std::size_t N>
     inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
-    template <class T, std::ptrdiff_t N>
+    template <class T, std::size_t N>
     inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
-    template <class T, std::ptrdiff_t N>
+    template <class T, std::size_t N>
     inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
@@ -156,8 +138,8 @@ public:
 
 private:
     Stream *const stream_;
-    std::ptrdiff_t writtenByteCount_;
-    std::ptrdiff_t readByteCount_;
+    std::size_t writtenByteCount_;
+    std::size_t readByteCount_;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
@@ -167,11 +149,30 @@ private:
 
     void serializeVariableLengthInteger(std::uintmax_t);
     void deserializeVariableLengthInteger(std::uintmax_t *);
-    void serializeBytes(const void *, std::ptrdiff_t);
-    void deserializeBytes(void *, std::ptrdiff_t);
+    void serializeBytes(const void *, std::size_t);
+    void deserializeBytes(void *, std::size_t);
 
     Archive(const Archive &) = delete;
     Archive &operator=(const Archive &) = delete;
+};
+
+
+class ArchiveEndOfStream final
+  : public std::exception
+{
+public:
+    inline const char *what() const noexcept override;
+
+    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
+    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
+
+private:
+    inline explicit ArchiveEndOfStream();
+
+    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
+    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
+
+    friend Archive;
 };
 
 }
@@ -185,7 +186,6 @@ private:
 #include <cassert>
 #include <limits>
 
-#include "helper_macros.h"
 #include "stream.h"
 #include "unsigned_to_signed.h"
 
@@ -193,18 +193,6 @@ private:
 namespace siren {
 
 namespace detail {
-
-ArchiveEndOfStream::ArchiveEndOfStream()
-{
-}
-
-
-const char *
-ArchiveEndOfStream::what() const noexcept
-{
-    return "Archive: End of stream";
-}
-
 
 Serializer::Serializer(Archive *archive)
   : archive_(archive)
@@ -311,7 +299,7 @@ Archive::operator>>(T &enumerator)
 }
 
 
-template <class T, std::ptrdiff_t N>
+template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
@@ -320,7 +308,7 @@ Archive::operator<<(const T (&array)[N])
 }
 
 
-template <class T, std::ptrdiff_t N>
+template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
@@ -329,7 +317,7 @@ Archive::operator>>(T (&array)[N])
 }
 
 
-template <class T, std::ptrdiff_t N>
+template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
@@ -341,7 +329,7 @@ Archive::operator<<(const T (&array)[N])
 }
 
 
-template <class T, std::ptrdiff_t N>
+template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
@@ -511,18 +499,18 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, void>
 Archive::serializeInteger(T integer)
 {
-    constexpr int k1 = std::numeric_limits<T>::digits;
-    constexpr int k2 = std::numeric_limits<unsigned char>::digits;
+    constexpr unsigned int k1 = std::numeric_limits<T>::digits;
+    constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits;
 
-    stream_->reserveBuffer(writtenByteCount_ + SSIZE_OF(T));
+    stream_->reserveBuffer(writtenByteCount_ + sizeof(T));
     auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_));
     *buffer = integer;
 
-    for (int n = k1 - k2; n >= 1; n -= k2) {
+    for (unsigned int n = k1 - k2; UnsignedToSigned(n) >= 1; n -= k2) {
         *++buffer = (integer >>= k2);
     }
 
-    writtenByteCount_ += SSIZE_OF(T);
+    writtenByteCount_ += sizeof(T);
 }
 
 
@@ -530,21 +518,33 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, void>
 Archive::deserializeInteger(T *integer)
 {
-    constexpr int k1 = std::numeric_limits<T>::digits;
-    constexpr int k2 = std::numeric_limits<unsigned char>::digits;
+    constexpr unsigned int k1 = std::numeric_limits<T>::digits;
+    constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits;
 
-    if (stream_->getDataSize() < readByteCount_ + SSIZE_OF(T)) {
+    if (stream_->getDataSize() < readByteCount_ + sizeof(T)) {
         throw EndOfStream();
     }
 
     auto data = static_cast<unsigned char *>(stream_->getData(readByteCount_));
     *integer = *data;
 
-    for (int n = k2; n < k1; n += k2) {
+    for (unsigned int n = k2; n < k1; n += k2) {
         *integer |= static_cast<T>(*++data) << n;
     }
 
-    readByteCount_ += SSIZE_OF(T);
+    readByteCount_ += sizeof(T);
+}
+
+
+ArchiveEndOfStream::ArchiveEndOfStream()
+{
+}
+
+
+const char *
+ArchiveEndOfStream::what() const noexcept
+{
+    return "Siren: Archive: End of stream";
 }
 
 }

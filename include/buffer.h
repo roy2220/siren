@@ -22,12 +22,12 @@ public:
 
     inline const T *get() const;
     inline T *get();
-    inline std::ptrdiff_t getLength() const;
-    inline void setLength(std::ptrdiff_t);
+    inline std::size_t getLength() const;
+    inline void setLength(std::size_t);
 
 private:
     T *base_;
-    std::ptrdiff_t length_;
+    std::size_t length_;
 
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -41,7 +41,6 @@ private:
  */
 
 
-#include <cassert>
 #include <cerrno>
 #include <cstdlib>
 #include <system_error>
@@ -81,6 +80,7 @@ Buffer<T, true> &
 Buffer<T, true>::operator=(Buffer &&other)
 {
     if (&other != this) {
+        std::free(base_);
         base_ = other.base_;
         length_ = other.length_;
         other.base_ = nullptr;
@@ -108,7 +108,7 @@ Buffer<T, true>::get()
 
 
 template <class T>
-std::ptrdiff_t
+std::size_t
 Buffer<T, true>::getLength() const
 {
     return length_;
@@ -117,11 +117,9 @@ Buffer<T, true>::getLength() const
 
 template <class T>
 void
-Buffer<T, true>::setLength(std::ptrdiff_t length)
+Buffer<T, true>::setLength(std::size_t length)
 {
-    assert(length >= 0);
-    std::size_t size = NextPowerOfTwo(static_cast<std::size_t>(length) * sizeof(T));
-    length = size / sizeof(T);
+    std::size_t size = NextPowerOfTwo(length * sizeof(T));
     T *base;
 
     if (size == 0) {
@@ -135,7 +133,7 @@ Buffer<T, true>::setLength(std::ptrdiff_t length)
     }
 
     base_ = base;
-    length_ = length;
+    length_ = size / sizeof(T);
 }
 
 }
