@@ -9,7 +9,17 @@ namespace siren {
 
 namespace {
 
-std::list<Test_ *> Tests;
+std::list<detail::Test *> Tests;
+
+}
+
+
+namespace detail {
+
+void AddTest(Test *test)
+{
+    Tests.push_back(test);
+}
 
 }
 
@@ -18,7 +28,7 @@ int RunTests()
 {
     int failedTestCount = 0;
 
-    for (Test_ *test : Tests) {
+    for (detail::Test *test : Tests) {
         try {
             test->run();
         } catch (const std::exception &exception) {
@@ -29,12 +39,6 @@ int RunTests()
     }
 
     return failedTestCount;
-}
-
-
-void AddTest_(Test_ *test)
-{
-    Tests.push_back(test);
 }
 
 }

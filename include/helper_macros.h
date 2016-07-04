@@ -1,17 +1,17 @@
 #pragma once
 
 
-#define STR_IMPL_(X) \
+#define STR_IMPL(X) \
     #X
 
 #define STR(X) \
-    STR_IMPL_(X)
+    STR_IMPL(X)
 
-#define CONCAT_IMPL_(A, B) \
+#define CONCAT_IMPL(A, B) \
     A##B
 
 #define CONCAT(A, B) \
-    CONCAT_IMPL_(A, B)
+    CONCAT_IMPL(A, B)
 
-#define UNIQUE_ID(PREFIX, POSTFIX) \
-    CONCAT(CONCAT(PREFIX, __LINE__), POSTFIX)
+#define UNIQUE_NAME(PREFIX) \
+    CONCAT(PREFIX, __LINE__)

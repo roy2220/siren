@@ -9,26 +9,81 @@
 #include <vector>
 
 
-#define SIREN_SERDES(...)                               \
-    void serialize(::siren::Archive *archive) const {   \
-        (::siren::Serializer_(archive)), __VA_ARGS__;   \
-    }                                                   \
-                                                        \
-    void deserialize(::siren::Archive *archive) {       \
-        (::siren::Deserializer_(archive)), __VA_ARGS__; \
+#define SIREN_SERDES(...)                                      \
+    void serialize(::siren::Archive *archive) const {          \
+        (::siren::detail::Serializer(archive)), __VA_ARGS__;   \
+    }                                                          \
+                                                               \
+    void deserialize(::siren::Archive *archive) {              \
+        (::siren::detail::Deserializer(archive)), __VA_ARGS__; \
     }
 
 
 namespace siren {
 
-class ArchiveEndOfStream;
+class Archive;
 class Stream;
+
+
+namespace detail {
+
+class ArchiveEndOfStream final
+  : public std::exception
+{
+public:
+    inline const char *what() const noexcept override;
+
+    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
+    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
+
+private:
+    inline explicit ArchiveEndOfStream();
+
+    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
+    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
+
+    friend Archive;
+};
+
+
+class Serializer final
+{
+public:
+    inline explicit Serializer(Archive *);
+
+    template <class T>
+    inline const Serializer &operator,(const T &) const;
+
+private:
+    Archive *const archive_;
+
+    Serializer(const Serializer &) = delete;
+    Serializer &operator=(const Serializer &) = delete;
+};
+
+
+class Deserializer final
+{
+public:
+    inline explicit Deserializer(Archive *);
+
+    template <class T>
+    inline const Deserializer &operator,(T &) const;
+
+private:
+    Archive *const archive_;
+
+    Deserializer(const Deserializer &) = delete;
+    Deserializer &operator=(const Deserializer &) = delete;
+};
+
+}
 
 
 class Archive final
 {
 public:
-    typedef ArchiveEndOfStream EndOfStream;
+    typedef detail::ArchiveEndOfStream EndOfStream;
 
     inline explicit Archive(Stream *);
 
@@ -119,57 +174,6 @@ private:
     Archive &operator=(const Archive &) = delete;
 };
 
-
-class ArchiveEndOfStream final
-  : public std::exception
-{
-public:
-    inline const char *what() const noexcept override;
-
-    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
-    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
-
-private:
-    inline explicit ArchiveEndOfStream();
-
-    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
-    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
-
-    friend Archive;
-};
-
-
-class Serializer_ final
-{
-public:
-    inline explicit Serializer_(Archive *);
-
-    template <class T>
-    inline const Serializer_ &operator,(const T &) const;
-
-private:
-    Archive *const archive_;
-
-    Serializer_(const Serializer_ &) = delete;
-    Serializer_ &operator=(const Serializer_ &) = delete;
-};
-
-
-class Deserializer_ final
-{
-public:
-    inline explicit Deserializer_(Archive *);
-
-    template <class T>
-    inline const Deserializer_ &operator,(T &) const;
-
-private:
-    Archive *const archive_;
-
-    Deserializer_(const Deserializer_ &) = delete;
-    Deserializer_ &operator=(const Deserializer_ &) = delete;
-};
-
 }
 
 
@@ -186,6 +190,52 @@ private:
 
 
 namespace siren {
+
+namespace detail {
+
+ArchiveEndOfStream::ArchiveEndOfStream()
+{
+}
+
+
+const char *
+ArchiveEndOfStream::what() const noexcept
+{
+    return "Archive: End of stream";
+}
+
+
+Serializer::Serializer(Archive *archive)
+  : archive_(archive)
+{
+}
+
+
+template <class T>
+const Serializer &
+Serializer::operator,(const T &x) const
+{
+    *archive_ << x;
+    return *this;
+}
+
+
+Deserializer::Deserializer(Archive *archive)
+  : archive_(archive)
+{
+}
+
+
+template <class T>
+const Deserializer &
+Deserializer::operator,(T &x) const
+{
+    *archive_ >> x;
+    return *this;
+}
+
+}
+
 
 Archive::Archive(Stream *stream)
   : stream_(stream),
@@ -501,48 +551,6 @@ Archive::deserializeInteger(T *integer)
     }
 
     readByteCount_ += sizeof(T);
-}
-
-
-ArchiveEndOfStream::ArchiveEndOfStream()
-{
-}
-
-
-const char *
-ArchiveEndOfStream::what() const noexcept
-{
-    return "Archive: End of stream";
-}
-
-
-Serializer_::Serializer_(Archive *archive)
-  : archive_(archive)
-{
-}
-
-
-template <class T>
-const Serializer_ &
-Serializer_::operator,(const T &x) const
-{
-    *archive_ << x;
-    return *this;
-}
-
-
-Deserializer_::Deserializer_(Archive *archive)
-  : archive_(archive)
-{
-}
-
-
-template <class T>
-const Deserializer_ &
-Deserializer_::operator,(T &x) const
-{
-    *archive_ >> x;
-    return *this;
 }
 
 }

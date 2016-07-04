@@ -9,19 +9,21 @@
     for (auto LIST_NODE = (LIST).getHead(); !(LIST).isNil((LIST_NODE)) \
          ; (LIST_NODE) = (LIST_NODE)->getNext())
 
-#define SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(LIST_NODE, LIST)             \
-    for (auto LIST_NODE = (LIST).getTail(), temp_ = (LIST_NODE)->getPrev() \
-         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = temp_, temp_ = (LIST_NODE)->getPrev())
+#define SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(LIST_NODE, LIST)                 \
+    for (auto LIST_NODE = (LIST).getTail(), sirenTemp = (LIST_NODE)->getPrev() \
+         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = sirenTemp, sirenTemp = (LIST_NODE)->getPrev())
 
-#define SIREN_LIST_FOR_EACH_NODE_SAFE(LIST_NODE, LIST)                     \
-    for (auto LIST_NODE = (LIST).getHead(), temp_ = (LIST_NODE)->getNext() \
-         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = temp_, temp_ = (LIST_NODE)->getNext())
+#define SIREN_LIST_FOR_EACH_NODE_SAFE(LIST_NODE, LIST)                         \
+    for (auto LIST_NODE = (LIST).getHead(), sirenTemp = (LIST_NODE)->getNext() \
+         ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = sirenTemp, sirenTemp = (LIST_NODE)->getNext())
 
 
 namespace siren {
 
 class List;
 
+
+namespace detail {
 
 class ListNode
 {
@@ -57,11 +59,13 @@ private:
     friend List;
 };
 
+}
+
 
 class List final
 {
 public:
-    typedef ListNode Node;
+    typedef detail::ListNode Node;
 
     inline explicit List();
 
@@ -93,6 +97,8 @@ private:
 
 
 namespace siren {
+
+namespace detail {
 
 ListNode::ListNode()
 #ifndef NDEBUG
@@ -233,6 +239,8 @@ ListNode::remove()
     prev_ = nullptr;
     next_ = nullptr;
 #endif
+}
+
 }
 
 
