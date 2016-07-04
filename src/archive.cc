@@ -48,14 +48,9 @@ Archive::deserializeVariableLengthInteger(std::uintmax_t *integer)
 
 
 void
-Archive::serializeBytes(const void *bytes, std::size_t numberOfBytes)
+Archive::serializeBytes(const void *bytes, std::ptrdiff_t numberOfBytes)
 {
-    std::size_t bufferSize = stream_->getBufferSize() - writtenByteCount_;
-
-    if (bufferSize < numberOfBytes) {
-        stream_->growBuffer(numberOfBytes - bufferSize);
-    }
-
+    stream_->reserveBuffer(writtenByteCount_ + numberOfBytes);
     void *buffer = stream_->getBuffer(writtenByteCount_);
     std::memcpy(buffer, bytes, numberOfBytes);
     writtenByteCount_ += numberOfBytes;
@@ -63,11 +58,9 @@ Archive::serializeBytes(const void *bytes, std::size_t numberOfBytes)
 
 
 void
-Archive::deserializeBytes(void *bytes, std::size_t numberOfBytes)
+Archive::deserializeBytes(void *bytes, std::ptrdiff_t numberOfBytes)
 {
-    std::size_t dataSize = stream_->getDataSize() - readByteCount_;
-
-    if (dataSize < numberOfBytes) {
+    if (stream_->getDataSize() < readByteCount_ + numberOfBytes) {
         throw EndOfStream();
     }
 

@@ -2,7 +2,8 @@
 
 
 #include <cstddef>
-#include <vector>
+
+#include "buffer.h"
 
 
 namespace siren {
@@ -12,19 +13,19 @@ class Stream final
 public:
     inline explicit Stream();
 
-    inline const void *getData(std::size_t = 0) const;
-    inline void *getData(std::size_t = 0);
-    inline std::size_t getDataSize() const;
-    inline void pickData(std::size_t);
-    inline void dropData(std::size_t);
-    inline void *getBuffer(std::size_t = 0);
-    inline std::size_t getBufferSize() const;
-    inline void growBuffer(std::size_t);
+    inline const void *getData(std::ptrdiff_t = 0) const;
+    inline void *getData(std::ptrdiff_t = 0);
+    inline std::ptrdiff_t getDataSize() const;
+    inline void pickData(std::ptrdiff_t);
+    inline void dropData(std::ptrdiff_t);
+    inline void *getBuffer(std::ptrdiff_t = 0);
+    inline std::ptrdiff_t getBufferSize() const;
+    inline void reserveBuffer(std::ptrdiff_t);
 
 private:
-    std::vector<char> base_;
-    std::size_t rSize_;
-    std::size_t wSize_;
+    Buffer<char> buffer_;
+    std::ptrdiff_t readerIndex_;
+    std::ptrdiff_t writerIndex_;
 
     Stream(const Stream &) = delete;
     Stream &operator=(const Stream &) = delete;
@@ -47,73 +48,79 @@ private:
 namespace siren {
 
 Stream::Stream()
-  : rSize_(0),
-    wSize_(0)
+  : readerIndex_(0),
+    writerIndex_(0)
 {
 }
 
 
 const void *
-Stream::getData(std::size_t offset) const
+Stream::getData(std::ptrdiff_t dataOffset) const
 {
-    return base_.data() + rSize_ + offset;
+    return buffer_.get() + readerIndex_ + dataOffset;
 }
 
 
 void *
-Stream::getData(std::size_t offset)
+Stream::getData(std::ptrdiff_t dataOffset)
 {
-    return base_.data() + rSize_ + offset;
+    return buffer_.get() + readerIndex_ + dataOffset;
 }
 
 
-std::size_t
+std::ptrdiff_t
 Stream::getDataSize() const
 {
-    return wSize_ - rSize_;
+    return writerIndex_ - readerIndex_;
 }
 
 
 void
-Stream::pickData(std::size_t size)
+Stream::pickData(std::ptrdiff_t dataSize)
 {
-    assert(wSize_ + size <= base_.size());
-    wSize_ += size;
+    assert(dataSize >= 0);
+    assert(writerIndex_ + dataSize <= buffer_.getLength());
+    writerIndex_ += dataSize;
 }
 
 
 void
-Stream::dropData(std::size_t size)
+Stream::dropData(std::ptrdiff_t dataSize)
 {
-    assert(rSize_ + size <= wSize_);
-    rSize_ += size;
+    assert(dataSize >= 0);
+    assert(readerIndex_ + dataSize <= writerIndex_);
+    readerIndex_ += dataSize;
 
-    if (rSize_ >= wSize_ - rSize_) {
-        std::memcpy(base_.data(), base_.data() + rSize_, wSize_ - rSize_);
-        wSize_ -= rSize_;
-        rSize_ = 0;
+    if (readerIndex_ >= writerIndex_ - readerIndex_) {
+        std::memcpy(buffer_.get(), buffer_.get() + readerIndex_, writerIndex_ - readerIndex_);
+        writerIndex_ -= readerIndex_;
+        readerIndex_ = 0;
     }
 }
 
 
 void *
-Stream::getBuffer(std::size_t offset)
+Stream::getBuffer(std::ptrdiff_t bufferOffset)
 {
-    return base_.data() + wSize_ + offset;
+    return buffer_.get() + writerIndex_ + bufferOffset;
 }
 
 
-std::size_t
+std::ptrdiff_t
 Stream::getBufferSize() const
 {
-    return base_.size() - wSize_;
+    return buffer_.getLength() - writerIndex_;
 }
 
 
 void
-Stream::growBuffer(std::size_t size)
+Stream::reserveBuffer(std::ptrdiff_t bufferSize)
 {
-    base_.resize(NextPowerOfTwo(base_.size() + size));
+    assert(bufferSize >= 0);
+
+    if (buffer_.getLength() < writerIndex_ + bufferSize) {
+        buffer_.setLength(writerIndex_ + bufferSize);
+    }
 }
 
 }

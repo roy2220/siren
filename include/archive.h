@@ -105,19 +105,19 @@ public:
     template <class T>
     inline std::enable_if_t<std::is_enum<T>::value, Archive &> operator>>(T &);
 
-    template <class T, std::size_t N>
+    template <class T, std::ptrdiff_t N>
     inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
-    template <class T, std::size_t N>
+    template <class T, std::ptrdiff_t N>
     inline std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
-    template <class T, std::size_t N>
+    template <class T, std::ptrdiff_t N>
     inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator<<(const T (&)[N]);
 
-    template <class T, std::size_t N>
+    template <class T, std::ptrdiff_t N>
     inline std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char)
                             , Archive &> operator>>(T (&)[N]);
 
@@ -156,8 +156,8 @@ public:
 
 private:
     Stream *const stream_;
-    std::size_t writtenByteCount_;
-    std::size_t readByteCount_;
+    std::ptrdiff_t writtenByteCount_;
+    std::ptrdiff_t readByteCount_;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
@@ -167,8 +167,8 @@ private:
 
     void serializeVariableLengthInteger(std::uintmax_t);
     void deserializeVariableLengthInteger(std::uintmax_t *);
-    void serializeBytes(const void *, std::size_t);
-    void deserializeBytes(void *, std::size_t);
+    void serializeBytes(const void *, std::ptrdiff_t);
+    void deserializeBytes(void *, std::ptrdiff_t);
 
     Archive(const Archive &) = delete;
     Archive &operator=(const Archive &) = delete;
@@ -185,6 +185,7 @@ private:
 #include <cassert>
 #include <limits>
 
+#include "helper_macros.h"
 #include "stream.h"
 #include "unsigned_to_signed.h"
 
@@ -310,7 +311,7 @@ Archive::operator>>(T &enumerator)
 }
 
 
-template <class T, std::size_t N>
+template <class T, std::ptrdiff_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
@@ -319,7 +320,7 @@ Archive::operator<<(const T (&array)[N])
 }
 
 
-template <class T, std::size_t N>
+template <class T, std::ptrdiff_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
@@ -328,7 +329,7 @@ Archive::operator>>(T (&array)[N])
 }
 
 
-template <class T, std::size_t N>
+template <class T, std::ptrdiff_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
@@ -340,7 +341,7 @@ Archive::operator<<(const T (&array)[N])
 }
 
 
-template <class T, std::size_t N>
+template <class T, std::ptrdiff_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
@@ -513,12 +514,7 @@ Archive::serializeInteger(T integer)
     constexpr int k1 = std::numeric_limits<T>::digits;
     constexpr int k2 = std::numeric_limits<unsigned char>::digits;
 
-    std::size_t bufferSize = stream_->getBufferSize() - writtenByteCount_;
-
-    if (bufferSize < sizeof(T)) {
-        stream_->growBuffer(sizeof(T) - bufferSize);
-    }
-
+    stream_->reserveBuffer(writtenByteCount_ + SSIZE_OF(T));
     auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_));
     *buffer = integer;
 
@@ -526,7 +522,7 @@ Archive::serializeInteger(T integer)
         *++buffer = (integer >>= k2);
     }
 
-    writtenByteCount_ += sizeof(T);
+    writtenByteCount_ += SSIZE_OF(T);
 }
 
 
@@ -537,9 +533,7 @@ Archive::deserializeInteger(T *integer)
     constexpr int k1 = std::numeric_limits<T>::digits;
     constexpr int k2 = std::numeric_limits<unsigned char>::digits;
 
-    std::size_t dataSize = stream_->getDataSize() - readByteCount_;
-
-    if (dataSize < sizeof(T)) {
+    if (stream_->getDataSize() < readByteCount_ + SSIZE_OF(T)) {
         throw EndOfStream();
     }
 
@@ -550,7 +544,7 @@ Archive::deserializeInteger(T *integer)
         *integer |= static_cast<T>(*++data) << n;
     }
 
-    readByteCount_ += sizeof(T);
+    readByteCount_ += SSIZE_OF(T);
 }
 
 }

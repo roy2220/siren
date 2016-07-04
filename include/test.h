@@ -7,7 +7,7 @@
 #include "helper_macros.h"
 
 
-#define SIREN_TEST_IMPL UNIQUE_NAME(SirenTestImpl)
+#define SIREN_TEST_IMPL CONCAT(SirenTestImpl, __LINE__)
 
 #define SIREN_TEST(DESCRIPTION)                                       \
     class SIREN_TEST_IMPL final                                       \
