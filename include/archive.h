@@ -366,7 +366,7 @@ template <class T>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    std::size_t temp;
+    std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&vector.front(), vector.size());
     return *this;
@@ -391,7 +391,7 @@ template <class T>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    std::size_t temp;
+    std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
 
     for (T &x : vector) {
@@ -489,7 +489,7 @@ Archive::operator<<(const std::string &string)
 Archive &
 Archive::operator>>(std::string &string)
 {
-    std::size_t temp;
+    std::uintmax_t temp;
     string.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&string.front(), string.size());
     return *this;
