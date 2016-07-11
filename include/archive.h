@@ -128,7 +128,7 @@ public:
     inline const char *what() const noexcept override;
 
 private:
-    inline explicit ArchiveEndOfStream();
+    inline explicit ArchiveEndOfStream() = default;
 
     friend Archive;
 };
@@ -459,11 +459,6 @@ Archive::deserializeInteger(T *integer)
     }
 
     readByteCount_ += sizeof(T);
-}
-
-
-ArchiveEndOfStream::ArchiveEndOfStream()
-{
 }
 
 

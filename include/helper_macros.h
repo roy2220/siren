@@ -13,5 +13,5 @@
 #define CONCAT(A, B) \
     CONCAT_IMPL(A, B)
 
-#define UNIQUE_NAME(PREFIX) \
-    CONCAT(PREFIX, __LINE__)
+#define UNIQUE_ID(ID_PREFIX) \
+    CONCAT(ID_PREFIX, __LINE__)

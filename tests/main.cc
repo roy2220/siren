@@ -5,5 +5,5 @@ int main()
 {
     using namespace siren;
 
-    return GetFailedTestCount();
+    return RunTests();
 }
