@@ -8,7 +8,7 @@
 #include "helper_macros.h"
 
 
-#define _SIREN_TEST_NAME UNIQUE_NAME(Test)
+#define _SIREN_TEST_NAME UNIQUE_NAME(_Test)
 
 #define SIREN_TEST(DESCRIPTION)                                                  \
     class _SIREN_TEST_NAME final                                                 \
