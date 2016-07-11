@@ -1,5 +1,5 @@
-PREFIX = /usr/local
-BUILDDIR = objs
+PREFIX := /usr/local
+BUILDDIR := objs
 
 CPPFLAGS =
 override CPPFLAGS += -iquote include -iquote src -MMD -MT $@ -MF $(BUILDDIR)/$*.d
@@ -8,11 +8,23 @@ override CXXFLAGS += -std=c++14 -pedantic -Wall -Wextra -Werror
 ARFLAGS =
 override ARFLAGS += rc
 
+OBJS := $(patsubst %.cc,%.o,$(wildcard src/*.cc))
+TESTOBJS := $(OBJS) $(patsubst %.cc,%.o,$(wildcard tests/*.cc))
+
+
+help:
+	@echo $(MAKE) help
+	@echo $(MAKE) build
+	@echo $(MAKE) test
+	@echo $(MAKE) install
+	@echo $(MAKE) uninstall
+	@echo $(MAKE) clean
+
 
 build: $(BUILDDIR)/libsiren.a
 
 
-test: build $(BUILDDIR)/test
+test: $(BUILDDIR)/test
 	$(BUILDDIR)/test
 
 
@@ -34,26 +46,26 @@ clean:
 	rm -rf $(BUILDDIR)
 
 
-.PHONY: build test install uninstall clean
+.PHONY: help build test install uninstall clean
 
 
-$(BUILDDIR)/libsiren.a: $(patsubst %.cc, $(BUILDDIR)/%.o, $(wildcard src/*.cc))
+$(BUILDDIR)/libsiren.a: $(addprefix $(BUILDDIR)/,$(OBJS))
 	@mkdir -p $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(patsubst %.cc, $(BUILDDIR)/%.d, $(wildcard src/*.cc))
+ifneq ($(filter build,$(MAKECMDGOALS)),)
+-include $(OBJS:%.o=$(BUILDDIR)/%.d)
 endif
 
 
-$(BUILDDIR)/test: $(patsubst %.cc, $(BUILDDIR)/%.o, $(wildcard tests/*.cc))
+$(BUILDDIR)/test: $(addprefix $(BUILDDIR)/,$(TESTOBJS))
 	@mkdir -p $(@D)
-	$(CXX) -o $@ $^ -L $(BUILDDIR) -lsiren
+	$(CXX) -o $@ $^
 
 
-ifneq ($(filter test, $(MAKECMDGOALS)), )
--include $(patsubst %.cc, $(BUILDDIR)/%.d, $(wildcard tests/*.cc))
+ifneq ($(filter test,$(MAKECMDGOALS)),)
+-include $(TESTOBJS:%.o=$(BUILDDIR)/%.d)
 endif
 
 
