@@ -11,7 +11,7 @@
 
 #define SIREN_TEST(DESCRIPTION)                               \
     class SIREN_TEST_ final                                   \
-      : public Test_                                          \
+      : public siren::Test_                                   \
     {                                                         \
         SIREN_TEST_(const SIREN_TEST_ &) = delete;            \
         void operator=(const SIREN_TEST_ &) = delete;         \
