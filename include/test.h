@@ -17,13 +17,18 @@
         void operator=(const SIREN_TEST_ &) = delete;         \
                                                               \
     public:                                                   \
-        explicit SIREN_TEST_() = default;                     \
+        explicit SIREN_TEST_();                               \
                                                               \
         const char *getFileName() const noexcept override;    \
         int getLineNumber() const noexcept override;          \
         const char *getDescription() const noexcept override; \
         void run() const override;                            \
     } SIREN_TEST_;                                            \
+                                                              \
+                                                              \
+    SIREN_TEST_::SIREN_TEST_()                                \
+    {                                                         \
+    }                                                         \
                                                               \
                                                               \
     const char *                                              \
@@ -73,7 +78,7 @@ public:
 
 protected:
     inline explicit Test_();
-    inline ~Test_() = default;
+    inline ~Test_();
 };
 
 
@@ -114,6 +119,11 @@ namespace siren {
 Test_::Test_()
 {
     AddTest_(this);
+}
+
+
+Test_::~Test_()
+{
 }
 
 
