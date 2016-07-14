@@ -22,14 +22,11 @@ int RunTests()
         try {
             test->run();
         } catch (const std::exception &exception) {
-            std::fprintf(stderr, "*FAILED* %s:%d: %s: %s\n", test->getFileName()
+            std::fprintf(stderr, "%s:%d: %s: %s\n", test->getFileName()
                          , test->getLineNumber(), test->getDescription(), exception.what());
             ++failedTestCount;
             continue;
         }
-
-        std::printf("*PASSED* %s:%d: %s\n", test->getFileName(), test->getLineNumber()
-                    , test->getDescription());
     }
 
     return failedTestCount;
