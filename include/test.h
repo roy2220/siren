@@ -11,7 +11,7 @@
 
 #define SIREN_TEST(DESCRIPTION)                               \
     class SIREN_TEST_ final                                   \
-      : public siren::Test_                                   \
+      : public ::siren::Test_                                 \
     {                                                         \
     public:                                                   \
         explicit SIREN_TEST_();                               \

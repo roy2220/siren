@@ -2,14 +2,14 @@
 
 #include <cstdio>
 #include <exception>
-#include <vector>
+#include <list>
 
 
 namespace siren {
 
 namespace {
 
-std::vector<Test_ *> Tests;
+std::list<Test_ *> Tests;
 
 }
 
@@ -25,7 +25,6 @@ int RunTests()
             std::fprintf(stderr, "%s:%d: %s: %s\n", test->getFileName()
                          , test->getLineNumber(), test->getDescription(), exception.what());
             ++failedTestCount;
-            continue;
         }
     }
 
