@@ -7,7 +7,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Insert/Remove list items")
+SIREN_TEST("Insert/Replace/Remove list items")
 {
     struct Dummy : ListItem {
     };
@@ -27,8 +27,9 @@ SIREN_TEST("Insert/Remove list items")
     SIREN_TEST_ASSERT(l.getTail() == &d1);
     d2.insertBefore(&d1);
     d1.remove();
-    SIREN_TEST_ASSERT(!l.isNil(l.getTail()));
-    d2.remove();
+    d2.replace(&d1);
+    SIREN_TEST_ASSERT(l.getTail() == &d1);
+    d1.remove();
     SIREN_TEST_ASSERT(l.isEmpty());
 }
 

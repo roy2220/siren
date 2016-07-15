@@ -30,6 +30,7 @@ public:
     inline ListItem *getNext() const;
     inline void insertBefore(ListItem *);
     inline void insertAfter(ListItem *);
+    inline void replace(ListItem *);
     inline void remove();
 
 protected:
@@ -177,6 +178,20 @@ ListItem::insertAfter(ListItem *other)
     assert(other != nullptr);
     assert(other->isLinked());
     insert(other, other->next_);
+}
+
+
+void
+ListItem::replace(ListItem *other)
+{
+    assert(isLinked());
+    assert(other != nullptr);
+    assert(other->isUnlinked());
+    other->insert(prev_, next_);
+#ifndef NDEBUG
+    prev_ = nullptr;
+    next_ = nullptr;
+#endif
 }
 
 
