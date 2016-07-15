@@ -184,6 +184,7 @@ private:
  */
 
 
+#include <cassert>
 #include <limits>
 
 #include "stream.h"
@@ -197,6 +198,7 @@ Archive::Archive(Stream *stream)
     writtenByteCount_(0),
     readByteCount_(0)
 {
+    assert(stream_ != nullptr);
 }
 
 
@@ -222,7 +224,7 @@ template <class T>
 std::enable_if_t<std::is_signed<T>::value, Archive &>
 Archive::operator>>(T &integer)
 {
-    using U = std::make_unsigned_t<T>;
+    typedef std::make_unsigned_t<T> U;
 
     U temp;
     integer = UnsignedToSigned((deserializeInteger(&temp), temp));
@@ -234,7 +236,7 @@ template <class T>
 std::enable_if_t<std::is_enum<T>::value, Archive &>
 Archive::operator<<(T enumerator)
 {
-    using U = std::underlying_type_t<T>;
+    typedef std::underlying_type_t<T> U;
 
     operator<<(static_cast<U>(enumerator));
     return *this;
@@ -245,7 +247,7 @@ template <class T>
 std::enable_if_t<std::is_enum<T>::value, Archive &>
 Archive::operator>>(T &enumerator)
 {
-    using U = std::underlying_type_t<T>;
+    typedef std::underlying_type_t<T> U;
 
     U temp;
     enumerator = static_cast<T>(operator>>(temp), temp);
@@ -513,7 +515,7 @@ ArchiveEndOfStream::ArchiveEndOfStream()
 const char *
 ArchiveEndOfStream::what() const noexcept
 {
-    return "end of stream";
+    return "End of stream";
 }
 
 

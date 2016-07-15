@@ -8,11 +8,8 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("serialize/deserialize structure")
+SIREN_TEST("Serialize/Deserialize structures")
 {
-    Stream s;
-    Archive a(&s);
-
     struct Dummy {
         char c;
         int i;
@@ -25,6 +22,8 @@ SIREN_TEST("serialize/deserialize structure")
         SIREN_SERDES(c, i, s)
     };
 
+    Stream s;
+    Archive a(&s);
     Dummy input{'a', 1, "hello"};
     a << input;
     a.flush();

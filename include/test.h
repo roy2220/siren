@@ -49,7 +49,7 @@
     const char *                                              \
     SIREN_TEST_::getDescription() const noexcept              \
     {                                                         \
-        return DESCRIPTION;                                   \
+        return (DESCRIPTION);                                 \
     }                                                         \
                                                               \
                                                               \
