@@ -11,7 +11,7 @@ override ARFLAGS += rc
 objs := $(patsubst %.cc,%.o,$(wildcard src/*.cc))
 testobjs := $(objs) $(patsubst %.cc,%.o,$(wildcard tests/*.cc))
 
-cmds := help build test install uninstall clean
+cmds := help build test install uninstall tag clean
 .PHONY: $(cmds)
 
 
@@ -38,6 +38,10 @@ uninstall:
 	rmdir -p --ignore-fail-on-non-empty $(PREFIX)/lib
 	rm -rf $(PREFIX)/include/siren
 	rmdir -p --ignore-fail-on-non-empty $(PREFIX)/include
+
+
+tag:
+	GTAGSFORCECPP= gtags -i
 
 
 clean:
