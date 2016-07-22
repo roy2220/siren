@@ -49,6 +49,7 @@ private:
     ListNode *next_;
 
 #ifndef NDEBUG
+    inline void initialize();
     inline bool isLinked() const;
     inline bool isUnlinked() const;
 #endif
@@ -64,6 +65,9 @@ public:
     typedef ListNode Node;
 
     inline explicit List();
+    inline List(List &&);
+    inline ~List();
+    inline List &operator=(List &&);
 
     inline bool isEmpty() const;
     inline const Node *getTail() const;
@@ -76,6 +80,9 @@ public:
 
 private:
     Node nil_;
+
+    inline void finalize();
+    inline void initialize();
 
     List(const List &) = delete;
     List &operator=(const List &) = delete;
@@ -134,6 +141,14 @@ ListNode::operator=(ListNode &&other)
 
 
 #ifndef NDEBUG
+void
+ListNode::initialize()
+{
+    prev_ = nullptr;
+    next_ = nullptr;
+}
+
+
 bool
 ListNode::isLinked() const
 {
@@ -209,8 +224,7 @@ ListNode::replace(ListNode *other)
     assert(other->isUnlinked());
     other->insert(prev_, next_);
 #ifndef NDEBUG
-    prev_ = nullptr;
-    next_ = nullptr;
+    initialize();
 #endif
 }
 
@@ -230,13 +244,65 @@ ListNode::remove()
     prev_->next_ = next_;
     next_->prev_ = prev_;
 #ifndef NDEBUG
-    prev_ = nullptr;
-    next_ = nullptr;
+    initialize();
 #endif
 }
 
 
 List::List()
+{
+    initialize();
+}
+
+
+List::List(List &&other)
+{
+    if (other.isEmpty()) {
+        initialize();
+    } else {
+        nil_.insert(other.nil_.prev_, other.nil_.next_);
+        other.initialize();
+    }
+}
+
+
+List::~List()
+{
+    finalize();
+}
+
+
+List &
+List::operator=(List &&other)
+{
+    if (&other != this) {
+        finalize();
+
+        if (other.isEmpty()) {
+            initialize();
+        } else {
+            nil_.insert(other.nil_.prev_, other.nil_.next_);
+            other.initialize();
+        }
+    }
+
+    return *this;
+}
+
+
+void
+List::finalize()
+{
+#ifndef NDEBUG
+    SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(node, *this) {
+        node->initialize();
+    }
+#endif
+}
+
+
+void
+List::initialize()
 {
     nil_.prev_ = &nil_;
     nil_.next_ = &nil_;

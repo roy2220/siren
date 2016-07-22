@@ -102,4 +102,45 @@ SIREN_TEST("Iterate lists while removing nodes")
     SIREN_TEST_ASSERT(l.isEmpty());
 }
 
+
+SIREN_TEST("Move lists")
+{
+    struct Dummy : List::Node {
+        int val;
+
+        Dummy(int x) : val(x) {
+        }
+    };
+
+    int val = 0;
+    Dummy d1(val++);
+    Dummy d2(val++);
+    Dummy d3(val++);
+    Dummy d4(val++);
+    List l;
+    l.insertTail(&d1);
+    l.insertTail(&d2);
+    l.insertTail(&d3);
+
+    List l2 = std::move(l);
+    SIREN_TEST_ASSERT(l.isEmpty());
+    SIREN_TEST_ASSERT(!l2.isEmpty());
+    val = 0;
+
+    SIREN_LIST_FOR_EACH_NODE(ln, l2) {
+        auto d = static_cast<Dummy *>(ln);
+        SIREN_TEST_ASSERT(d->val == val++);
+    }
+
+    l.insertTail(&d4);
+    l = std::move(l2);
+    l.insertTail(&d4);
+    val = 4;
+
+    SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {
+        auto d = static_cast<Dummy *>(ln);
+        SIREN_TEST_ASSERT(d->val == --val);
+    }
+}
+
 }

@@ -29,6 +29,8 @@ private:
     std::size_t readerIndex_;
     std::size_t writerIndex_;
 
+    inline void initialize();
+
     Stream(const Stream &) = delete;
     Stream &operator=(const Stream &) = delete;
 };
@@ -62,8 +64,7 @@ Stream::Stream(Stream &&other)
     readerIndex_(other.readerIndex_),
     writerIndex_(other.writerIndex_)
 {
-    other.readerIndex_ = 0;
-    other.writerIndex_ = 0;
+    other.initialize();
 }
 
 
@@ -74,11 +75,18 @@ Stream::operator=(Stream &&other)
         buffer_ = std::move(other.buffer_);
         readerIndex_ = other.readerIndex_;
         writerIndex_ = other.writerIndex_;
-        other.readerIndex_ = 0;
-        other.writerIndex_ = 0;
+        other.initialize();
     }
 
     return *this;
+}
+
+
+void
+Stream::initialize()
+{
+    readerIndex_ = 0;
+    writerIndex_ = 0;
 }
 
 

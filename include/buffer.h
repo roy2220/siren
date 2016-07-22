@@ -29,6 +29,9 @@ private:
     T *base_;
     std::size_t length_;
 
+    inline void finalize();
+    inline void initialize();
+
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
 };
@@ -63,15 +66,14 @@ Buffer<T, true>::Buffer(Buffer &&other)
   : base_(other.base_),
     length_(other.length_)
 {
-    other.base_ = nullptr;
-    other.length_ = 0;
+    other.initialize();
 }
 
 
 template <class T>
 Buffer<T, true>::~Buffer()
 {
-    std::free(base_);
+    finalize();
 }
 
 
@@ -80,14 +82,30 @@ Buffer<T, true> &
 Buffer<T, true>::operator=(Buffer &&other)
 {
     if (&other != this) {
-        std::free(base_);
+        finalize();
         base_ = other.base_;
         length_ = other.length_;
-        other.base_ = nullptr;
-        other.length_ = 0;
+        other.initialize();
     }
 
     return *this;
+}
+
+
+template <class T>
+void
+Buffer<T, true>::finalize()
+{
+    std::free(base_);
+}
+
+
+template <class T>
+void
+Buffer<T, true>::initialize()
+{
+    base_ = nullptr;
+    length_ = 0;
 }
 
 
