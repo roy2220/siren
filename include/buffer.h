@@ -22,6 +22,7 @@ public:
     inline operator const T *() const noexcept;
     inline operator T *() noexcept;
 
+    inline void reset() noexcept;
     inline std::size_t getLength() const noexcept;
     inline void setLength(std::size_t);
 
@@ -103,6 +104,15 @@ template <class T>
 Buffer<T, true>::operator T *() noexcept
 {
     return base_;
+}
+
+
+template <class T>
+void
+Buffer<T, true>::reset() noexcept
+{
+    finalize();
+    initialize();
 }
 
 

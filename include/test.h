@@ -8,7 +8,7 @@
 #include "helper_macros.h"
 
 
-#define SIREN_TEST_IMPL CONCAT(SirenTestImpl, __LINE__)
+#define SIREN_TEST_IMPL SIREN_CONCAT(SirenTestImpl, __LINE__)
 
 #define SIREN_TEST(DESCRIPTION)                                       \
     class SIREN_TEST_IMPL final                                       \
@@ -57,11 +57,11 @@
     void                                                              \
     SIREN_TEST_IMPL::run() const
 
-#define SIREN_TEST_ASSERT(EXPRESSION)                                               \
-    do {                                                                            \
-        if (!(EXPRESSION)) {                                                        \
-            throw ::siren::detail::TestAssertionFailure(STR(EXPRESSION), __LINE__); \
-        }                                                                           \
+#define SIREN_TEST_ASSERT(EXPRESSION)                                                     \
+    do {                                                                                  \
+        if (!(EXPRESSION)) {                                                              \
+            throw ::siren::detail::TestAssertionFailure(SIREN_STR(EXPRESSION), __LINE__); \
+        }                                                                                 \
     } while (false)
 
 
@@ -80,11 +80,9 @@ public:
 protected:
     inline explicit Test();
 
+    Test(const Test &) noexcept = default;
     ~Test() = default;
-
-private:
-    Test(const Test &) = delete;
-    Test &operator=(const Test &) = delete;
+    Test &operator=(const Test &) noexcept = default;
 };
 
 
@@ -137,9 +135,9 @@ Test::Test()
 
 TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber) noexcept
 {
-    description_ = "SIREN_TEST_ASSERT(";
+    description_ = "Assert `";
     description_ += expression;
-    description_ += ") failed at line ";
+    description_ += "` failed at line ";
     description_ += std::to_string(lineNumber);
 }
 

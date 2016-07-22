@@ -15,6 +15,7 @@ public:
     inline Stream(Stream &&) noexcept;
     inline Stream &operator=(Stream &&) noexcept;
 
+    inline void reset() noexcept;
     inline const void *getData(std::size_t = 0) const noexcept;
     inline void *getData(std::size_t = 0) noexcept;
     inline std::size_t getDataSize() const noexcept;
@@ -79,6 +80,14 @@ Stream::operator=(Stream &&other) noexcept
     }
 
     return *this;
+}
+
+
+void
+Stream::reset() noexcept
+{
+    buffer_.reset();
+    initialize();
 }
 
 

@@ -18,8 +18,10 @@ public:
 
     inline explicit Heap(bool (*)(const Node &, const Node &)) noexcept;
     inline Heap(Heap &&) noexcept;
+    inline ~Heap();
     inline Heap &operator=(Heap &&) noexcept;
 
+    inline void reset() noexcept;
     inline const Node *getTop() const noexcept;
     inline Node *getTop() noexcept;
 
@@ -99,17 +101,32 @@ Heap::Heap(Heap &&other) noexcept
 }
 
 
+Heap::~Heap()
+{
+    finalize();
+}
+
+
 Heap &
 Heap::operator=(Heap &&other) noexcept
 {
     if (&other != this) {
         finalize();
+        assert(nodeOrderer_ == other.nodeOrderer_);
         nodes_ = std::move(other.nodes_);
         numberOfNodes_ = other.numberOfNodes_;
         other.initialize();
     }
 
     return *this;
+}
+
+
+void
+Heap::reset() noexcept
+{
+    finalize();
+    initialize();
 }
 
 

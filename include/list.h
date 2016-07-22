@@ -69,6 +69,7 @@ public:
     inline ~List();
     inline List &operator=(List &&) noexcept;
 
+    inline void reset() noexcept;
     inline bool isEmpty() const noexcept;
     inline const Node *getTail() const noexcept;
     inline Node *getTail() noexcept;
@@ -286,6 +287,14 @@ List::operator=(List &&other) noexcept
     }
 
     return *this;
+}
+
+
+void
+List::reset() noexcept
+{
+    finalize();
+    initialize();
 }
 
 
