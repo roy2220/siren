@@ -48,8 +48,8 @@ private:
     ListNode *prev_;
     ListNode *next_;
 
-#ifndef NDEBUG
     inline void initialize();
+#ifndef NDEBUG
     inline bool isLinked() const;
     inline bool isUnlinked() const;
 #endif
@@ -140,15 +140,17 @@ ListNode::operator=(ListNode &&other)
 }
 
 
-#ifndef NDEBUG
 void
 ListNode::initialize()
 {
+#ifndef NDEBUG
     prev_ = nullptr;
     next_ = nullptr;
+#endif
 }
 
 
+#ifndef NDEBUG
 bool
 ListNode::isLinked() const
 {
@@ -223,9 +225,7 @@ ListNode::replace(ListNode *other)
     assert(other != nullptr);
     assert(other->isUnlinked());
     other->insert(prev_, next_);
-#ifndef NDEBUG
     initialize();
-#endif
 }
 
 
@@ -243,15 +243,14 @@ ListNode::remove()
     assert(isLinked());
     prev_->next_ = next_;
     next_->prev_ = prev_;
-#ifndef NDEBUG
     initialize();
-#endif
 }
 
 
 List::List()
 {
-    initialize();
+    nil_.prev_ = &nil_;
+    nil_.next_ = &nil_;
 }
 
 

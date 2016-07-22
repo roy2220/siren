@@ -25,6 +25,7 @@ public:
 
     void insertNode(Node *);
     void removeNode(Node *);
+    void removeTop();
 
 private:
     bool (*const nodeOrderer_)(const Node &, const Node &);
@@ -56,8 +57,8 @@ protected:
 private:
     std::size_t index_;
 
-#ifndef NDEBUG
     inline void initialize();
+#ifndef NDEBUG
     inline bool isLinked() const;
     inline bool isUnlinked() const;
 #endif
@@ -182,14 +183,16 @@ HeapNode::operator=(HeapNode &&other)
 }
 
 
-#ifndef NDEBUG
 void
 HeapNode::initialize()
 {
+#ifndef NDEBUG
     index_ = -1;
+#endif
 }
 
 
+#ifndef NDEBUG
 bool
 HeapNode::isLinked() const
 {

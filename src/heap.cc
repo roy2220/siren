@@ -1,7 +1,5 @@
 #include "heap.h"
 
-#include <cassert>
-
 
 namespace siren {
 
@@ -28,12 +26,29 @@ Heap::removeNode(Node *node)
     assert(node->index_ < numberOfNodes_ && node == nodes_[node->index_]);
     std::size_t i = node->index_;
     node->initialize();
-    node = nodes_[--numberOfNodes_];
 
-    if (nodeOrderer_(*node, *nodes_[i])) {
-        siftUp(node, i);
-    } else {
-        siftDown(node, i);
+    if (i < --numberOfNodes_) {
+        node = nodes_[numberOfNodes_];
+
+        if (nodeOrderer_(*node, *nodes_[i])) {
+            siftUp(node, i);
+        } else {
+            siftDown(node, i);
+        }
+    }
+}
+
+
+void
+Heap::removeTop()
+{
+    assert(numberOfNodes_ >= 1);
+    Node *top = nodes_[0];
+    top->initialize();
+
+    if (0 < --numberOfNodes_) {
+        top = nodes_[numberOfNodes_];
+        siftDown(top, 0);
     }
 }
 
