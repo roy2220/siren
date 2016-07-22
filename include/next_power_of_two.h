@@ -30,7 +30,7 @@ NextPowerOfTwo(T x)
 
     --x;
 
-    for (unsigned int n = 1; n < k; n += n) {
+    for (unsigned int n = 1; n < k; n *= 2) {
         x |= x >> n;
     }
 

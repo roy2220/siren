@@ -93,14 +93,14 @@ Stream::initialize()
 const void *
 Stream::getData(std::size_t dataOffset) const
 {
-    return buffer_.get() + readerIndex_ + dataOffset;
+    return buffer_ + readerIndex_ + dataOffset;
 }
 
 
 void *
 Stream::getData(std::size_t dataOffset)
 {
-    return buffer_.get() + readerIndex_ + dataOffset;
+    return buffer_ + readerIndex_ + dataOffset;
 }
 
 
@@ -126,7 +126,7 @@ Stream::dropData(std::size_t dataSize)
     readerIndex_ += dataSize;
 
     if (readerIndex_ >= writerIndex_ - readerIndex_) {
-        std::memcpy(buffer_.get(), buffer_.get() + readerIndex_, writerIndex_ - readerIndex_);
+        std::memcpy(buffer_, buffer_ + readerIndex_, writerIndex_ - readerIndex_);
         writerIndex_ -= readerIndex_;
         readerIndex_ = 0;
     }
@@ -136,7 +136,7 @@ Stream::dropData(std::size_t dataSize)
 void *
 Stream::getBuffer(std::size_t bufferOffset)
 {
-    return buffer_.get() + writerIndex_ + bufferOffset;
+    return buffer_ + writerIndex_ + bufferOffset;
 }
 
 

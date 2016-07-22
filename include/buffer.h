@@ -19,9 +19,9 @@ public:
     inline Buffer(Buffer &&);
     inline ~Buffer();
     inline Buffer &operator=(Buffer &&);
+    inline operator const T *() const;
+    inline operator T *();
 
-    inline const T *get() const;
-    inline T *get();
     inline std::size_t getLength() const;
     inline void setLength(std::size_t);
 
@@ -93,6 +93,20 @@ Buffer<T, true>::operator=(Buffer &&other)
 
 
 template <class T>
+Buffer<T, true>::operator const T *() const
+{
+    return base_;
+}
+
+
+template <class T>
+Buffer<T, true>::operator T *()
+{
+    return base_;
+}
+
+
+template <class T>
 void
 Buffer<T, true>::finalize()
 {
@@ -106,22 +120,6 @@ Buffer<T, true>::initialize()
 {
     base_ = nullptr;
     length_ = 0;
-}
-
-
-template <class T>
-const T *
-Buffer<T, true>::get() const
-{
-    return base_;
-}
-
-
-template <class T>
-T *
-Buffer<T, true>::get()
-{
-    return base_;
 }
 
 
