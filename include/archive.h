@@ -31,7 +31,7 @@ namespace detail {
 class Serializer final
 {
 public:
-    inline explicit Serializer(Archive *);
+    inline explicit Serializer(Archive *) noexcept;
 
     template <class T>
     inline const Serializer &operator,(const T &) const;
@@ -47,7 +47,7 @@ private:
 class Deserializer final
 {
 public:
-    inline explicit Deserializer(Archive *);
+    inline explicit Deserializer(Archive *) noexcept;
 
     template <class T>
     inline const Deserializer &operator,(T &) const;
@@ -67,7 +67,7 @@ class Archive final
 public:
     typedef ArchiveEndOfStream EndOfStream;
 
-    inline explicit Archive(Stream *);
+    inline explicit Archive(Stream *) noexcept;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator<<(T);
@@ -134,7 +134,7 @@ public:
     inline Archive &operator<<(const std::string &);
     inline Archive &operator>>(std::string &);
 
-    inline void flush();
+    inline void flush() noexcept;
 
 private:
     Stream *const stream_;
@@ -163,11 +163,11 @@ class ArchiveEndOfStream final
 public:
     inline const char *what() const noexcept override;
 
-    ArchiveEndOfStream(ArchiveEndOfStream &&) = default;
-    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) = default;
+    ArchiveEndOfStream(ArchiveEndOfStream &&) noexcept = default;
+    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) noexcept = default;
 
 private:
-    inline explicit ArchiveEndOfStream();
+    inline explicit ArchiveEndOfStream() noexcept;
 
     ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
     ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
@@ -194,7 +194,7 @@ namespace siren {
 
 namespace detail {
 
-Serializer::Serializer(Archive *archive)
+Serializer::Serializer(Archive *archive) noexcept
   : archive_(archive)
 {
 }
@@ -209,7 +209,7 @@ Serializer::operator,(const T &x) const
 }
 
 
-Deserializer::Deserializer(Archive *archive)
+Deserializer::Deserializer(Archive *archive) noexcept
   : archive_(archive)
 {
 }
@@ -226,7 +226,7 @@ Deserializer::operator,(T &x) const
 }
 
 
-Archive::Archive(Stream *stream)
+Archive::Archive(Stream *stream) noexcept
   : stream_(stream),
     writtenByteCount_(0),
     readByteCount_(0)
@@ -486,7 +486,7 @@ Archive::operator>>(std::string &string)
 
 
 void
-Archive::flush()
+Archive::flush() noexcept
 {
     stream_->pickData(writtenByteCount_);
     writtenByteCount_ = 0;
@@ -536,7 +536,7 @@ Archive::deserializeInteger(T *integer)
 }
 
 
-ArchiveEndOfStream::ArchiveEndOfStream()
+ArchiveEndOfStream::ArchiveEndOfStream() noexcept
 {
 }
 

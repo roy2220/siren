@@ -26,21 +26,21 @@ class List;
 class ListNode
 {
 public:
-    inline const ListNode *getPrev() const;
-    inline ListNode *getPrev();
-    inline const ListNode *getNext() const;
-    inline ListNode *getNext();
-    inline void insertBefore(ListNode *);
-    inline void insertAfter(ListNode *);
-    inline void replace(ListNode *);
-    inline void remove();
+    inline const ListNode *getPrev() const noexcept;
+    inline ListNode *getPrev() noexcept;
+    inline const ListNode *getNext() const noexcept;
+    inline ListNode *getNext() noexcept;
+    inline void insertBefore(ListNode *) noexcept;
+    inline void insertAfter(ListNode *) noexcept;
+    inline void replace(ListNode *) noexcept;
+    inline void remove() noexcept;
 
 protected:
-    inline explicit ListNode();
-    inline ListNode(const ListNode &);
-    inline ListNode(ListNode &&);
-    inline ListNode &operator=(const ListNode &);
-    inline ListNode &operator=(ListNode &&);
+    inline explicit ListNode() noexcept;
+    inline ListNode(const ListNode &) noexcept;
+    inline ListNode(ListNode &&) noexcept;
+    inline ListNode &operator=(const ListNode &) noexcept;
+    inline ListNode &operator=(ListNode &&) noexcept;
 
     ~ListNode() = default;
 
@@ -48,12 +48,12 @@ private:
     ListNode *prev_;
     ListNode *next_;
 
-    inline void initialize();
+    inline void initialize() noexcept;
 #ifndef NDEBUG
-    inline bool isLinked() const;
-    inline bool isUnlinked() const;
+    inline bool isLinked() const noexcept;
+    inline bool isUnlinked() const noexcept;
 #endif
-    inline void insert(ListNode *, ListNode *);
+    inline void insert(ListNode *, ListNode *) noexcept;
 
     friend List;
 };
@@ -64,25 +64,25 @@ class List final
 public:
     typedef ListNode Node;
 
-    inline explicit List();
-    inline List(List &&);
+    inline explicit List() noexcept;
+    inline List(List &&) noexcept;
     inline ~List();
-    inline List &operator=(List &&);
+    inline List &operator=(List &&) noexcept;
 
-    inline bool isEmpty() const;
-    inline const Node *getTail() const;
-    inline Node *getTail();
-    inline const Node *getHead() const;
-    inline Node *getHead();
-    inline bool isNil(const Node *) const;
-    inline void insertTail(Node *);
-    inline void insertHead(Node *);
+    inline bool isEmpty() const noexcept;
+    inline const Node *getTail() const noexcept;
+    inline Node *getTail() noexcept;
+    inline const Node *getHead() const noexcept;
+    inline Node *getHead() noexcept;
+    inline bool isNil(const Node *) const noexcept;
+    inline void insertTail(Node *) noexcept;
+    inline void insertHead(Node *) noexcept;
 
 private:
     Node nil_;
 
-    inline void finalize();
-    inline void initialize();
+    inline void finalize() noexcept;
+    inline void initialize() noexcept;
 
     List(const List &) = delete;
     List &operator=(const List &) = delete;
@@ -101,7 +101,7 @@ private:
 
 namespace siren {
 
-ListNode::ListNode()
+ListNode::ListNode() noexcept
 #ifndef NDEBUG
   : prev_(nullptr),
     next_(nullptr)
@@ -110,14 +110,14 @@ ListNode::ListNode()
 }
 
 
-ListNode::ListNode(const ListNode &other)
+ListNode::ListNode(const ListNode &other) noexcept
   : ListNode()
 {
     static_cast<void>(other);
 }
 
 
-ListNode::ListNode(ListNode &&other)
+ListNode::ListNode(ListNode &&other) noexcept
   : ListNode()
 {
     static_cast<void>(other);
@@ -125,7 +125,7 @@ ListNode::ListNode(ListNode &&other)
 
 
 ListNode &
-ListNode::operator=(const ListNode &other)
+ListNode::operator=(const ListNode &other) noexcept
 {
     static_cast<void>(other);
     return *this;
@@ -133,7 +133,7 @@ ListNode::operator=(const ListNode &other)
 
 
 ListNode &
-ListNode::operator=(ListNode &&other)
+ListNode::operator=(ListNode &&other) noexcept
 {
     static_cast<void>(other);
     return *this;
@@ -141,7 +141,7 @@ ListNode::operator=(ListNode &&other)
 
 
 void
-ListNode::initialize()
+ListNode::initialize() noexcept
 {
 #ifndef NDEBUG
     prev_ = nullptr;
@@ -152,14 +152,14 @@ ListNode::initialize()
 
 #ifndef NDEBUG
 bool
-ListNode::isLinked() const
+ListNode::isLinked() const noexcept
 {
     return prev_ != nullptr && next_ != nullptr;
 }
 
 
 bool
-ListNode::isUnlinked() const
+ListNode::isUnlinked() const noexcept
 {
     return prev_ == nullptr && next_ == nullptr;
 }
@@ -167,7 +167,7 @@ ListNode::isUnlinked() const
 
 
 const ListNode *
-ListNode::getPrev() const
+ListNode::getPrev() const noexcept
 {
     assert(isLinked());
     return prev_;
@@ -175,7 +175,7 @@ ListNode::getPrev() const
 
 
 ListNode *
-ListNode::getPrev()
+ListNode::getPrev() noexcept
 {
     assert(isLinked());
     return prev_;
@@ -183,7 +183,7 @@ ListNode::getPrev()
 
 
 const ListNode *
-ListNode::getNext() const
+ListNode::getNext() const noexcept
 {
     assert(isLinked());
     return next_;
@@ -191,7 +191,7 @@ ListNode::getNext() const
 
 
 ListNode *
-ListNode::getNext()
+ListNode::getNext() noexcept
 {
     assert(isLinked());
     return next_;
@@ -199,7 +199,7 @@ ListNode::getNext()
 
 
 void
-ListNode::insertBefore(ListNode *other)
+ListNode::insertBefore(ListNode *other) noexcept
 {
     assert(isUnlinked());
     assert(other != nullptr);
@@ -209,7 +209,7 @@ ListNode::insertBefore(ListNode *other)
 
 
 void
-ListNode::insertAfter(ListNode *other)
+ListNode::insertAfter(ListNode *other) noexcept
 {
     assert(isUnlinked());
     assert(other != nullptr);
@@ -219,7 +219,7 @@ ListNode::insertAfter(ListNode *other)
 
 
 void
-ListNode::replace(ListNode *other)
+ListNode::replace(ListNode *other) noexcept
 {
     assert(isLinked());
     assert(other != nullptr);
@@ -230,7 +230,7 @@ ListNode::replace(ListNode *other)
 
 
 void
-ListNode::insert(ListNode *prev, ListNode *next)
+ListNode::insert(ListNode *prev, ListNode *next) noexcept
 {
     (prev_ = prev)->next_ = this;
     (next_ = next)->prev_ = this;
@@ -238,7 +238,7 @@ ListNode::insert(ListNode *prev, ListNode *next)
 
 
 void
-ListNode::remove()
+ListNode::remove() noexcept
 {
     assert(isLinked());
     prev_->next_ = next_;
@@ -247,14 +247,14 @@ ListNode::remove()
 }
 
 
-List::List()
+List::List() noexcept
 {
     nil_.prev_ = &nil_;
     nil_.next_ = &nil_;
 }
 
 
-List::List(List &&other)
+List::List(List &&other) noexcept
 {
     if (other.isEmpty()) {
         initialize();
@@ -272,7 +272,7 @@ List::~List()
 
 
 List &
-List::operator=(List &&other)
+List::operator=(List &&other) noexcept
 {
     if (&other != this) {
         finalize();
@@ -290,7 +290,7 @@ List::operator=(List &&other)
 
 
 void
-List::finalize()
+List::finalize() noexcept
 {
 #ifndef NDEBUG
     SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(node, *this) {
@@ -301,7 +301,7 @@ List::finalize()
 
 
 void
-List::initialize()
+List::initialize() noexcept
 {
     nil_.prev_ = &nil_;
     nil_.next_ = &nil_;
@@ -309,49 +309,49 @@ List::initialize()
 
 
 bool
-List::isEmpty() const
+List::isEmpty() const noexcept
 {
     return nil_.prev_ == &nil_;
 }
 
 
 const List::Node *
-List::getTail() const
+List::getTail() const noexcept
 {
     return nil_.prev_;
 }
 
 
 List::Node *
-List::getTail()
+List::getTail() noexcept
 {
     return nil_.prev_;
 }
 
 
 const List::Node *
-List::getHead() const
+List::getHead() const noexcept
 {
     return nil_.next_;
 }
 
 
 List::Node *
-List::getHead()
+List::getHead() noexcept
 {
     return nil_.next_;
 }
 
 
 bool
-List::isNil(const Node *node) const
+List::isNil(const Node *node) const noexcept
 {
     return node == &nil_;
 }
 
 
 void
-List::insertTail(Node *node)
+List::insertTail(Node *node) noexcept
 {
     assert(node != nullptr);
     assert(node->isUnlinked());
@@ -360,7 +360,7 @@ List::insertTail(Node *node)
 
 
 void
-List::insertHead(Node *node)
+List::insertHead(Node *node) noexcept
 {
     assert(node != nullptr);
     assert(node->isUnlinked());

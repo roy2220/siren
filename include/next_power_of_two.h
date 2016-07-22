@@ -7,7 +7,7 @@
 namespace siren {
 
 template <class T>
-inline std::enable_if_t<std::is_unsigned<T>::value, T> NextPowerOfTwo(T);
+inline std::enable_if_t<std::is_unsigned<T>::value, T> NextPowerOfTwo(T) noexcept;
 
 }
 
@@ -24,7 +24,7 @@ namespace siren {
 
 template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, T>
-NextPowerOfTwo(T x)
+NextPowerOfTwo(T x) noexcept
 {
     constexpr unsigned int k = std::numeric_limits<T>::digits;
 

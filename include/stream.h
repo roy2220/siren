@@ -11,17 +11,17 @@ namespace siren {
 class Stream final
 {
 public:
-    inline explicit Stream();
-    inline Stream(Stream &&);
-    inline Stream &operator=(Stream &&);
+    inline explicit Stream() noexcept;
+    inline Stream(Stream &&) noexcept;
+    inline Stream &operator=(Stream &&) noexcept;
 
-    inline const void *getData(std::size_t = 0) const;
-    inline void *getData(std::size_t = 0);
-    inline std::size_t getDataSize() const;
-    inline void pickData(std::size_t);
-    inline void dropData(std::size_t);
-    inline void *getBuffer(std::size_t = 0);
-    inline std::size_t getBufferSize() const;
+    inline const void *getData(std::size_t = 0) const noexcept;
+    inline void *getData(std::size_t = 0) noexcept;
+    inline std::size_t getDataSize() const noexcept;
+    inline void pickData(std::size_t) noexcept;
+    inline void dropData(std::size_t) noexcept;
+    inline void *getBuffer(std::size_t = 0) noexcept;
+    inline std::size_t getBufferSize() const noexcept;
     inline void reserveBuffer(std::size_t);
 
 private:
@@ -29,7 +29,7 @@ private:
     std::size_t readerIndex_;
     std::size_t writerIndex_;
 
-    inline void initialize();
+    inline void initialize() noexcept;
 
     Stream(const Stream &) = delete;
     Stream &operator=(const Stream &) = delete;
@@ -52,14 +52,14 @@ private:
 
 namespace siren {
 
-Stream::Stream()
+Stream::Stream() noexcept
   : readerIndex_(0),
     writerIndex_(0)
 {
 }
 
 
-Stream::Stream(Stream &&other)
+Stream::Stream(Stream &&other) noexcept
   : buffer_(std::move(other.buffer_)),
     readerIndex_(other.readerIndex_),
     writerIndex_(other.writerIndex_)
@@ -69,7 +69,7 @@ Stream::Stream(Stream &&other)
 
 
 Stream &
-Stream::operator=(Stream &&other)
+Stream::operator=(Stream &&other) noexcept
 {
     if (&other != this) {
         buffer_ = std::move(other.buffer_);
@@ -83,7 +83,7 @@ Stream::operator=(Stream &&other)
 
 
 void
-Stream::initialize()
+Stream::initialize() noexcept
 {
     readerIndex_ = 0;
     writerIndex_ = 0;
@@ -91,28 +91,28 @@ Stream::initialize()
 
 
 const void *
-Stream::getData(std::size_t dataOffset) const
+Stream::getData(std::size_t dataOffset) const noexcept
 {
     return buffer_ + readerIndex_ + dataOffset;
 }
 
 
 void *
-Stream::getData(std::size_t dataOffset)
+Stream::getData(std::size_t dataOffset) noexcept
 {
     return buffer_ + readerIndex_ + dataOffset;
 }
 
 
 std::size_t
-Stream::getDataSize() const
+Stream::getDataSize() const noexcept
 {
     return writerIndex_ - readerIndex_;
 }
 
 
 void
-Stream::pickData(std::size_t dataSize)
+Stream::pickData(std::size_t dataSize) noexcept
 {
     assert(writerIndex_ + dataSize <= buffer_.getLength());
     writerIndex_ += dataSize;
@@ -120,7 +120,7 @@ Stream::pickData(std::size_t dataSize)
 
 
 void
-Stream::dropData(std::size_t dataSize)
+Stream::dropData(std::size_t dataSize) noexcept
 {
     assert(readerIndex_ + dataSize <= writerIndex_);
     readerIndex_ += dataSize;
@@ -134,14 +134,14 @@ Stream::dropData(std::size_t dataSize)
 
 
 void *
-Stream::getBuffer(std::size_t bufferOffset)
+Stream::getBuffer(std::size_t bufferOffset) noexcept
 {
     return buffer_ + writerIndex_ + bufferOffset;
 }
 
 
 std::size_t
-Stream::getBufferSize() const
+Stream::getBufferSize() const noexcept
 {
     return buffer_.getLength() - writerIndex_;
 }

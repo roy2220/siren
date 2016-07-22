@@ -26,7 +26,7 @@ AddTest(Test *test)
 
 
 std::size_t
-RunTests()
+RunTests() noexcept
 {
     std::size_t failedTestCount = 0;
 

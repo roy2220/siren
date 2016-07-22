@@ -15,22 +15,22 @@ template <class T>
 class Buffer<T, true> final
 {
 public:
-    inline explicit Buffer();
-    inline Buffer(Buffer &&);
+    inline explicit Buffer() noexcept;
+    inline Buffer(Buffer &&) noexcept;
     inline ~Buffer();
-    inline Buffer &operator=(Buffer &&);
-    inline operator const T *() const;
-    inline operator T *();
+    inline Buffer &operator=(Buffer &&) noexcept;
+    inline operator const T *() const noexcept;
+    inline operator T *() noexcept;
 
-    inline std::size_t getLength() const;
+    inline std::size_t getLength() const noexcept;
     inline void setLength(std::size_t);
 
 private:
     T *base_;
     std::size_t length_;
 
-    inline void finalize();
-    inline void initialize();
+    inline void finalize() noexcept;
+    inline void initialize() noexcept;
 
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -54,7 +54,7 @@ private:
 namespace siren {
 
 template <class T>
-Buffer<T, true>::Buffer()
+Buffer<T, true>::Buffer() noexcept
   : base_(nullptr),
     length_(0)
 {
@@ -62,7 +62,7 @@ Buffer<T, true>::Buffer()
 
 
 template <class T>
-Buffer<T, true>::Buffer(Buffer &&other)
+Buffer<T, true>::Buffer(Buffer &&other) noexcept
   : base_(other.base_),
     length_(other.length_)
 {
@@ -79,7 +79,7 @@ Buffer<T, true>::~Buffer()
 
 template <class T>
 Buffer<T, true> &
-Buffer<T, true>::operator=(Buffer &&other)
+Buffer<T, true>::operator=(Buffer &&other) noexcept
 {
     if (&other != this) {
         finalize();
@@ -93,14 +93,14 @@ Buffer<T, true>::operator=(Buffer &&other)
 
 
 template <class T>
-Buffer<T, true>::operator const T *() const
+Buffer<T, true>::operator const T *() const noexcept
 {
     return base_;
 }
 
 
 template <class T>
-Buffer<T, true>::operator T *()
+Buffer<T, true>::operator T *() noexcept
 {
     return base_;
 }
@@ -108,7 +108,7 @@ Buffer<T, true>::operator T *()
 
 template <class T>
 void
-Buffer<T, true>::finalize()
+Buffer<T, true>::finalize() noexcept
 {
     std::free(base_);
 }
@@ -116,7 +116,7 @@ Buffer<T, true>::finalize()
 
 template <class T>
 void
-Buffer<T, true>::initialize()
+Buffer<T, true>::initialize() noexcept
 {
     base_ = nullptr;
     length_ = 0;
@@ -125,7 +125,7 @@ Buffer<T, true>::initialize()
 
 template <class T>
 std::size_t
-Buffer<T, true>::getLength() const
+Buffer<T, true>::getLength() const noexcept
 {
     return length_;
 }

@@ -92,12 +92,12 @@ class TestAssertionFailure final
   : public std::exception
 {
 public:
-    inline explicit TestAssertionFailure(const char *, unsigned int);
+    inline explicit TestAssertionFailure(const char *, unsigned int) noexcept;
 
     inline const char *what() const noexcept override;
 
-    TestAssertionFailure(TestAssertionFailure &&) = default;
-    TestAssertionFailure &operator=(TestAssertionFailure &&) = default;
+    TestAssertionFailure(TestAssertionFailure &&) noexcept = default;
+    TestAssertionFailure &operator=(TestAssertionFailure &&) noexcept = default;
 
 private:
     std::string description_;
@@ -112,7 +112,7 @@ void AddTest(Test *);
 }
 
 
-std::size_t RunTests();
+std::size_t RunTests() noexcept;
 
 }
 
@@ -135,7 +135,7 @@ Test::Test()
 }
 
 
-TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber)
+TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber) noexcept
 {
     description_ = "SIREN_TEST_ASSERT(";
     description_ += expression;

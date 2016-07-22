@@ -19,7 +19,7 @@ Heap::insertNode(Node *node)
 
 
 void
-Heap::removeNode(Node *node)
+Heap::removeNode(Node *node) noexcept
 {
     assert(node != nullptr);
     assert(node->isLinked());
@@ -40,7 +40,7 @@ Heap::removeNode(Node *node)
 
 
 void
-Heap::removeTop()
+Heap::removeTop() noexcept
 {
     assert(numberOfNodes_ >= 1);
     Node *top = nodes_[0];
@@ -54,7 +54,7 @@ Heap::removeTop()
 
 
 void
-Heap::siftUp(Node *node, std::size_t i)
+Heap::siftUp(Node *node, std::size_t i) noexcept
 {
     while (i >= 1) {
         std::size_t j = (i - 1) / 2;
@@ -72,7 +72,7 @@ Heap::siftUp(Node *node, std::size_t i)
 
 
 void
-Heap::siftDown(Node *node, std::size_t i)
+Heap::siftDown(Node *node, std::size_t i) noexcept
 {
     for (;;) {
         std::size_t j;

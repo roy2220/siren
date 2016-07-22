@@ -7,7 +7,8 @@
 namespace siren {
 
 template <class T>
-inline std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>> UnsignedToSigned(T);
+inline std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>> UnsignedToSigned(T)
+    noexcept;
 
 }
 
@@ -24,7 +25,7 @@ namespace siren {
 
 template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>>
-UnsignedToSigned(T x)
+UnsignedToSigned(T x) noexcept
 {
     typedef std::make_signed_t<T> U;
     constexpr T k1 = std::numeric_limits<U>::max();
