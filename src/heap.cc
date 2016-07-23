@@ -4,10 +4,10 @@
 namespace siren {
 
 void
-Heap::insertNode(Node *node)
+Heap::addNode(Node *node)
 {
     assert(node != nullptr);
-    assert(node->isUnlinked());
+    assert(!node->isUsed());
 
     if (numberOfNodes_ == nodes_.getLength()) {
         nodes_.setLength(numberOfNodes_ + 1);
@@ -22,7 +22,7 @@ void
 Heap::removeNode(Node *node) noexcept
 {
     assert(node != nullptr);
-    assert(node->isLinked());
+    assert(node->isUsed());
     assert(node->index_ < numberOfNodes_ && node == nodes_[node->index_]);
     std::size_t i = node->index_;
     node->initialize();

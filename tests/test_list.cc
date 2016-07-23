@@ -9,7 +9,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Insert/Replace/Remove list nodes")
+SIREN_TEST("Add/Replace/Remove list nodes")
 {
     struct Dummy : List::Node {
     };
@@ -18,8 +18,8 @@ SIREN_TEST("Insert/Replace/Remove list nodes")
     SIREN_TEST_ASSERT(l.isEmpty());
     Dummy d1;
     Dummy d2;
-    l.insertHead(&d1);
-    l.insertTail(&d2);
+    l.addHead(&d1);
+    l.addTail(&d2);
     SIREN_TEST_ASSERT(l.getHead() == &d1);
     SIREN_TEST_ASSERT(l.getTail() == &d2);
     d1.remove();
@@ -50,9 +50,9 @@ SIREN_TEST("Iterate lists")
     Dummy d2(val++);
     Dummy d3(val++);
     List l;
-    l.insertTail(&d1);
-    l.insertTail(&d2);
-    l.insertTail(&d3);
+    l.addTail(&d1);
+    l.addTail(&d2);
+    l.addTail(&d3);
 
     SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
@@ -80,9 +80,9 @@ SIREN_TEST("Iterate lists while removing nodes")
     Dummy d2(val++);
     Dummy d3(val++);
     List l;
-    l.insertTail(&d1);
-    l.insertTail(&d2);
-    l.insertTail(&d3);
+    l.addTail(&d1);
+    l.addTail(&d2);
+    l.addTail(&d3);
 
     SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
@@ -91,9 +91,9 @@ SIREN_TEST("Iterate lists while removing nodes")
     }
 
     SIREN_TEST_ASSERT(l.isEmpty());
-    l.insertTail(&d1);
-    l.insertTail(&d2);
-    l.insertTail(&d3);
+    l.addTail(&d1);
+    l.addTail(&d2);
+    l.addTail(&d3);
 
     SIREN_LIST_FOR_EACH_NODE_SAFE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
@@ -120,9 +120,9 @@ SIREN_TEST("Move lists")
     Dummy d3(val++);
     Dummy d4(val++);
     List l;
-    l.insertTail(&d1);
-    l.insertTail(&d2);
-    l.insertTail(&d3);
+    l.addTail(&d1);
+    l.addTail(&d2);
+    l.addTail(&d3);
 
     List l2 = std::move(l);
     SIREN_TEST_ASSERT(l.isEmpty());
@@ -134,9 +134,9 @@ SIREN_TEST("Move lists")
         SIREN_TEST_ASSERT(d->val == val++);
     }
 
-    l.insertTail(&d4);
+    l.addTail(&d4);
     l = std::move(l2);
-    l.insertTail(&d4);
+    l.addTail(&d4);
     val = 4;
 
     SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {

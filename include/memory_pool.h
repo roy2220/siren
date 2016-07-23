@@ -22,7 +22,7 @@ public:
 private:
     const std::size_t blockAlignment_;
     const std::size_t blockSize_;
-    std::size_t firstChunkSize_;
+    const std::size_t firstChunkSize_;
     std::size_t chunkSize_;
     std::vector<void *> chunks_;
     void *lastFreeBlock_;
@@ -30,8 +30,9 @@ private:
     std::size_t allocatedBlockCount_;
 #endif
 
-    inline void finalize() noexcept;
     inline void initialize() noexcept;
+    inline void finalize() noexcept;
+    inline void move(MemoryPool *) noexcept;
 
     void addBlocks();
 
@@ -63,16 +64,10 @@ MemoryPool::MemoryPool(std::size_t blockAlignment, std::size_t blockSize
                                                      : NextPowerOfTwo(blockAlignment)),
     blockSize_(blockSize < sizeof(void *) ? sizeof(void *)
                                           : SIREN_ALIGN(blockSize, blockAlignment_)),
-    firstChunkSize_(NextPowerOfTwo((firstChunkLength < 1 ? 1 : firstChunkLength) * blockSize_)),
-    chunkSize_(firstChunkSize_),
-    lastFreeBlock_(nullptr)
-#ifndef NDEBUG
-        ,
-    allocatedBlockCount_(0)
-#endif
-
+    firstChunkSize_(NextPowerOfTwo((firstChunkLength < 1 ? 1 : firstChunkLength) * blockSize_))
 {
     assert(blockAlignment_ <= alignof(std::max_align_t));
+    initialize();
 }
 
 
@@ -80,15 +75,9 @@ MemoryPool::MemoryPool(MemoryPool &&other) noexcept
   : blockAlignment_(other.blockAlignment_),
     blockSize_(other.blockSize_),
     firstChunkSize_(other.firstChunkSize_),
-    chunkSize_(other.chunkSize_),
-    chunks_(std::move(other.chunks_)),
-    lastFreeBlock_(other.lastFreeBlock_)
-#ifndef NDEBUG
-        ,
-    allocatedBlockCount_(other.allocatedBlockCount_)
-#endif
+    chunks_(std::move(other.chunks_))
 {
-    other.initialize();
+    other.move(this);
 }
 
 
@@ -105,14 +94,9 @@ MemoryPool::operator=(MemoryPool &&other) noexcept
         finalize();
         assert(blockAlignment_ == other.blockAlignment_);
         assert(blockSize_ == other.blockSize_);
-        firstChunkSize_ = other.firstChunkSize_;
-        chunkSize_ = other.chunkSize_;
+        assert(firstChunkSize_ == other.firstChunkSize_);
         chunks_ = std::move(other.chunks_);
-        lastFreeBlock_ = other.lastFreeBlock_;
-#ifndef NDEBUG
-        allocatedBlockCount_ = other.allocatedBlockCount_;
-#endif
-        other.initialize();
+        other.move(this);
     }
 
     return *this;
@@ -120,11 +104,13 @@ MemoryPool::operator=(MemoryPool &&other) noexcept
 
 
 void
-MemoryPool::reset() noexcept
+MemoryPool::initialize() noexcept
 {
-    finalize();
-    chunks_.clear();
-    initialize();
+    chunkSize_ = firstChunkSize_;
+    lastFreeBlock_ = nullptr;
+#ifndef NDEBUG
+    allocatedBlockCount_ = 0;
+#endif
 }
 
 
@@ -140,13 +126,23 @@ MemoryPool::finalize() noexcept
 
 
 void
-MemoryPool::initialize() noexcept
+MemoryPool::move(MemoryPool *other) noexcept
 {
-    chunkSize_ = firstChunkSize_;
-    lastFreeBlock_ = nullptr;
+    other->chunkSize_ = chunkSize_;
+    other->lastFreeBlock_ = lastFreeBlock_;
 #ifndef NDEBUG
-    allocatedBlockCount_ = 0;
+    other->allocatedBlockCount_ = allocatedBlockCount_;
 #endif
+    initialize();
+}
+
+
+void
+MemoryPool::reset() noexcept
+{
+    finalize();
+    chunks_.clear();
+    initialize();
 }
 
 

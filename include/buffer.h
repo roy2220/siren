@@ -30,8 +30,9 @@ private:
     T *base_;
     std::size_t length_;
 
-    inline void finalize() noexcept;
     inline void initialize() noexcept;
+    inline void finalize() noexcept;
+    inline void move(Buffer *) noexcept;
 
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -56,18 +57,15 @@ namespace siren {
 
 template <class T>
 Buffer<T, true>::Buffer() noexcept
-  : base_(nullptr),
-    length_(0)
 {
+    initialize();
 }
 
 
 template <class T>
 Buffer<T, true>::Buffer(Buffer &&other) noexcept
-  : base_(other.base_),
-    length_(other.length_)
 {
-    other.initialize();
+    other.move(this);
 }
 
 
@@ -84,9 +82,7 @@ Buffer<T, true>::operator=(Buffer &&other) noexcept
 {
     if (&other != this) {
         finalize();
-        base_ = other.base_;
-        length_ = other.length_;
-        other.initialize();
+        other.move(this);
     }
 
     return *this;
@@ -109,10 +105,10 @@ Buffer<T, true>::operator T *() noexcept
 
 template <class T>
 void
-Buffer<T, true>::reset() noexcept
+Buffer<T, true>::initialize() noexcept
 {
-    finalize();
-    initialize();
+    base_ = nullptr;
+    length_ = 0;
 }
 
 
@@ -126,10 +122,20 @@ Buffer<T, true>::finalize() noexcept
 
 template <class T>
 void
-Buffer<T, true>::initialize() noexcept
+Buffer<T, true>::move(Buffer *other) noexcept
 {
-    base_ = nullptr;
-    length_ = 0;
+    other->base_ = base_;
+    other->length_ = length_;
+    initialize();
+}
+
+
+template <class T>
+void
+Buffer<T, true>::reset() noexcept
+{
+    finalize();
+    initialize();
 }
 
 

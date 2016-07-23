@@ -50,8 +50,7 @@ private:
 
     inline void initialize() noexcept;
 #ifndef NDEBUG
-    inline bool isLinked() const noexcept;
-    inline bool isUnlinked() const noexcept;
+    inline bool isUsed() const noexcept;
 #endif
     inline void insert(ListNode *, ListNode *) noexcept;
 
@@ -76,14 +75,15 @@ public:
     inline const Node *getHead() const noexcept;
     inline Node *getHead() noexcept;
     inline bool isNil(const Node *) const noexcept;
-    inline void insertTail(Node *) noexcept;
-    inline void insertHead(Node *) noexcept;
+    inline void addTail(Node *) noexcept;
+    inline void addHead(Node *) noexcept;
 
 private:
     Node nil_;
 
-    inline void finalize() noexcept;
     inline void initialize() noexcept;
+    inline void finalize() noexcept;
+    inline void move(List *) noexcept;
 
     List(const List &) = delete;
     List &operator=(const List &) = delete;
@@ -103,40 +103,37 @@ private:
 namespace siren {
 
 ListNode::ListNode() noexcept
-#ifndef NDEBUG
-  : prev_(nullptr),
-    next_(nullptr)
-#endif
 {
+    initialize();
 }
 
 
-ListNode::ListNode(const ListNode &other) noexcept
+ListNode::ListNode(const ListNode &dummy) noexcept
   : ListNode()
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
 }
 
 
-ListNode::ListNode(ListNode &&other) noexcept
+ListNode::ListNode(ListNode &&dummy) noexcept
   : ListNode()
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
 }
 
 
 ListNode &
-ListNode::operator=(const ListNode &other) noexcept
+ListNode::operator=(const ListNode &dummy) noexcept
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
     return *this;
 }
 
 
 ListNode &
-ListNode::operator=(ListNode &&other) noexcept
+ListNode::operator=(ListNode &&dummy) noexcept
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
     return *this;
 }
 
@@ -153,16 +150,9 @@ ListNode::initialize() noexcept
 
 #ifndef NDEBUG
 bool
-ListNode::isLinked() const noexcept
+ListNode::isUsed() const noexcept
 {
-    return prev_ != nullptr && next_ != nullptr;
-}
-
-
-bool
-ListNode::isUnlinked() const noexcept
-{
-    return prev_ == nullptr && next_ == nullptr;
+    return prev_ != nullptr;
 }
 #endif
 
@@ -170,7 +160,7 @@ ListNode::isUnlinked() const noexcept
 const ListNode *
 ListNode::getPrev() const noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     return prev_;
 }
 
@@ -178,7 +168,7 @@ ListNode::getPrev() const noexcept
 ListNode *
 ListNode::getPrev() noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     return prev_;
 }
 
@@ -186,7 +176,7 @@ ListNode::getPrev() noexcept
 const ListNode *
 ListNode::getNext() const noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     return next_;
 }
 
@@ -194,7 +184,7 @@ ListNode::getNext() const noexcept
 ListNode *
 ListNode::getNext() noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     return next_;
 }
 
@@ -202,9 +192,9 @@ ListNode::getNext() noexcept
 void
 ListNode::insertBefore(ListNode *other) noexcept
 {
-    assert(isUnlinked());
+    assert(!isUsed());
     assert(other != nullptr);
-    assert(other->isLinked());
+    assert(other->isUsed());
     insert(other->prev_, other);
 }
 
@@ -212,9 +202,9 @@ ListNode::insertBefore(ListNode *other) noexcept
 void
 ListNode::insertAfter(ListNode *other) noexcept
 {
-    assert(isUnlinked());
+    assert(!isUsed());
     assert(other != nullptr);
-    assert(other->isLinked());
+    assert(other->isUsed());
     insert(other, other->next_);
 }
 
@@ -222,9 +212,9 @@ ListNode::insertAfter(ListNode *other) noexcept
 void
 ListNode::replace(ListNode *other) noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     assert(other != nullptr);
-    assert(other->isUnlinked());
+    assert(!other->isUsed());
     other->insert(prev_, next_);
     initialize();
 }
@@ -241,7 +231,7 @@ ListNode::insert(ListNode *prev, ListNode *next) noexcept
 void
 ListNode::remove() noexcept
 {
-    assert(isLinked());
+    assert(isUsed());
     prev_->next_ = next_;
     next_->prev_ = prev_;
     initialize();
@@ -250,19 +240,13 @@ ListNode::remove() noexcept
 
 List::List() noexcept
 {
-    nil_.prev_ = &nil_;
-    nil_.next_ = &nil_;
+    initialize();
 }
 
 
 List::List(List &&other) noexcept
 {
-    if (other.isEmpty()) {
-        initialize();
-    } else {
-        nil_.insert(other.nil_.prev_, other.nil_.next_);
-        other.initialize();
-    }
+    other.move(this);
 }
 
 
@@ -277,13 +261,7 @@ List::operator=(List &&other) noexcept
 {
     if (&other != this) {
         finalize();
-
-        if (other.isEmpty()) {
-            initialize();
-        } else {
-            nil_.insert(other.nil_.prev_, other.nil_.next_);
-            other.initialize();
-        }
+        other.move(this);
     }
 
     return *this;
@@ -291,10 +269,10 @@ List::operator=(List &&other) noexcept
 
 
 void
-List::reset() noexcept
+List::initialize() noexcept
 {
-    finalize();
-    initialize();
+    nil_.prev_ = &nil_;
+    nil_.next_ = &nil_;
 }
 
 
@@ -310,10 +288,22 @@ List::finalize() noexcept
 
 
 void
-List::initialize() noexcept
+List::move(List *other) noexcept
 {
-    nil_.prev_ = &nil_;
-    nil_.next_ = &nil_;
+    if (isEmpty()) {
+        other->initialize();
+    } else {
+        other->nil_.insert(nil_.prev_, nil_.next_);
+        initialize();
+    }
+}
+
+
+void
+List::reset() noexcept
+{
+    finalize();
+    initialize();
 }
 
 
@@ -360,19 +350,19 @@ List::isNil(const Node *node) const noexcept
 
 
 void
-List::insertTail(Node *node) noexcept
+List::addTail(Node *node) noexcept
 {
     assert(node != nullptr);
-    assert(node->isUnlinked());
+    assert(!node->isUsed());
     node->insert(getTail(), &nil_);
 }
 
 
 void
-List::insertHead(Node *node) noexcept
+List::addHead(Node *node) noexcept
 {
     assert(node != nullptr);
-    assert(node->isUnlinked());
+    assert(!node->isUsed());
     node->insert(&nil_, getHead());
 }
 

@@ -25,7 +25,7 @@ public:
     inline const Node *getTop() const noexcept;
     inline Node *getTop() noexcept;
 
-    void insertNode(Node *);
+    void addNode(Node *);
     void removeNode(Node *) noexcept;
     void removeTop() noexcept;
 
@@ -34,8 +34,9 @@ private:
     Buffer<Node *> nodes_;
     std::size_t numberOfNodes_;
 
-    inline void finalize() noexcept;
     inline void initialize() noexcept;
+    inline void finalize() noexcept;
+    inline void move(Heap *) noexcept;
 
     void siftUp(Node *, std::size_t) noexcept;
     void siftDown(Node *, std::size_t) noexcept;
@@ -61,8 +62,7 @@ private:
 
     inline void initialize() noexcept;
 #ifndef NDEBUG
-    inline bool isLinked() const noexcept;
-    inline bool isUnlinked() const noexcept;
+    inline bool isUsed() const noexcept;
 #endif
 
     friend Heap;
@@ -85,19 +85,18 @@ private:
 namespace siren {
 
 Heap::Heap(bool (*nodeOrderer)(const Node &, const Node &)) noexcept
-  : nodeOrderer_(nodeOrderer),
-    numberOfNodes_(0)
+  : nodeOrderer_(nodeOrderer)
 {
     assert(nodeOrderer_ != nullptr);
+    initialize();
 }
 
 
 Heap::Heap(Heap &&other) noexcept
   : nodeOrderer_(other.nodeOrderer_),
-    nodes_(std::move(other.nodes_)),
-    numberOfNodes_(other.numberOfNodes_)
+    nodes_(std::move(other.nodes_))
 {
-    other.initialize();
+    other.move(this);
 }
 
 
@@ -114,8 +113,7 @@ Heap::operator=(Heap &&other) noexcept
         finalize();
         assert(nodeOrderer_ == other.nodeOrderer_);
         nodes_ = std::move(other.nodes_);
-        numberOfNodes_ = other.numberOfNodes_;
-        other.initialize();
+        other.move(this);
     }
 
     return *this;
@@ -123,10 +121,9 @@ Heap::operator=(Heap &&other) noexcept
 
 
 void
-Heap::reset() noexcept
+Heap::initialize() noexcept
 {
-    finalize();
-    initialize();
+    numberOfNodes_ = 0;
 }
 
 
@@ -142,9 +139,19 @@ Heap::finalize() noexcept
 
 
 void
-Heap::initialize() noexcept
+Heap::move(Heap *other) noexcept
 {
-    numberOfNodes_ = 0;
+    other->numberOfNodes_ = numberOfNodes_;
+    initialize();
+}
+
+
+void
+Heap::reset() noexcept
+{
+    finalize();
+    nodes_.reset();
+    initialize();
 }
 
 
@@ -163,39 +170,37 @@ Heap::getTop() noexcept
 
 
 HeapNode::HeapNode() noexcept
-#ifndef NDEBUG
-  : index_(-1)
-#endif
 {
+    initialize();
 }
 
 
-HeapNode::HeapNode(const HeapNode &other) noexcept
+HeapNode::HeapNode(const HeapNode &dummy) noexcept
   : HeapNode()
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
 }
 
 
-HeapNode::HeapNode(HeapNode &&other) noexcept
+HeapNode::HeapNode(HeapNode &&dummy) noexcept
   : HeapNode()
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
 }
 
 
 HeapNode &
-HeapNode::operator=(const HeapNode &other) noexcept
+HeapNode::operator=(const HeapNode &dummy) noexcept
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
     return *this;
 }
 
 
 HeapNode &
-HeapNode::operator=(HeapNode &&other) noexcept
+HeapNode::operator=(HeapNode &&dummy) noexcept
 {
-    static_cast<void>(other);
+    static_cast<void>(dummy);
     return *this;
 }
 
@@ -211,16 +216,9 @@ HeapNode::initialize() noexcept
 
 #ifndef NDEBUG
 bool
-HeapNode::isLinked() const noexcept
+HeapNode::isUsed() const noexcept
 {
     return UnsignedToSigned(index_) >= 0;
-}
-
-
-bool
-HeapNode::isUnlinked() const noexcept
-{
-    return UnsignedToSigned(index_) < 0;
 }
 #endif
 

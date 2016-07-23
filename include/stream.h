@@ -31,6 +31,7 @@ private:
     std::size_t writerIndex_;
 
     inline void initialize() noexcept;
+    inline void move(Stream *) noexcept;
 
     Stream(const Stream &) = delete;
     Stream &operator=(const Stream &) = delete;
@@ -54,18 +55,15 @@ private:
 namespace siren {
 
 Stream::Stream() noexcept
-  : readerIndex_(0),
-    writerIndex_(0)
 {
+    initialize();
 }
 
 
 Stream::Stream(Stream &&other) noexcept
-  : buffer_(std::move(other.buffer_)),
-    readerIndex_(other.readerIndex_),
-    writerIndex_(other.writerIndex_)
+  : buffer_(std::move(other.buffer_))
 {
-    other.initialize();
+    other.move(this);
 }
 
 
@@ -74,20 +72,10 @@ Stream::operator=(Stream &&other) noexcept
 {
     if (&other != this) {
         buffer_ = std::move(other.buffer_);
-        readerIndex_ = other.readerIndex_;
-        writerIndex_ = other.writerIndex_;
-        other.initialize();
+        other.move(this);
     }
 
     return *this;
-}
-
-
-void
-Stream::reset() noexcept
-{
-    buffer_.reset();
-    initialize();
 }
 
 
@@ -96,6 +84,23 @@ Stream::initialize() noexcept
 {
     readerIndex_ = 0;
     writerIndex_ = 0;
+}
+
+
+void
+Stream::move(Stream *other) noexcept
+{
+    other->readerIndex_ = readerIndex_;
+    other->writerIndex_ = writerIndex_;
+    initialize();
+}
+
+
+void
+Stream::reset() noexcept
+{
+    buffer_.reset();
+    initialize();
 }
 
 
