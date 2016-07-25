@@ -26,6 +26,7 @@ class List;
 class ListNode
 {
 public:
+    inline bool isOnly() const noexcept;
     inline const ListNode *getPrev() const noexcept;
     inline ListNode *getPrev() noexcept;
     inline const ListNode *getNext() const noexcept;
@@ -155,6 +156,14 @@ ListNode::isUsed() const noexcept
     return prev_ != nullptr;
 }
 #endif
+
+
+bool
+ListNode::isOnly() const noexcept
+{
+    assert(isUsed());
+    return prev_ == next_;
+}
 
 
 const ListNode *
