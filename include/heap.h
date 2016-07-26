@@ -18,7 +18,6 @@ public:
 
     inline explicit Heap(bool (*)(const Node &, const Node &)) noexcept;
     inline Heap(Heap &&) noexcept;
-    inline ~Heap();
     inline Heap &operator=(Heap &&) noexcept;
 
     inline void reset() noexcept;
@@ -52,10 +51,9 @@ protected:
     inline explicit HeapNode() noexcept;
     inline HeapNode(const HeapNode &) noexcept;
     inline HeapNode(HeapNode &&) noexcept;
+    inline ~HeapNode();
     inline HeapNode &operator=(const HeapNode &) noexcept;
     inline HeapNode &operator=(HeapNode &&) noexcept;
-
-    ~HeapNode() = default;
 
 private:
     std::size_t index_;
@@ -97,12 +95,6 @@ Heap::Heap(Heap &&other) noexcept
     nodes_(std::move(other.nodes_))
 {
     other.move(this);
-}
-
-
-Heap::~Heap()
-{
-    finalize();
 }
 
 
@@ -186,6 +178,12 @@ HeapNode::HeapNode(HeapNode &&dummy) noexcept
   : HeapNode()
 {
     static_cast<void>(dummy);
+}
+
+
+HeapNode::~HeapNode()
+{
+    assert(!isUsed());
 }
 
 

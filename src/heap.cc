@@ -61,10 +61,10 @@ Heap::siftUp(Node *node, std::size_t i) noexcept
 
         if (nodeOrderer_(*nodes_[j], *node)) {
             break;
+        } else {
+            (nodes_[i] = nodes_[j])->index_ = i;
+            i = j;
         }
-
-        (nodes_[i] = nodes_[j])->index_ = i;
-        i = j;
     }
 
     (nodes_[i] = node)->index_ = i;
@@ -84,9 +84,9 @@ Heap::siftDown(Node *node, std::size_t i) noexcept
             if (j2 >= numberOfNodes_) {
                 if (j1 >= numberOfNodes_) {
                     break;
+                } else {
+                    j = j1;
                 }
-
-                j = j1;
             } else {
                 j = nodeOrderer_(*nodes_[j1], *nodes_[j2]) ? j1 : j2;
             }
@@ -94,10 +94,10 @@ Heap::siftDown(Node *node, std::size_t i) noexcept
 
         if (nodeOrderer_(*node, *nodes_[j])) {
             break;
+        } else {
+            (nodes_[i] = nodes_[j])->index_ = i;
+            i = j;
         }
-
-        (nodes_[i] = nodes_[j])->index_ = i;
-        i = j;
     }
 
     (nodes_[i] = node)->index_ = i;

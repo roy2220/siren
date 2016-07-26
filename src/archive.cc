@@ -19,9 +19,9 @@ Archive::serializeVariableLengthInteger(std::uintmax_t integer)
             auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_ - 1));
             *buffer |= k3 + 1;
             return;
+        } else {
+            serializeInteger<unsigned char>((integer >>= k2) & k3);
         }
-
-        serializeInteger<unsigned char>((integer >>= k2) & k3);
     }
 }
 
@@ -37,12 +37,12 @@ Archive::deserializeVariableLengthInteger(std::uintmax_t *integer)
     *integer = (deserializeInteger(&temp), temp & k3);
 
     for (unsigned int n = k2; n < k1; n += k2) {
-        if ((temp & (k3 + 1)) != 0) {
+        if ((temp & (k3 + 1)) == k3 + 1) {
             *integer |= -(*integer & (UINTMAX_C(1) << (n - 1)));
             return;
+        } else {
+            *integer |= static_cast<std::uintmax_t>(deserializeInteger(&temp), temp & k3) << n;
         }
-
-        *integer |= static_cast<std::uintmax_t>(deserializeInteger(&temp), temp & k3) << n;
     }
 }
 

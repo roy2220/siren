@@ -40,10 +40,9 @@ protected:
     inline explicit ListNode() noexcept;
     inline ListNode(const ListNode &) noexcept;
     inline ListNode(ListNode &&) noexcept;
+    inline ~ListNode();
     inline ListNode &operator=(const ListNode &) noexcept;
     inline ListNode &operator=(ListNode &&) noexcept;
-
-    ~ListNode() = default;
 
 private:
     ListNode *prev_;
@@ -120,6 +119,11 @@ ListNode::ListNode(ListNode &&dummy) noexcept
   : ListNode()
 {
     static_cast<void>(dummy);
+}
+
+ListNode::~ListNode()
+{
+    assert(!isUsed());
 }
 
 
@@ -261,7 +265,7 @@ List::List(List &&other) noexcept
 
 List::~List()
 {
-    finalize();
+    nil_.initialize();
 }
 
 

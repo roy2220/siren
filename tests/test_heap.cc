@@ -45,16 +45,18 @@ SIREN_TEST("Add/Remove heap nodes")
 
         if (pd == nullptr) {
             break;
+        } else {
+            h.removeTop();
+            SIREN_TEST_ASSERT(pd->val >= t);
+            t = pd->val;
         }
-
-        h.removeTop();
-        SIREN_TEST_ASSERT(pd->val >= t);
-        t = pd->val;
     }
 
     for (int i = 0; i < 1024; ++i) {
         h.addNode(&d[i]);
     }
+
+    h.reset();
 }
 
 

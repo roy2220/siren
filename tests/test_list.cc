@@ -63,6 +63,8 @@ SIREN_TEST("Iterate lists")
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
     }
+
+    l.reset();
 }
 
 
@@ -143,6 +145,8 @@ SIREN_TEST("Move lists")
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
     }
+
+    l.reset();
 }
 
 }
