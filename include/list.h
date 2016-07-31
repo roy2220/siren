@@ -1,9 +1,6 @@
 #pragma once
 
 
-#include <type_traits>
-
-
 #define SIREN_LIST_FOR_EACH_NODE_REVERSE(LIST_NODE, LIST)              \
     for (auto LIST_NODE = (LIST).getTail(); !(LIST).isNil((LIST_NODE)) \
          ; (LIST_NODE) = (LIST_NODE)->getPrev())
@@ -38,17 +35,22 @@ public:
     inline void insertAfter(ListNode *) noexcept;
     inline void remove() noexcept;
 
+protected:
+    inline explicit ListNode() noexcept;
+
+    ~ListNode() = default;
+
 private:
     ListNode *prev_;
     ListNode *next_;
 
     inline void insert(ListNode *, ListNode *) noexcept;
 
+    ListNode(const ListNode &) = delete;
+    ListNode &operator=(const ListNode &) = delete;
+
     friend List;
 };
-
-
-static_assert(std::is_pod<ListNode>::value, "");
 
 
 class List final
@@ -75,9 +77,6 @@ private:
 
     inline void initialize() noexcept;
     inline void move(List *) noexcept;
-
-    List(const List &) = delete;
-    List &operator=(const List &) = delete;
 };
 
 }
@@ -92,6 +91,11 @@ private:
 
 
 namespace siren {
+
+ListNode::ListNode() noexcept
+{
+}
+
 
 bool
 ListNode::isOnly() const noexcept

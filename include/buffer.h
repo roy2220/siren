@@ -33,9 +33,6 @@ private:
     inline void initialize() noexcept;
     inline void finalize() noexcept;
     inline void move(Buffer *) noexcept;
-
-    Buffer(const Buffer &) = delete;
-    Buffer &operator=(const Buffer &) = delete;
 };
 
 }

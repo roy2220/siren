@@ -32,9 +32,6 @@ private:
 
     inline void initialize() noexcept;
     inline void move(Stream *) noexcept;
-
-    Stream(const Stream &) = delete;
-    Stream &operator=(const Stream &) = delete;
 };
 
 }

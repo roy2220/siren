@@ -157,9 +157,6 @@ private:
     void deserializeVariableLengthInteger(std::uintmax_t *);
     void serializeBytes(const void *, std::size_t);
     void deserializeBytes(void *, std::size_t);
-
-    Archive(const Archive &) = delete;
-    Archive &operator=(const Archive &) = delete;
 };
 
 
@@ -174,9 +171,6 @@ public:
 
 private:
     inline explicit ArchiveEndOfStream() noexcept;
-
-    ArchiveEndOfStream(const ArchiveEndOfStream &) = delete;
-    ArchiveEndOfStream &operator=(const ArchiveEndOfStream &) = delete;
 
     friend Archive;
 };

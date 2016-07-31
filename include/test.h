@@ -99,9 +99,6 @@ public:
 
 private:
     std::string description_;
-
-    TestAssertionFailure(const TestAssertionFailure &) = delete;
-    TestAssertionFailure &operator=(const TestAssertionFailure &) = delete;
 };
 
 

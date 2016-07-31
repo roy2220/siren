@@ -2,7 +2,6 @@
 
 
 #include <cstddef>
-#include <type_traits>
 
 #include "buffer.h"
 
@@ -39,22 +38,24 @@ private:
 
     void siftUp(Node *, std::size_t) noexcept;
     void siftDown(Node *, std::size_t) noexcept;
-
-    Heap(const Heap &) = delete;
-    Heap &operator=(const Heap &) = delete;
 };
 
 
 class HeapNode
 {
+protected:
+    inline explicit HeapNode() noexcept;
+
+    ~HeapNode() = default;
+
 private:
     std::size_t index_;
 
+    HeapNode(const HeapNode &) = delete;
+    HeapNode &operator=(const HeapNode &) = delete;
+
     friend Heap;
 };
-
-
-static_assert(std::is_pod<HeapNode>::value, "");
 
 }
 
@@ -159,6 +160,11 @@ Heap::removeTop() noexcept
         Node *top = nodes_[numberOfNodes_];
         siftDown(top, 0);
     }
+}
+
+
+HeapNode::HeapNode() noexcept
+{
 }
 
 }

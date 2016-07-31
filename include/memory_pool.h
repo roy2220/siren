@@ -32,9 +32,6 @@ private:
     inline void move(MemoryPool *) noexcept;
 
     void makeFreeBlocks();
-
-    MemoryPool(const MemoryPool &) = delete;
-    MemoryPool &operator=(const MemoryPool &) = delete;
 };
 
 }
