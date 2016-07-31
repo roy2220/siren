@@ -4,28 +4,11 @@
 namespace siren {
 
 void
-Heap::addNode(Node *node)
-{
-    assert(node != nullptr);
-    assert(!node->isUsed());
-
-    if (numberOfNodes_ == nodes_.getLength()) {
-        nodes_.setLength(numberOfNodes_ + 1);
-    }
-
-    std::size_t i = numberOfNodes_++;
-    siftUp(node, i);
-}
-
-
-void
 Heap::removeNode(Node *node) noexcept
 {
     assert(node != nullptr);
-    assert(node->isUsed());
     assert(node->index_ < numberOfNodes_ && node == nodes_[node->index_]);
     std::size_t i = node->index_;
-    node->initialize();
 
     if (i < --numberOfNodes_) {
         node = nodes_[numberOfNodes_];
@@ -35,20 +18,6 @@ Heap::removeNode(Node *node) noexcept
         } else {
             siftDown(node, i);
         }
-    }
-}
-
-
-void
-Heap::removeTop() noexcept
-{
-    assert(numberOfNodes_ >= 1);
-    Node *top = nodes_[0];
-    top->initialize();
-
-    if (0 < --numberOfNodes_) {
-        top = nodes_[numberOfNodes_];
-        siftDown(top, 0);
     }
 }
 

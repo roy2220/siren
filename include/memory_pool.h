@@ -26,9 +26,6 @@ private:
     std::size_t chunkSize_;
     std::vector<void *> chunks_;
     void *lastFreeBlock_;
-#ifndef NDEBUG
-    std::size_t allocatedBlockCount_;
-#endif
 
     inline void initialize() noexcept;
     inline void finalize() noexcept;
@@ -108,17 +105,12 @@ MemoryPool::initialize() noexcept
 {
     chunkSize_ = firstChunkSize_;
     lastFreeBlock_ = nullptr;
-#ifndef NDEBUG
-    allocatedBlockCount_ = 0;
-#endif
 }
 
 
 void
 MemoryPool::finalize() noexcept
 {
-    assert(allocatedBlockCount_ == 0);
-
     for (void *chunk : chunks_) {
         std::free(chunk);
     }
@@ -130,9 +122,6 @@ MemoryPool::move(MemoryPool *other) noexcept
 {
     other->chunkSize_ = chunkSize_;
     other->lastFreeBlock_ = lastFreeBlock_;
-#ifndef NDEBUG
-    other->allocatedBlockCount_ = allocatedBlockCount_;
-#endif
     initialize();
 }
 
@@ -155,9 +144,6 @@ MemoryPool::allocateBlock()
 
     void *block = lastFreeBlock_;
     lastFreeBlock_ = *static_cast<void **>(block);
-#ifndef NDEBUG
-    ++allocatedBlockCount_;
-#endif
     return block;
 }
 
@@ -166,12 +152,8 @@ void
 MemoryPool::freeBlock(void *block) noexcept
 {
     if (block != nullptr) {
-        assert(allocatedBlockCount_ >= 1);
         *static_cast<void **>(block) = lastFreeBlock_;
         lastFreeBlock_ = block;
-#ifndef NDEBUG
-        --allocatedBlockCount_;
-#endif
     }
 }
 

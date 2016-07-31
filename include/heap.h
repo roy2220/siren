@@ -2,6 +2,7 @@
 
 
 #include <cstddef>
+#include <type_traits>
 
 #include "buffer.h"
 
@@ -23,10 +24,10 @@ public:
     inline void reset() noexcept;
     inline const Node *getTop() const noexcept;
     inline Node *getTop() noexcept;
+    inline void addNode(Node *);
+    inline void removeTop() noexcept;
 
-    void addNode(Node *);
     void removeNode(Node *) noexcept;
-    void removeTop() noexcept;
 
 private:
     bool (*const nodeOrderer_)(const Node &, const Node &);
@@ -34,7 +35,6 @@ private:
     std::size_t numberOfNodes_;
 
     inline void initialize() noexcept;
-    inline void finalize() noexcept;
     inline void move(Heap *) noexcept;
 
     void siftUp(Node *, std::size_t) noexcept;
@@ -47,24 +47,14 @@ private:
 
 class HeapNode
 {
-protected:
-    inline explicit HeapNode() noexcept;
-    inline HeapNode(const HeapNode &) noexcept;
-    inline HeapNode(HeapNode &&) noexcept;
-    inline ~HeapNode();
-    inline HeapNode &operator=(const HeapNode &) noexcept;
-    inline HeapNode &operator=(HeapNode &&) noexcept;
-
 private:
     std::size_t index_;
 
-    inline void initialize() noexcept;
-#ifndef NDEBUG
-    inline bool isUsed() const noexcept;
-#endif
-
     friend Heap;
 };
+
+
+static_assert(std::is_pod<HeapNode>::value, "");
 
 }
 
@@ -76,8 +66,6 @@ private:
 
 #include <cassert>
 #include <utility>
-
-#include "unsigned_to_signed.h"
 
 
 namespace siren {
@@ -102,7 +90,6 @@ Heap &
 Heap::operator=(Heap &&other) noexcept
 {
     if (&other != this) {
-        finalize();
         assert(nodeOrderer_ == other.nodeOrderer_);
         nodes_ = std::move(other.nodes_);
         other.move(this);
@@ -120,17 +107,6 @@ Heap::initialize() noexcept
 
 
 void
-Heap::finalize() noexcept
-{
-#ifndef NDEBUG
-    for (std::size_t i = 0; i < numberOfNodes_; ++i) {
-        nodes_[i]->initialize();
-    }
-#endif
-}
-
-
-void
 Heap::move(Heap *other) noexcept
 {
     other->numberOfNodes_ = numberOfNodes_;
@@ -141,7 +117,6 @@ Heap::move(Heap *other) noexcept
 void
 Heap::reset() noexcept
 {
-    finalize();
     nodes_.reset();
     initialize();
 }
@@ -161,63 +136,29 @@ Heap::getTop() noexcept
 }
 
 
-HeapNode::HeapNode() noexcept
+void
+Heap::addNode(Node *node)
 {
-    initialize();
-}
+    assert(node != nullptr);
 
+    if (numberOfNodes_ == nodes_.getLength()) {
+        nodes_.setLength(numberOfNodes_ + 1);
+    }
 
-HeapNode::HeapNode(const HeapNode &dummy) noexcept
-  : HeapNode()
-{
-    static_cast<void>(dummy);
-}
-
-
-HeapNode::HeapNode(HeapNode &&dummy) noexcept
-  : HeapNode()
-{
-    static_cast<void>(dummy);
-}
-
-
-HeapNode::~HeapNode()
-{
-    assert(!isUsed());
-}
-
-
-HeapNode &
-HeapNode::operator=(const HeapNode &dummy) noexcept
-{
-    static_cast<void>(dummy);
-    return *this;
-}
-
-
-HeapNode &
-HeapNode::operator=(HeapNode &&dummy) noexcept
-{
-    static_cast<void>(dummy);
-    return *this;
+    std::size_t i = numberOfNodes_++;
+    siftUp(node, i);
 }
 
 
 void
-HeapNode::initialize() noexcept
+Heap::removeTop() noexcept
 {
-#ifndef NDEBUG
-    index_ = -1;
-#endif
-}
+    assert(numberOfNodes_ >= 1);
 
-
-#ifndef NDEBUG
-bool
-HeapNode::isUsed() const noexcept
-{
-    return UnsignedToSigned(index_) >= 0;
+    if (--numberOfNodes_ >= 1) {
+        Node *top = nodes_[numberOfNodes_];
+        siftDown(top, 0);
+    }
 }
-#endif
 
 }

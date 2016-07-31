@@ -26,7 +26,7 @@ namespace siren {
 class List;
 
 
-struct ListNode
+class ListNode
 {
 public:
     inline bool isOnly() const noexcept;

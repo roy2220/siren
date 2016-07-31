@@ -55,8 +55,6 @@ SIREN_TEST("Add/Remove heap nodes")
     for (int i = 0; i < 1024; ++i) {
         h.addNode(&d[i]);
     }
-
-    h.reset();
 }
 
 
