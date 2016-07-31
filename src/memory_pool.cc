@@ -7,7 +7,7 @@
 namespace siren {
 
 void
-MemoryPool::addBlocks()
+MemoryPool::makeFreeBlocks()
 {
     void *chunk = std::malloc(chunkSize_);
 

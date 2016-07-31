@@ -31,7 +31,7 @@ private:
     inline void finalize() noexcept;
     inline void move(MemoryPool *) noexcept;
 
-    void addBlocks();
+    void makeFreeBlocks();
 
     MemoryPool(const MemoryPool &) = delete;
     MemoryPool &operator=(const MemoryPool &) = delete;
@@ -139,7 +139,7 @@ void *
 MemoryPool::allocateBlock()
 {
     if (lastFreeBlock_ == nullptr) {
-        addBlocks();
+        makeFreeBlocks();
     }
 
     void *block = lastFreeBlock_;
@@ -151,10 +151,9 @@ MemoryPool::allocateBlock()
 void
 MemoryPool::freeBlock(void *block) noexcept
 {
-    if (block != nullptr) {
-        *static_cast<void **>(block) = lastFreeBlock_;
-        lastFreeBlock_ = block;
-    }
+    assert(block != nullptr);
+    *static_cast<void **>(block) = lastFreeBlock_;
+    lastFreeBlock_ = block;
 }
 
 }
