@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <type_traits>
+
+
 #define SIREN_LIST_FOR_EACH_NODE_REVERSE(LIST_NODE, LIST)              \
     for (auto LIST_NODE = (LIST).getTail(); !(LIST).isNil((LIST_NODE)) \
          ; (LIST_NODE) = (LIST_NODE)->getPrev())
@@ -23,7 +26,7 @@ namespace siren {
 class List;
 
 
-class ListNode
+struct ListNode
 {
 public:
     inline bool isOnly() const noexcept;
@@ -33,29 +36,19 @@ public:
     inline ListNode *getNext() noexcept;
     inline void insertBefore(ListNode *) noexcept;
     inline void insertAfter(ListNode *) noexcept;
-    inline void replace(ListNode *) noexcept;
     inline void remove() noexcept;
-
-protected:
-    inline explicit ListNode() noexcept;
-    inline ListNode(const ListNode &) noexcept;
-    inline ListNode(ListNode &&) noexcept;
-    inline ~ListNode();
-    inline ListNode &operator=(const ListNode &) noexcept;
-    inline ListNode &operator=(ListNode &&) noexcept;
 
 private:
     ListNode *prev_;
     ListNode *next_;
 
-    inline void initialize() noexcept;
-#ifndef NDEBUG
-    inline bool isUsed() const noexcept;
-#endif
     inline void insert(ListNode *, ListNode *) noexcept;
 
     friend List;
 };
+
+
+static_assert(std::is_pod<ListNode>::value, "");
 
 
 class List final
@@ -65,7 +58,6 @@ public:
 
     inline explicit List() noexcept;
     inline List(List &&) noexcept;
-    inline ~List();
     inline List &operator=(List &&) noexcept;
 
     inline void reset() noexcept;
@@ -82,7 +74,6 @@ private:
     Node nil_;
 
     inline void initialize() noexcept;
-    inline void finalize() noexcept;
     inline void move(List *) noexcept;
 
     List(const List &) = delete;
@@ -102,70 +93,9 @@ private:
 
 namespace siren {
 
-ListNode::ListNode() noexcept
-{
-    initialize();
-}
-
-
-ListNode::ListNode(const ListNode &dummy) noexcept
-  : ListNode()
-{
-    static_cast<void>(dummy);
-}
-
-
-ListNode::ListNode(ListNode &&dummy) noexcept
-  : ListNode()
-{
-    static_cast<void>(dummy);
-}
-
-ListNode::~ListNode()
-{
-    assert(!isUsed());
-}
-
-
-ListNode &
-ListNode::operator=(const ListNode &dummy) noexcept
-{
-    static_cast<void>(dummy);
-    return *this;
-}
-
-
-ListNode &
-ListNode::operator=(ListNode &&dummy) noexcept
-{
-    static_cast<void>(dummy);
-    return *this;
-}
-
-
-void
-ListNode::initialize() noexcept
-{
-#ifndef NDEBUG
-    prev_ = nullptr;
-    next_ = nullptr;
-#endif
-}
-
-
-#ifndef NDEBUG
-bool
-ListNode::isUsed() const noexcept
-{
-    return prev_ != nullptr;
-}
-#endif
-
-
 bool
 ListNode::isOnly() const noexcept
 {
-    assert(isUsed());
     return prev_ == next_;
 }
 
@@ -173,7 +103,6 @@ ListNode::isOnly() const noexcept
 const ListNode *
 ListNode::getPrev() const noexcept
 {
-    assert(isUsed());
     return prev_;
 }
 
@@ -181,7 +110,6 @@ ListNode::getPrev() const noexcept
 ListNode *
 ListNode::getPrev() noexcept
 {
-    assert(isUsed());
     return prev_;
 }
 
@@ -189,7 +117,6 @@ ListNode::getPrev() noexcept
 const ListNode *
 ListNode::getNext() const noexcept
 {
-    assert(isUsed());
     return next_;
 }
 
@@ -197,7 +124,6 @@ ListNode::getNext() const noexcept
 ListNode *
 ListNode::getNext() noexcept
 {
-    assert(isUsed());
     return next_;
 }
 
@@ -205,9 +131,7 @@ ListNode::getNext() noexcept
 void
 ListNode::insertBefore(ListNode *other) noexcept
 {
-    assert(!isUsed());
     assert(other != nullptr);
-    assert(other->isUsed());
     insert(other->prev_, other);
 }
 
@@ -215,21 +139,8 @@ ListNode::insertBefore(ListNode *other) noexcept
 void
 ListNode::insertAfter(ListNode *other) noexcept
 {
-    assert(!isUsed());
     assert(other != nullptr);
-    assert(other->isUsed());
     insert(other, other->next_);
-}
-
-
-void
-ListNode::replace(ListNode *other) noexcept
-{
-    assert(isUsed());
-    assert(other != nullptr);
-    assert(!other->isUsed());
-    other->insert(prev_, next_);
-    initialize();
 }
 
 
@@ -244,10 +155,8 @@ ListNode::insert(ListNode *prev, ListNode *next) noexcept
 void
 ListNode::remove() noexcept
 {
-    assert(isUsed());
     prev_->next_ = next_;
     next_->prev_ = prev_;
-    initialize();
 }
 
 
@@ -263,17 +172,10 @@ List::List(List &&other) noexcept
 }
 
 
-List::~List()
-{
-    nil_.initialize();
-}
-
-
 List &
 List::operator=(List &&other) noexcept
 {
     if (&other != this) {
-        finalize();
         other.move(this);
     }
 
@@ -286,17 +188,6 @@ List::initialize() noexcept
 {
     nil_.prev_ = &nil_;
     nil_.next_ = &nil_;
-}
-
-
-void
-List::finalize() noexcept
-{
-#ifndef NDEBUG
-    SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(node, *this) {
-        node->initialize();
-    }
-#endif
 }
 
 
@@ -315,7 +206,6 @@ List::move(List *other) noexcept
 void
 List::reset() noexcept
 {
-    finalize();
     initialize();
 }
 
@@ -358,25 +248,24 @@ List::getHead() noexcept
 bool
 List::isNil(const Node *node) const noexcept
 {
+    assert(node != nullptr);
     return node == &nil_;
 }
 
 
 void
-List::addTail(Node *node) noexcept
+List::addTail(Node *tail) noexcept
 {
-    assert(node != nullptr);
-    assert(!node->isUsed());
-    node->insert(getTail(), &nil_);
+    assert(tail != nullptr);
+    tail->insert(getTail(), &nil_);
 }
 
 
 void
-List::addHead(Node *node) noexcept
+List::addHead(Node *head) noexcept
 {
-    assert(node != nullptr);
-    assert(!node->isUsed());
-    node->insert(&nil_, getHead());
+    assert(head != nullptr);
+    head->insert(&nil_, getHead());
 }
 
 }

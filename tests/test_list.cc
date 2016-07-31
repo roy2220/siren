@@ -9,7 +9,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Add/Replace/Remove list nodes")
+SIREN_TEST("Add/Remove list nodes")
 {
     struct Dummy : List::Node {
     };
@@ -29,9 +29,8 @@ SIREN_TEST("Add/Replace/Remove list nodes")
     SIREN_TEST_ASSERT(l.getTail() == &d1);
     d2.insertBefore(&d1);
     d1.remove();
-    d2.replace(&d1);
-    SIREN_TEST_ASSERT(l.getTail() == &d1);
-    d1.remove();
+    SIREN_TEST_ASSERT(l.getHead() == &d2);
+    d2.remove();
     SIREN_TEST_ASSERT(l.isEmpty());
 }
 
@@ -63,8 +62,6 @@ SIREN_TEST("Iterate lists")
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
     }
-
-    l.reset();
 }
 
 
@@ -145,8 +142,6 @@ SIREN_TEST("Move lists")
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
     }
-
-    l.reset();
 }
 
 }
