@@ -1,19 +1,19 @@
 #pragma once
 
 
-#define SIREN_LIST_FOR_EACH_NODE_REVERSE(LIST_NODE, LIST)              \
+#define SIREN_LIST_FOREACH_REVERSE(LIST_NODE, LIST)                    \
     for (auto LIST_NODE = (LIST).getTail(); !(LIST).isNil((LIST_NODE)) \
          ; (LIST_NODE) = (LIST_NODE)->getPrev())
 
-#define SIREN_LIST_FOR_EACH_NODE(LIST_NODE, LIST)                      \
+#define SIREN_LIST_FOREACH(LIST_NODE, LIST)                            \
     for (auto LIST_NODE = (LIST).getHead(); !(LIST).isNil((LIST_NODE)) \
          ; (LIST_NODE) = (LIST_NODE)->getNext())
 
-#define SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(LIST_NODE, LIST)                 \
+#define SIREN_LIST_FOREACH_SAFE_REVERSE(LIST_NODE, LIST)                       \
     for (auto LIST_NODE = (LIST).getTail(), sirenTemp = (LIST_NODE)->getPrev() \
          ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = sirenTemp, sirenTemp = (LIST_NODE)->getPrev())
 
-#define SIREN_LIST_FOR_EACH_NODE_SAFE(LIST_NODE, LIST)                         \
+#define SIREN_LIST_FOREACH_SAFE(LIST_NODE, LIST)                               \
     for (auto LIST_NODE = (LIST).getHead(), sirenTemp = (LIST_NODE)->getNext() \
          ; !(LIST).isNil((LIST_NODE)); (LIST_NODE) = sirenTemp, sirenTemp = (LIST_NODE)->getNext())
 

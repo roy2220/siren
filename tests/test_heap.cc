@@ -12,12 +12,12 @@ using namespace siren;
 
 SIREN_TEST("Add/Remove heap nodes")
 {
-    struct Dummy : Heap::Node {
+    struct Dummy : HeapNode {
         int val;
 
-        static bool OrderHeapNode(const Heap::Node &hn1, const Heap::Node &hn2) {
-            return static_cast<const Dummy &>(hn1).val <=
-                   static_cast<const Dummy &>(hn2).val;
+        static bool OrderHeapNode(const HeapNode *hn1, const HeapNode *hn2) {
+            return static_cast<const Dummy *>(hn1)->val <=
+                   static_cast<const Dummy *>(hn2)->val;
         }
     };
 
@@ -60,14 +60,15 @@ SIREN_TEST("Add/Remove heap nodes")
 
 SIREN_TEST("Move heap nodes")
 {
-    struct Dummy : Heap::Node {
+    struct Dummy : HeapNode {
         int val;
 
         Dummy(int x) : val(x) {}
+        Dummy(Dummy &&other) : val(other.val) {}
 
-        static bool OrderHeapNode(const Heap::Node &hn1, const Heap::Node &hn2) {
-            return static_cast<const Dummy &>(hn1).val <=
-                   static_cast<const Dummy &>(hn2).val;
+        static bool OrderHeapNode(const HeapNode *hn1, const HeapNode *hn2) {
+            return static_cast<const Dummy *>(hn1)->val <=
+                   static_cast<const Dummy *>(hn2)->val;
         }
     };
 

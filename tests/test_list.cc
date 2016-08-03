@@ -11,7 +11,7 @@ using namespace siren;
 
 SIREN_TEST("Add/Remove list nodes")
 {
-    struct Dummy : List::Node {
+    struct Dummy : ListNode {
     };
 
     List l;
@@ -37,7 +37,7 @@ SIREN_TEST("Add/Remove list nodes")
 
 SIREN_TEST("Iterate lists")
 {
-    struct Dummy : List::Node {
+    struct Dummy : ListNode {
         int val;
 
         Dummy(int x) : val(x) {
@@ -53,12 +53,12 @@ SIREN_TEST("Iterate lists")
     l.addTail(&d2);
     l.addTail(&d3);
 
-    SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {
+    SIREN_LIST_FOREACH_REVERSE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
     }
 
-    SIREN_LIST_FOR_EACH_NODE(ln, l) {
+    SIREN_LIST_FOREACH(ln, l) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
     }
@@ -67,7 +67,7 @@ SIREN_TEST("Iterate lists")
 
 SIREN_TEST("Iterate lists while removing nodes")
 {
-    struct Dummy : List::Node {
+    struct Dummy : ListNode {
         int val;
 
         Dummy(int x) : val(x) {
@@ -83,7 +83,7 @@ SIREN_TEST("Iterate lists while removing nodes")
     l.addTail(&d2);
     l.addTail(&d3);
 
-    SIREN_LIST_FOR_EACH_NODE_SAFE_REVERSE(ln, l) {
+    SIREN_LIST_FOREACH_SAFE_REVERSE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
         d->remove();
@@ -94,7 +94,7 @@ SIREN_TEST("Iterate lists while removing nodes")
     l.addTail(&d2);
     l.addTail(&d3);
 
-    SIREN_LIST_FOR_EACH_NODE_SAFE(ln, l) {
+    SIREN_LIST_FOREACH_SAFE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
         d->remove();
@@ -106,7 +106,7 @@ SIREN_TEST("Iterate lists while removing nodes")
 
 SIREN_TEST("Move lists")
 {
-    struct Dummy : List::Node {
+    struct Dummy : ListNode {
         int val;
 
         Dummy(int x) : val(x) {
@@ -128,7 +128,7 @@ SIREN_TEST("Move lists")
     SIREN_TEST_ASSERT(!l2.isEmpty());
     val = 0;
 
-    SIREN_LIST_FOR_EACH_NODE(ln, l2) {
+    SIREN_LIST_FOREACH(ln, l2) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == val++);
     }
@@ -138,7 +138,7 @@ SIREN_TEST("Move lists")
     l.addTail(&d4);
     val = 4;
 
-    SIREN_LIST_FOR_EACH_NODE_REVERSE(ln, l) {
+    SIREN_LIST_FOREACH_REVERSE(ln, l) {
         auto d = static_cast<Dummy *>(ln);
         SIREN_TEST_ASSERT(d->val == --val);
     }

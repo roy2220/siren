@@ -16,7 +16,7 @@ class Heap final
 public:
     typedef HeapNode Node;
 
-    inline explicit Heap(bool (*)(const Node &, const Node &)) noexcept;
+    inline explicit Heap(bool (*)(const Node *, const Node *)) noexcept;
     inline Heap(Heap &&) noexcept;
     inline Heap &operator=(Heap &&) noexcept;
 
@@ -29,7 +29,7 @@ public:
     void removeNode(Node *) noexcept;
 
 private:
-    bool (*const nodeOrderer_)(const Node &, const Node &);
+    bool (*const nodeOrderer_)(const Node *, const Node *);
     Buffer<Node *> nodes_;
     std::size_t numberOfNodes_;
 
@@ -71,7 +71,7 @@ private:
 
 namespace siren {
 
-Heap::Heap(bool (*nodeOrderer)(const Node &, const Node &)) noexcept
+Heap::Heap(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
   : nodeOrderer_(nodeOrderer)
 {
     assert(nodeOrderer_ != nullptr);
