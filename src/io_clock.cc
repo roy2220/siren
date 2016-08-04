@@ -12,7 +12,7 @@ IOClock::getExpiredTimers(std::vector<Timer *> *timers)
          ; heapNode = timerHeap_.getTop()) {
         auto timer = static_cast<Timer *>(heapNode);
 
-        if (timer->expiryTime_ > time_) {
+        if (timer->expiryTime_ > now_) {
             return;
         } else {
             timerHeap_.removeTop();
@@ -23,7 +23,7 @@ IOClock::getExpiredTimers(std::vector<Timer *> *timers)
 
 
 bool
-IOTimer::OrderHeapNode(const HeapNode *HeapNode1, const HeapNode *HeapNode2)
+IOTimer::OrderHeapNode(const HeapNode *HeapNode1, const HeapNode *HeapNode2) noexcept
 {
     auto timer1 = static_cast<const IOTimer *>(HeapNode1);
     auto timer2 = static_cast<const IOTimer *>(HeapNode2);
