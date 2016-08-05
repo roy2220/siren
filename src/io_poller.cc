@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "io_clock.h"
+#include "scope_guard.h"
 
 
 namespace siren {
@@ -22,14 +23,25 @@ const unsigned int IOEventFlags[2] = {
 
 }
 
+
 void
 IOPoller::initialize()
 {
+    ScopeGuard scopeGuard([&fd_ = fd_] () -> void {
+        if (close(fd_) < 0 && errno != EINTR) {
+            throw std::system_error(errno, std::system_category(), "close() failed");
+        }
+    });
+
     fd_ = epoll_create1(0);
 
     if (fd_ < 0) {
         throw std::system_error(errno, std::system_category(), "epoll_create1() failed");
     }
+
+    scopeGuard.commit();
+    events_.setLength(64);
+    scopeGuard.dismiss();
 }
 
 
@@ -182,20 +194,21 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     flushObjects();
     std::size_t numberOfEvents = 0;
     clock->start();
+    int timeout = clock->getDueTime().count();
 
     for (;;) {
         int result = epoll_wait(fd_, events_ + numberOfEvents, events_.getLength() - numberOfEvents
-                                , clock->getDueTime().count());
+                                , timeout);
 
         if (result >= 0) {
+            clock->stop();
             numberOfEvents += result;
 
             if (numberOfEvents == events_.getLength()) {
-                clock->stop();
                 events_.setLength(numberOfEvents + 1);
                 clock->start();
+                timeout = 0;
             } else {
-                clock->stop();
                 break;
             }
         } else {
@@ -205,6 +218,7 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
             }
 
             clock->restart();
+            timeout = clock->getDueTime().count();
         }
     }
 
@@ -213,8 +227,6 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
         auto object = static_cast<Object *>(event->data.ptr);
 
         if ((event->events & (IOEventFlags[0] | EPOLLERR | EPOLLHUP)) != 0) {
-            assert(!object->watcherLists[0].isEmpty());
-
             SIREN_LIST_FOREACH(listNode, object->watcherLists[0]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);
@@ -222,8 +234,6 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
         }
 
         if ((event->events & (IOEventFlags[1] | EPOLLERR | EPOLLHUP)) != 0) {
-            assert(!object->watcherLists[1].isEmpty());
-
             SIREN_LIST_FOREACH(listNode, object->watcherLists[1]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);

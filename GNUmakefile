@@ -60,7 +60,7 @@ endif
 
 $(BUILDDIR)/test: $(addprefix $(BUILDDIR)/,$(testobjs))
 	@mkdir -p $(@D)
-	$(CXX) -o $@ $^
+	$(CXX) -o $@ $^ -pthread
 
 
 ifneq ($(filter test,$(MAKECMDGOALS)),)
