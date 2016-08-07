@@ -27,19 +27,18 @@ const unsigned int IOEventFlags[2] = {
 void
 IOPoller::initialize()
 {
-    ScopeGuard scopeGuard([&fd_ = fd_] () -> void {
-        if (close(fd_) < 0 && errno != EINTR) {
-            throw std::system_error(errno, std::system_category(), "close() failed");
-        }
-    });
-
     fd_ = epoll_create1(0);
 
     if (fd_ < 0) {
         throw std::system_error(errno, std::system_category(), "epoll_create1() failed");
     }
 
-    scopeGuard.commit();
+    auto scopeGuard = MakeScopeGuard([fd_ = fd_] () -> void {
+        if (close(fd_) < 0 && errno != EINTR) {
+            throw std::system_error(errno, std::system_category(), "close() failed");
+        }
+    });
+
     events_.setLength(64);
     scopeGuard.dismiss();
 }

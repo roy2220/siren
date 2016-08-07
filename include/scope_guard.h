@@ -1,30 +1,36 @@
 #pragma once
 
 
-#include <functional>
-#include <utility>
+#include <type_traits>
 
 
 namespace siren {
 
-class ScopeGuard final
+template <class T, bool = std::is_nothrow_move_constructible<T>::value>
+class ScopeGuard;
+
+
+template <class T>
+class ScopeGuard<T, true> final
 {
 public:
-    template <class T>
-    inline explicit ScopeGuard(T &&);
-
+    inline explicit ScopeGuard(T &&) noexcept;
+    inline ScopeGuard(ScopeGuard &&) noexcept;
     inline ~ScopeGuard();
 
-    inline void commit() noexcept;
     inline void dismiss() noexcept;
 
 private:
-    std::function<void ()> rollback_;
-    bool committed_;
+    bool isEngaged_;
+    T rollback_;
 
-    ScopeGuard(const ScopeGuard &) = delete;
-    ScopeGuard &operator=(const ScopeGuard &) = delete;
+    inline void initialize() noexcept;
+    inline void move(ScopeGuard *) noexcept;
 };
+
+
+template <class T>
+inline ScopeGuard<std::remove_reference_t<T>> MakeScopeGuard(T &&) noexcept;
 
 }
 
@@ -34,35 +40,70 @@ private:
  */
 
 
+#include <cassert>
+#include <utility>
+
+
 namespace siren {
 
 template <class T>
-ScopeGuard::ScopeGuard(T &&rollback)
-  : rollback_(std::forward<T>(rollback)),
-    committed_(false)
+ScopeGuard<T, true>::ScopeGuard(T &&rollback) noexcept
+  : rollback_(std::move(rollback))
 {
+    initialize();
 }
 
 
-ScopeGuard::~ScopeGuard()
+template <class T>
+ScopeGuard<T, true>::ScopeGuard(ScopeGuard &&other) noexcept
+  : rollback_(std::move(other.rollback_))
 {
-    if (committed_) {
+    other.move(this);
+}
+
+
+template <class T>
+ScopeGuard<T, true>::~ScopeGuard()
+{
+    if (isEngaged_) {
         rollback_();
     }
 }
 
 
+template <class T>
 void
-ScopeGuard::commit() noexcept
+ScopeGuard<T, true>::initialize() noexcept
 {
-    committed_ = true;
+    isEngaged_ = true;
 }
 
 
+template <class T>
 void
-ScopeGuard::dismiss() noexcept
+ScopeGuard<T, true>::move(ScopeGuard *other) noexcept
 {
-    committed_ = false;
+    other->isEngaged_ = isEngaged_;
+    isEngaged_ = false;
+}
+
+
+template <class T>
+void
+ScopeGuard<T, true>::dismiss() noexcept
+{
+    assert(isEngaged_);
+    isEngaged_ = false;
+}
+
+
+template <class T>
+ScopeGuard<std::remove_reference_t<T>>
+MakeScopeGuard(T &&rollback) noexcept
+{
+    typedef std::remove_reference_t<T> U;
+
+    return ScopeGuard<U>(std::forward<T>(rollback));
 }
 
 }

@@ -46,8 +46,6 @@ private:
 #include <cstring>
 #include <utility>
 
-#include "next_power_of_two.h"
-
 
 namespace siren {
 
