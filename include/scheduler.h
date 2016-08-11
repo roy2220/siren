@@ -17,6 +17,9 @@ struct alignas(std::max_align_t) Fiber
 {
     char *stack;
     std::size_t stackSize;
+#ifdef USE_VALGRIND
+    int stackID;
+#endif
     std::function<void ()> routine;
     std::jmp_buf *context;
 };

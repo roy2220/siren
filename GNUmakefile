@@ -4,7 +4,7 @@ BUILDDIR = objs
 CPPFLAGS =
 override CPPFLAGS += -iquote include -iquote src -MMD -MT $@ -MF $(BUILDDIR)/$*.d
 CXXFLAGS =
-override CXXFLAGS += -std=c++14 -pedantic -Wall -Wextra -Werror
+override CXXFLAGS += -std=c++14 -pedantic -Wall -Wextra -Werror # -DUSE_VALGRIND
 ARFLAGS =
 override ARFLAGS += rc
 

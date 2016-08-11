@@ -4,6 +4,10 @@
 #include <cstdlib>
 #include <system_error>
 
+#ifdef USE_VALGRIND
+#include <valgrind/valgrind.h>
+#endif
+
 
 namespace siren {
 
@@ -34,6 +38,9 @@ Scheduler::allocateFiber(std::size_t fiberSize)
     auto fiber = new (base + fiberOffset) Fiber();
     fiber->stack = base + stackOffset;
     fiber->stackSize = stackSize;
+#ifdef USE_VALGRIND
+    fiber->stackID = VALGRIND_STACK_REGISTER(fiber->stack, fiber->stack + fiber->stackSize);
+#endif
     return fiber;
 }
 
@@ -46,6 +53,9 @@ Scheduler::freeFiber(Fiber *fiber) noexcept
     base = fiber->stack;
 #else
 #    error architecture not supported
+#endif
+#ifdef USE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(fiber->stackID);
 #endif
     fiber->~Fiber();
     std::free(base);
