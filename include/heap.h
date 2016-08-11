@@ -74,7 +74,7 @@ namespace siren {
 Heap::Heap(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
   : nodeOrderer_(nodeOrderer)
 {
-    assert(nodeOrderer_ != nullptr);
+    assert(nodeOrderer != nullptr);
     initialize();
 }
 

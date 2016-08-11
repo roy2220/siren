@@ -229,7 +229,7 @@ Deserializer::operator,(T &x) const
 Archive::Archive(Stream *stream) noexcept
   : stream_(stream)
 {
-    assert(stream_ != nullptr);
+    assert(stream != nullptr);
     initialize();
 }
 

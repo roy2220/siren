@@ -10,7 +10,7 @@ namespace siren {
 class MemoryPool final
 {
 public:
-    inline explicit MemoryPool(std::size_t, std::size_t, std::size_t) noexcept;
+    inline explicit MemoryPool(std::size_t, std::size_t, std::size_t = 0) noexcept;
     inline MemoryPool(MemoryPool &&) noexcept;
     inline ~MemoryPool();
     inline MemoryPool &operator=(MemoryPool &&) noexcept;
@@ -54,10 +54,10 @@ namespace siren {
 
 MemoryPool::MemoryPool(std::size_t blockAlignment, std::size_t blockSize
                        , std::size_t firstChunkLength) noexcept
-  : blockAlignment_(blockAlignment < alignof(void *) ? alignof(void *)
-                                                     : NextPowerOfTwo(blockAlignment)),
-    blockSize_(blockSize < sizeof(void *) ? sizeof(void *)
-                                          : SIREN_ALIGN(blockSize, blockAlignment_)),
+  : blockAlignment_(NextPowerOfTwo(blockAlignment < alignof(void *) ? alignof(void *)
+                                                                    : blockAlignment)),
+    blockSize_(SIREN_ALIGN(blockSize < sizeof(void *) ? sizeof(void *) : blockSize
+                           , blockAlignment_)),
     firstChunkSize_(NextPowerOfTwo((firstChunkLength < 1 ? 1 : firstChunkLength) * blockSize_))
 {
     assert(blockAlignment_ <= alignof(std::max_align_t));

@@ -109,7 +109,7 @@ enum class IOCondition
 namespace siren {
 
 IOPoller::IOPoller()
-  : objectMemoryPool_(alignof(detail::IOObject), sizeof(detail::IOObject), 64)
+  : objectMemoryPool_(alignof(Object), sizeof(Object), 64)
 {
     initialize();
 }

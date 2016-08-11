@@ -18,7 +18,7 @@ SIREN_TEST("Allocate/Free memory blocks")
         bool b;
     };
 
-    MemoryPool mp(alignof(Dummy), sizeof(Dummy), 1);
+    MemoryPool mp(alignof(Dummy), sizeof(Dummy));
     void *ps[1024];
 
     for (int i = 0; i < 1024; ++i) {
@@ -39,7 +39,7 @@ SIREN_TEST("Allocate/Free memory blocks")
 SIREN_TEST("Check memory block pointer alignments")
 {
     for (std::size_t n = 1; n < alignof(std::max_align_t); ++n) {
-        MemoryPool mp(n, n, 0);
+        MemoryPool mp(n, n);
         void *ps[32];
 
         for (int i = 0; i < 32; ++i) {
@@ -58,7 +58,7 @@ SIREN_TEST("Check memory block pointer alignments")
 
 SIREN_TEST("Move memory pools")
 {
-    MemoryPool mp(0, 0, 0);
+    MemoryPool mp(0, 0);
     void *p1 = mp.allocateBlock();
     void *p2 = mp.allocateBlock();
     void *p3 = mp.allocateBlock();
@@ -75,7 +75,7 @@ SIREN_TEST("Move memory pools")
     p3 = mp.allocateBlock();
 
     {
-        MemoryPool mp2(0, 0, 0);
+        MemoryPool mp2(0, 0);
         mp2 = std::move(mp);
         mp2.freeBlock(p1);
         mp2.freeBlock(p2);
