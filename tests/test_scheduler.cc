@@ -42,24 +42,26 @@ SIREN_TEST("Fibers yield")
     });
 
     scheduler.run();
-    SIREN_TEST_ASSERT(s == "abcabcabc");
+    SIREN_TEST_ASSERT(s == "cbacbacba");
 }
 
 
 SIREN_TEST("Suspend/Resume fibers")
 {
     Scheduler scheduler;
-    void *fh;
     int s = 0;
 
-    scheduler.createFiber([&scheduler, &s, &fh] () -> void {
-        fh = scheduler.getCurrentFiber();
+    void *fh = scheduler.createFiber([&scheduler, &s] () -> void {
         ++s;
-        scheduler.suspendCurrentFiber();
+        scheduler.suspendFiber(scheduler.getCurrentFiber());
         ++s;
         scheduler.currentFiberExits();
     });
 
+    scheduler.suspendFiber(fh);
+    scheduler.run();
+    SIREN_TEST_ASSERT(s == 0);
+    scheduler.resumeFiber(fh);
     scheduler.run();
     SIREN_TEST_ASSERT(s == 1);
     scheduler.resumeFiber(fh);

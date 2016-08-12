@@ -82,6 +82,8 @@ Scheduler::switchToFiber(Fiber *fiber) noexcept
 void
 Scheduler::runFiber(Fiber *fiber) noexcept
 {
+    fiber->state = FiberState::Running;
+    fiber->remove();
     runningFiber_ = fiber;
 
     if (fiber->context == nullptr) {
