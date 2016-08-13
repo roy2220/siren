@@ -17,31 +17,26 @@ SIREN_TEST("Fibers yield")
     scheduler.createFiber([&scheduler, &s] () -> void {
         for (int i = 0; i < 3; ++i) {
             s.push_back('a');
-            scheduler.currentFiberYields();
+            scheduler.yieldTo();
         }
-
-        scheduler.currentFiberExits();
     });
 
     scheduler.createFiber([&scheduler, &s] () -> void {
         for (int i = 0; i < 3; ++i) {
             s.push_back('b');
-            scheduler.currentFiberYields();
+            scheduler.yieldTo();
         }
-
-        scheduler.currentFiberExits();
     });
 
     scheduler.createFiber([&scheduler, &s] () -> void {
         for (int i = 0; i < 3; ++i) {
             s.push_back('c');
-            scheduler.currentFiberYields();
+            scheduler.yieldTo();
         }
-
-        scheduler.currentFiberExits();
     });
 
     scheduler.run();
+    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
     SIREN_TEST_ASSERT(s == "cbacbacba");
 }
 
@@ -55,17 +50,19 @@ SIREN_TEST("Suspend/Resume fibers")
         ++s;
         scheduler.suspendFiber(scheduler.getCurrentFiber());
         ++s;
-        scheduler.currentFiberExits();
     });
 
     scheduler.suspendFiber(fh);
     scheduler.run();
+    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
     SIREN_TEST_ASSERT(s == 0);
     scheduler.resumeFiber(fh);
     scheduler.run();
+    SIREN_TEST_ASSERT(scheduler.hasAliveFibers());
     SIREN_TEST_ASSERT(s == 1);
     scheduler.resumeFiber(fh);
     scheduler.run();
+    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
     SIREN_TEST_ASSERT(s == 2);
 }
 

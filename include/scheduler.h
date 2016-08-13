@@ -30,7 +30,7 @@ struct alignas(std::max_align_t) Fiber
 #ifdef USE_VALGRIND
     int stackID;
 #endif
-    std::function<void ()> routine;
+    std::function<void ()> procedure;
     std::jmp_buf *context;
     State state;
 };
@@ -46,14 +46,15 @@ public:
     inline ~Scheduler();
     inline Scheduler &operator=(Scheduler &&) noexcept;
 
-    inline bool allFibersHaveExited() const noexcept;
+    inline void reset() noexcept;
+    inline bool hasAliveFibers() const noexcept;
     inline void *createFiber(const std::function<void ()> &, std::size_t = 0);
     inline void *createFiber(std::function<void ()> &&, std::size_t = 0);
-    inline void *getCurrentFiber() noexcept;
     inline void suspendFiber(void *) noexcept;
     inline void resumeFiber(void *) noexcept;
-    inline void currentFiberYields() noexcept;
-    [[noreturn]] inline void currentFiberExits() noexcept;
+    inline void *getCurrentFiber() noexcept;
+    inline void yieldTo() noexcept;
+    inline void yieldToFiber(void *) noexcept;
     inline void run() noexcept;
 
 private:
@@ -62,17 +63,15 @@ private:
 
     static constexpr std::size_t MinFiberSize = 4096;
 
-    static void FiberStart(Fiber *) noexcept;
-
     const std::size_t defaultFiberSize_;
     Fiber idleFiber_;
     List runnableFiberList_;
     Fiber *runningFiber_;
-    Fiber *fiberToFree_;
-    std::size_t numberOfFibers_;
+    List suspendedFiberList_;
+    std::size_t aliveFiberCount_;
+    Fiber *deadFiber_;
 
-    inline void initialize() noexcept;
-    inline void move(Scheduler *) noexcept;
+    inline void finalize() noexcept;
 #ifndef NDEBUG
     inline bool isIdle() const noexcept;
 #endif
@@ -81,6 +80,7 @@ private:
     void freeFiber(Fiber *) noexcept;
     void switchToFiber(Fiber *) noexcept;
     [[noreturn]] void runFiber(Fiber *) noexcept;
+    [[noreturn]] void fiberStart() noexcept;
 };
 
 }
@@ -102,30 +102,29 @@ namespace siren {
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
   : defaultFiberSize_(NextPowerOfTwo(defaultFiberSize < MinFiberSize ? MinFiberSize
-                                                                     : defaultFiberSize))
+                                                                     : defaultFiberSize)),
+    runningFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
+    aliveFiberCount_(0),
+    deadFiber_(nullptr)
 {
-    idleFiber_.state = FiberState::Running;
-    runningFiber_ = &idleFiber_;
-    fiberToFree_ = nullptr;
-    initialize();
 }
 
 
 Scheduler::Scheduler(Scheduler &&other) noexcept
   : defaultFiberSize_(other.defaultFiberSize_),
-    runnableFiberList_(std::move(other.runnableFiberList_))
+    runnableFiberList_(std::move(other.runnableFiberList_)),
+    runningFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
+    aliveFiberCount_(0),
+    deadFiber_(nullptr)
 {
-    assert(other.isIdle());
-    idleFiber_.state = FiberState::Running;
-    runningFiber_ = &idleFiber_;
-    fiberToFree_ = nullptr;
-    other.move(this);
+    assert(!other.hasAliveFibers());
 }
 
 
 Scheduler::~Scheduler()
 {
-    assert(allFibersHaveExited());
+    assert(!hasAliveFibers());
+    finalize();
 }
 
 
@@ -133,10 +132,10 @@ Scheduler &
 Scheduler::operator=(Scheduler &&other) noexcept
 {
     if (&other != this) {
-        assert(allFibersHaveExited());
-        assert(other.isIdle());
+        assert(!hasAliveFibers());
+        assert(!other.hasAliveFibers());
+        finalize();
         runnableFiberList_ = std::move(other.runnableFiberList_);
-        other.move(this);
     }
 
     return *this;
@@ -144,17 +143,21 @@ Scheduler::operator=(Scheduler &&other) noexcept
 
 
 void
-Scheduler::initialize() noexcept
+Scheduler::finalize() noexcept
 {
-    numberOfFibers_ = 0;
+    SIREN_LIST_FOREACH_SAFE_REVERSE(listNode, runnableFiberList_) {
+        auto fiber = static_cast<Fiber *>(listNode);
+        freeFiber(fiber);
+    }
 }
 
 
 void
-Scheduler::move(Scheduler *other) noexcept
+Scheduler::reset() noexcept
 {
-    other->numberOfFibers_ = numberOfFibers_;
-    initialize();
+    assert(!hasAliveFibers());
+    finalize();
+    runnableFiberList_.reset();
 }
 
 
@@ -168,14 +171,14 @@ Scheduler::isIdle() const noexcept
 
 
 bool
-Scheduler::allFibersHaveExited() const noexcept
+Scheduler::hasAliveFibers() const noexcept
 {
-    return numberOfFibers_ == 0;
+    return aliveFiberCount_ >= 1;
 }
 
 
 void *
-Scheduler::createFiber(const std::function<void ()> &routine, std::size_t fiberSize)
+Scheduler::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize)
 {
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
@@ -189,18 +192,16 @@ Scheduler::createFiber(const std::function<void ()> &routine, std::size_t fiberS
         freeFiber(fiber);
     });
 
-    fiber->routine = routine;
+    fiber->procedure = procedure;
     fiber->context = nullptr;
-    fiber->state = FiberState::Runnable;
+    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
     scopeGuard.dismiss();
-    ++numberOfFibers_;
-    runnableFiberList_.addTail(fiber);
     return fiber;
 }
 
 
 void *
-Scheduler::createFiber(std::function<void ()> &&routine, std::size_t fiberSize)
+Scheduler::createFiber(std::function<void ()> &&procedure, std::size_t fiberSize)
 {
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
@@ -214,21 +215,11 @@ Scheduler::createFiber(std::function<void ()> &&routine, std::size_t fiberSize)
         freeFiber(fiber);
     });
 
-    fiber->routine = std::move(routine);
+    fiber->procedure = procedure;
     fiber->context = nullptr;
-    fiber->state = FiberState::Runnable;
+    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
     scopeGuard.dismiss();
-    ++numberOfFibers_;
-    runnableFiberList_.addTail(fiber);
     return fiber;
-}
-
-
-void *
-Scheduler::getCurrentFiber() noexcept
-{
-    assert(!isIdle());
-    return runningFiber_;
 }
 
 
@@ -239,10 +230,10 @@ Scheduler::suspendFiber(void *fiberHandle) noexcept
     auto fiber1 = static_cast<Fiber *>(fiberHandle);
 
     if (fiber1->state == FiberState::Runnable) {
-        fiber1->state = FiberState::Suspended;
-        fiber1->remove();
+        suspendedFiberList_.addTail((fiber1->state = FiberState::Suspended, fiber1->remove()
+                                     , fiber1));
     } else if (fiber1->state == FiberState::Running) {
-        fiber1->state = FiberState::Suspended;
+        suspendedFiberList_.addTail((fiber1->state = FiberState::Suspended, fiber1));
         auto fiber2 = static_cast<Fiber *>(runnableFiberList_.getTail());
         switchToFiber(fiber2);
     }
@@ -256,20 +247,26 @@ Scheduler::resumeFiber(void *fiberHandle) noexcept
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Suspended) {
-        fiber->state = FiberState::Runnable;
-        runnableFiberList_.addTail(fiber);
+        runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber->remove(), fiber));
     }
 }
 
 
+void *
+Scheduler::getCurrentFiber() noexcept
+{
+    assert(!isIdle());
+    return runningFiber_;
+}
+
+
 void
-Scheduler::currentFiberYields() noexcept
+Scheduler::yieldTo() noexcept
 {
     assert(!isIdle());
 
     if (!idleFiber_.isOnly()) {
-        runningFiber_->state = FiberState::Runnable;
-        runningFiber_->insertAfter(&idleFiber_);
+        (runningFiber_->state = FiberState::Runnable, runningFiber_)->insertAfter(&idleFiber_);
         auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
         switchToFiber(fiber);
     }
@@ -277,13 +274,16 @@ Scheduler::currentFiberYields() noexcept
 
 
 void
-Scheduler::currentFiberExits() noexcept
+Scheduler::yieldToFiber(void *fiberHandle) noexcept
 {
     assert(!isIdle());
-    fiberToFree_ = runningFiber_;
-    --numberOfFibers_;
-    auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
-    runFiber(fiber);
+    assert(fiberHandle != nullptr);
+    auto fiber = static_cast<Fiber *>(fiberHandle);
+
+    if (fiber->state == FiberState::Runnable) {
+        (runningFiber_->state = FiberState::Runnable, runningFiber_)->insertAfter(&idleFiber_);
+        switchToFiber(fiber);
+    }
 }
 
 
@@ -293,8 +293,7 @@ Scheduler::run() noexcept
     assert(isIdle());
 
     if (!runnableFiberList_.isEmpty()) {
-        idleFiber_.state = FiberState::Runnable;
-        runnableFiberList_.addHead(&idleFiber_);
+        runnableFiberList_.addHead((idleFiber_.state = FiberState::Runnable, &idleFiber_));
         auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
         switchToFiber(fiber);
     }

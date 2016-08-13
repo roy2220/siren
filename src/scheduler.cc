@@ -11,13 +11,6 @@
 
 namespace siren {
 
-void
-Scheduler::FiberStart(Fiber *fiber) noexcept
-{
-    fiber->routine();
-}
-
-
 Scheduler::Fiber *
 Scheduler::allocateFiber(std::size_t fiberSize)
 {
@@ -71,9 +64,9 @@ Scheduler::switchToFiber(Fiber *fiber) noexcept
         runningFiber_->context = &context;
         runFiber(fiber);
     } else {
-        if (fiberToFree_ != nullptr) {
-            freeFiber(fiberToFree_);
-            fiberToFree_ = nullptr;
+        if (deadFiber_ != nullptr) {
+            freeFiber(deadFiber_);
+            deadFiber_ = nullptr;
         }
     }
 }
@@ -82,11 +75,11 @@ Scheduler::switchToFiber(Fiber *fiber) noexcept
 void
 Scheduler::runFiber(Fiber *fiber) noexcept
 {
-    fiber->state = FiberState::Running;
-    fiber->remove();
-    runningFiber_ = fiber;
+    runningFiber_ = (fiber->state = FiberState::Running, fiber->remove(), fiber);
 
     if (fiber->context == nullptr) {
+        void (Scheduler::*fiberStart)() = &Scheduler::fiberStart;
+
 #if defined(__GNUG__)
         __asm__ __volatile__ (
 #    if defined(__i386__)
@@ -96,14 +89,14 @@ Scheduler::runFiber(Fiber *fiber) noexcept
             "pushl\t$0\n\t"
             "jmpl\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "r"(fiber), "r"(FiberStart)
+            : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(fiberStart)
 #    elif defined(__x86_64__)
             "movq\t$0, %%rbp\n\t"
             "movq\t%0, %%rsp\n\t"
             "pushq\t$0\n\t"
             "jmpq\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "D"(fiber), "r"(FiberStart)
+            : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(fiberStart)
 #    else
 #        error architecture not supported
 #    endif
@@ -116,6 +109,18 @@ Scheduler::runFiber(Fiber *fiber) noexcept
     } else {
         std::longjmp(*fiber->context, 1);
     }
+}
+
+
+void
+Scheduler::fiberStart() noexcept
+{
+    ++aliveFiberCount_;
+    runningFiber_->procedure();
+    deadFiber_ = runningFiber_;
+    --aliveFiberCount_;
+    auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+    runFiber(fiber);
 }
 
 }

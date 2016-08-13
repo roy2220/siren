@@ -140,8 +140,7 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
         object->pendingEventFlags &= ~IOEventFlags[i];
 
         if (!object->isDirty) {
-            object->isDirty = true;
-            dirtyObjectList_.addTail(object);
+            dirtyObjectList_.addTail((object->isDirty = true, object));
         }
     }
 }
