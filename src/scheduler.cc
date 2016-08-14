@@ -5,7 +5,7 @@
 #include <system_error>
 
 #ifdef USE_VALGRIND
-#include <valgrind/valgrind.h>
+#    include <valgrind/valgrind.h>
 #endif
 
 
@@ -116,10 +116,18 @@ void
 Scheduler::fiberStart() noexcept
 {
     ++aliveFiberCount_;
-    runningFiber_->procedure();
+    Fiber *fiber;
+
+    try {
+        runningFiber_->procedure();
+        fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+    } catch (...) {
+        exception_ = std::current_exception();
+        fiber = &idleFiber_;
+    }
+
     deadFiber_ = runningFiber_;
     --aliveFiberCount_;
-    auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
     runFiber(fiber);
 }
 

@@ -90,12 +90,9 @@ class TestAssertionFailure final
   : public std::exception
 {
 public:
-    inline explicit TestAssertionFailure(const char *, unsigned int) noexcept;
+    inline explicit TestAssertionFailure(const char *, unsigned int);
 
     inline const char *what() const noexcept override;
-
-    TestAssertionFailure(TestAssertionFailure &&) noexcept = default;
-    TestAssertionFailure &operator=(TestAssertionFailure &&) noexcept = default;
 
 private:
     std::string description_;
@@ -130,7 +127,7 @@ Test::Test()
 }
 
 
-TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber) noexcept
+TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber)
 {
     description_ = "Assert `";
     description_ += expression;

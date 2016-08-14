@@ -3,6 +3,7 @@
 
 #include <csetjmp>
 #include <cstddef>
+#include <exception>
 #include <functional>
 
 #include "list.h"
@@ -55,7 +56,7 @@ public:
     inline void *getCurrentFiber() noexcept;
     inline void yieldTo() noexcept;
     inline void yieldToFiber(void *) noexcept;
-    inline void run() noexcept;
+    inline void run();
 
 private:
     typedef detail::Fiber Fiber;
@@ -70,6 +71,7 @@ private:
     List suspendedFiberList_;
     std::size_t aliveFiberCount_;
     Fiber *deadFiber_;
+    std::exception_ptr exception_;
 
     inline void finalize() noexcept;
 #ifndef NDEBUG
@@ -161,6 +163,13 @@ Scheduler::reset() noexcept
 }
 
 
+bool
+Scheduler::hasAliveFibers() const noexcept
+{
+    return aliveFiberCount_ >= 1;
+}
+
+
 #ifndef NDEBUG
 bool
 Scheduler::isIdle() const noexcept
@@ -168,13 +177,6 @@ Scheduler::isIdle() const noexcept
     return runningFiber_ == &idleFiber_;
 }
 #endif
-
-
-bool
-Scheduler::hasAliveFibers() const noexcept
-{
-    return aliveFiberCount_ >= 1;
-}
 
 
 void *
@@ -288,7 +290,7 @@ Scheduler::yieldToFiber(void *fiberHandle) noexcept
 
 
 void
-Scheduler::run() noexcept
+Scheduler::run()
 {
     assert(isIdle());
 
@@ -296,6 +298,10 @@ Scheduler::run() noexcept
         runnableFiberList_.addHead((idleFiber_.state = FiberState::Runnable, &idleFiber_));
         auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
         switchToFiber(fiber);
+
+        if (exception_ != nullptr) {
+            std::rethrow_exception(std::move(exception_));
+        }
     }
 }
 

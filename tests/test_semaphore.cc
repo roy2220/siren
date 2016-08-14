@@ -17,9 +17,9 @@ SIREN_TEST("Up/Down semaphores")
 
     sched.createFiber([&sem, &p] () -> void {
         for (int i = 0; i < 100; ++i) {
-            sem.up();
             p.push_back(i);
-            SIREN_TEST_ASSERT(p.size() <= 10);
+            SIREN_TEST_ASSERT(p.size() <= 11);
+            sem.up();
         }
     });
 

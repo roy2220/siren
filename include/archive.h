@@ -166,9 +166,6 @@ class ArchiveEndOfStream final
 public:
     inline const char *what() const noexcept override;
 
-    ArchiveEndOfStream(ArchiveEndOfStream &&) noexcept = default;
-    ArchiveEndOfStream &operator=(ArchiveEndOfStream &&) noexcept = default;
-
 private:
     inline explicit ArchiveEndOfStream() noexcept;
 
