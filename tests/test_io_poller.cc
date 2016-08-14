@@ -26,7 +26,7 @@ SIREN_TEST("Add/Remove io watchers")
     assert(pipe2(fds, O_NONBLOCK) == 0);
     IOClock ioClock;
     IOTimerContext ioTimerContext;
-    ioClock.addTimer(&ioTimerContext, std::chrono::milliseconds(500));
+    ioClock.addTimer(&ioTimerContext, std::chrono::milliseconds(100));
     IOPoller ioPoller;
     IOWatcherContext ioWatcherContext;
     ioPoller.createObject(fds[0]);
@@ -42,7 +42,7 @@ SIREN_TEST("Add/Remove io watchers")
     assert(read(fds[0], &c, 1) == -1);
 
     std::thread t([fds] {
-        usleep(500 * 1000);
+        usleep(100 * 1000);
         char c = 'a';
         assert(write(fds[1], &c, 1) == 1);
     });
