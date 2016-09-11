@@ -56,7 +56,7 @@ Scheduler::freeFiber(Fiber *fiber) noexcept
 
 
 void
-Scheduler::switchToFiber(Fiber *fiber) noexcept
+Scheduler::switchToFiber(Fiber *fiber)
 {
     std::jmp_buf context;
 
@@ -64,10 +64,7 @@ Scheduler::switchToFiber(Fiber *fiber) noexcept
         runningFiber_->context = &context;
         runFiber(fiber);
     } else {
-        if (deadFiber_ != nullptr) {
-            freeFiber(deadFiber_);
-            deadFiber_ = nullptr;
-        }
+        onFiberRun();
     }
 }
 
@@ -113,13 +110,31 @@ Scheduler::runFiber(Fiber *fiber) noexcept
 
 
 void
+Scheduler::onFiberRun()
+{
+    if (deadFiber_ != nullptr) {
+        freeFiber(deadFiber_);
+        deadFiber_ = nullptr;
+    }
+
+    if (runningFiber_->isInterrupted) {
+        runningFiber_->isInterrupted = false;
+        throw FiberInterruption();
+    }
+}
+
+
+void
 Scheduler::fiberStart() noexcept
 {
-    ++aliveFiberCount_;
     Fiber *fiber;
+    ++aliveFiberCount_;
 
     try {
+        onFiberRun();
         runningFiber_->procedure();
+        fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+    } catch (const FiberInterruption &) {
         fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
     } catch (...) {
         exception_ = std::current_exception();

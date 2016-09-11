@@ -23,15 +23,30 @@ SIREN_TEST("Up/Down semaphores")
         }
     });
 
-    sched.createFiber([&sem, &p] () -> void {
+    void *fh = sched.createFiber([&sem, &p] () -> void {
         for (int i = 0; i < 100; ++i) {
             sem.down();
             SIREN_TEST_ASSERT(!p.empty());
             p.pop_front();
         }
+
+        try {
+            sem.down();
+        } catch (const FiberInterruption &) {
+            throw 2349;
+        }
     });
 
     sched.run();
+    int i = 0;
+
+    try {
+        sched.interruptFiber(fh);
+    } catch (int x) {
+        i = x;
+    }
+
+    SIREN_TEST_ASSERT(i == 2349);
 }
 
 

@@ -1,12 +1,47 @@
 #include <string>
 
 #include "scheduler.h"
+#include "scope_guard.h"
 #include "test.h"
 
 
 namespace {
 
 using namespace siren;
+
+
+SIREN_TEST("Interrupt fibers")
+{
+    int i = 3;
+
+    {
+        Scheduler scheduler;
+
+        void *fh = scheduler.createFiber([&scheduler, &i] () -> void {
+            auto sg = MakeScopeGuard([&i] () -> void { --i; });
+            scheduler.suspendFiber(scheduler.getCurrentFiber());
+        });
+
+        scheduler.run();
+        scheduler.interruptFiber(fh);
+        SIREN_TEST_ASSERT(i == 2);
+
+        scheduler.createFiber([&scheduler, &i] () -> void {
+            auto sg = MakeScopeGuard([&i] () -> void { --i; });
+            scheduler.suspendFiber(scheduler.getCurrentFiber());
+        });
+
+        scheduler.createFiber([&scheduler, &i] () -> void {
+            auto sg = MakeScopeGuard([&i] () -> void { --i; });
+            scheduler.suspendFiber(scheduler.getCurrentFiber());
+        });
+
+        scheduler.run();
+        SIREN_TEST_ASSERT(scheduler.hasAliveFibers());
+    }
+
+    SIREN_TEST_ASSERT(i == 0);
+}
 
 
 SIREN_TEST("Fibers yield")

@@ -31,8 +31,8 @@ public:
     inline Semaphore &operator=(Semaphore &&) noexcept;
 
     inline void reset() noexcept;
-    inline void up() noexcept;
-    inline void down() noexcept;
+    inline void up();
+    inline void down();
     inline bool tryUp() noexcept;
     inline bool tryDown() noexcept;
 
@@ -149,14 +149,14 @@ Semaphore::isWaited() const noexcept
 
 
 void
-Semaphore::up() noexcept
+Semaphore::up()
 {
     if (value_ == maxValue_) {
         {
             Waiter waiter;
             upWaiterList_.addTail(&waiter);
+            auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
             scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
-            waiter.remove();
         }
 
         if (++value_ < maxValue_ && !upWaiterList_.isEmpty()) {
@@ -178,14 +178,14 @@ Semaphore::up() noexcept
 
 
 void
-Semaphore::down() noexcept
+Semaphore::down()
 {
     if (value_ == minValue_) {
         {
             Waiter waiter;
             downWaiterList_.addTail(&waiter);
+            auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
             scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
-            waiter.remove();
         }
 
         if (--value_ > minValue_ && !downWaiterList_.isEmpty()) {

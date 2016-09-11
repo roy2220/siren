@@ -27,7 +27,7 @@ public:
     inline ~Event();
 
     inline void trigger() noexcept;
-    inline void waitFor() noexcept;
+    inline void waitFor();
 
 private:
     typedef detail::EventWaiter Waiter;
@@ -54,6 +54,7 @@ private:
 #include <cassert>
 
 #include "scheduler.h"
+#include "scope_guard.h"
 
 
 namespace siren {
@@ -91,12 +92,12 @@ Event::trigger() noexcept
 
 
 void
-Event::waitFor() noexcept
+Event::waitFor()
 {
     Waiter waiter;
     waiterList_.addTail(&waiter);
+    auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
     scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
-    waiter.remove();
 }
 
 }
