@@ -7,11 +7,11 @@ void
 Heap::removeNode(Node *node) noexcept
 {
     assert(node != nullptr);
-    assert(node->index_ < numberOfNodes_ && node == nodes_[node->index_]);
+    assert(node->index_ < nodeCount_ && node == nodes_[node->index_]);
     std::size_t i = node->index_;
 
-    if (i < --numberOfNodes_) {
-        node = nodes_[numberOfNodes_];
+    if (i < --nodeCount_) {
+        node = nodes_[nodeCount_];
 
         if (nodeOrderer_(node, nodes_[i])) {
             siftUp(node, i);
@@ -50,14 +50,14 @@ Heap::siftDown(Node *node, std::size_t i) noexcept
             std::size_t j1 = (2 * i) + 1;
             std::size_t j2 = j1 + 1;
 
-            if (j2 >= numberOfNodes_) {
-                if (j1 >= numberOfNodes_) {
-                    break;
+            if (j1 < nodeCount_) {
+                if (j2 < nodeCount_) {
+                    j = nodeOrderer_(nodes_[j1], nodes_[j2]) ? j1 : j2;
                 } else {
                     j = j1;
                 }
             } else {
-                j = nodeOrderer_(nodes_[j1], nodes_[j2]) ? j1 : j2;
+                break;
             }
         }
 

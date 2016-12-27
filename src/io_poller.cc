@@ -53,7 +53,9 @@ IOPoller::finalize()
         }
 
         for (Object *object : objects_) {
-            if (object != nullptr) {
+            if (object == nullptr) {
+                continue;
+            } else {
                 object->~IOObject();
             }
         }
@@ -190,26 +192,15 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     assert(clock != nullptr);
     assert(watchers != nullptr);
     flushObjects();
-    std::size_t numberOfEvents = 0;
+    std::size_t eventCount = 0;
     clock->start();
     int timeout = clock->getDueTime().count();
 
     for (;;) {
-        int result = epoll_wait(fd_, events_ + numberOfEvents, events_.getLength() - numberOfEvents
-                                , timeout);
+        int numberOfEvents = epoll_wait(fd_, events_ + eventCount, events_.getLength() - eventCount
+                                        , timeout);
 
-        if (result >= 0) {
-            clock->stop();
-            numberOfEvents += result;
-
-            if (numberOfEvents == events_.getLength()) {
-                events_.setLength(numberOfEvents + 1);
-                clock->start();
-                timeout = 0;
-            } else {
-                break;
-            }
-        } else {
+        if (numberOfEvents < 0) {
             if (errno != EINTR) {
                 clock->stop();
                 throw std::system_error(errno, std::system_category(), "epoll_wait() failed");
@@ -217,10 +208,21 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
 
             clock->restart();
             timeout = clock->getDueTime().count();
+        } else {
+            clock->stop();
+            eventCount += numberOfEvents;
+
+            if (eventCount < events_.getLength()) {
+                break;
+            } else {
+                events_.setLength(eventCount + 1);
+                clock->start();
+                timeout = 0;
+            }
         }
     }
 
-    for (std::size_t i = 0; i < numberOfEvents; ++i) {
+    for (std::size_t i = 0; i < eventCount; ++i) {
         epoll_event *event = &events_[i];
         auto object = static_cast<Object *>(event->data.ptr);
 

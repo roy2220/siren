@@ -151,22 +151,26 @@ Semaphore::isWaited() const noexcept
 void
 Semaphore::up()
 {
-    if (value_ == maxValue_) {
+    if (value_ < maxValue_) {
+        if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
+            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+            scheduler_->suspendFiber(waiter->fiberHandle);
+        }
+    } else {
         {
             Waiter waiter;
             upWaiterList_.addTail(&waiter);
-            auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
+
+            auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+                waiter.remove();
+            });
+
             scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
         }
 
         if (++value_ < maxValue_ && !upWaiterList_.isEmpty()) {
             auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
             scheduler_->resumeFiber(waiter->fiberHandle);
-        }
-    } else {
-        if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
-            scheduler_->suspendFiber(waiter->fiberHandle);
         }
     }
 
@@ -184,7 +188,11 @@ Semaphore::down()
         {
             Waiter waiter;
             downWaiterList_.addTail(&waiter);
-            auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
+
+            auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+                waiter.remove();
+            });
+
             scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
         }
 
@@ -209,9 +217,7 @@ Semaphore::down()
 bool
 Semaphore::tryUp() noexcept
 {
-    if (value_ == maxValue_) {
-        return false;
-    } else {
+    if (value_ < maxValue_) {
         if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
             auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
             scheduler_->suspendFiber(waiter->fiberHandle);
@@ -223,6 +229,8 @@ Semaphore::tryUp() noexcept
         }
 
         return true;
+    } else {
+        return false;
     }
 }
 

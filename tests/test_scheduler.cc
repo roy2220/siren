@@ -37,7 +37,7 @@ SIREN_TEST("Interrupt fibers")
         });
 
         scheduler.run();
-        SIREN_TEST_ASSERT(scheduler.hasAliveFibers());
+        SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() >= 1) ;
     }
 
     SIREN_TEST_ASSERT(i == 0);
@@ -71,7 +71,7 @@ SIREN_TEST("Fibers yield")
     });
 
     scheduler.run();
-    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
+    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 0);
     SIREN_TEST_ASSERT(s == "cbacbacba");
 }
 
@@ -89,15 +89,15 @@ SIREN_TEST("Suspend/Resume fibers")
 
     scheduler.suspendFiber(fh);
     scheduler.run();
-    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
+    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 0);
     SIREN_TEST_ASSERT(s == 0);
     scheduler.resumeFiber(fh);
     scheduler.run();
-    SIREN_TEST_ASSERT(scheduler.hasAliveFibers());
+    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() >= 1);
     SIREN_TEST_ASSERT(s == 1);
     scheduler.resumeFiber(fh);
     scheduler.run();
-    SIREN_TEST_ASSERT(!scheduler.hasAliveFibers());
+    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 0);
     SIREN_TEST_ASSERT(s == 2);
 }
 

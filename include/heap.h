@@ -31,7 +31,7 @@ public:
 private:
     bool (*const nodeOrderer_)(const Node *, const Node *);
     Buffer<Node *> nodes_;
-    std::size_t numberOfNodes_;
+    std::size_t nodeCount_;
 
     inline void initialize() noexcept;
     inline void move(Heap *) noexcept;
@@ -103,14 +103,14 @@ Heap::operator=(Heap &&other) noexcept
 void
 Heap::initialize() noexcept
 {
-    numberOfNodes_ = 0;
+    nodeCount_ = 0;
 }
 
 
 void
 Heap::move(Heap *other) noexcept
 {
-    other->numberOfNodes_ = numberOfNodes_;
+    other->nodeCount_ = nodeCount_;
     initialize();
 }
 
@@ -126,14 +126,14 @@ Heap::reset() noexcept
 const Heap::Node *
 Heap::getTop() const noexcept
 {
-    return numberOfNodes_ == 0 ? nullptr : nodes_[0];
+    return nodeCount_ == 0 ? nullptr : nodes_[0];
 }
 
 
 Heap::Node *
 Heap::getTop() noexcept
 {
-    return numberOfNodes_ == 0 ? nullptr : nodes_[0];
+    return nodeCount_ == 0 ? nullptr : nodes_[0];
 }
 
 
@@ -142,11 +142,11 @@ Heap::addNode(Node *node)
 {
     assert(node != nullptr);
 
-    if (numberOfNodes_ == nodes_.getLength()) {
-        nodes_.setLength(numberOfNodes_ + 1);
+    if (nodeCount_ == nodes_.getLength()) {
+        nodes_.setLength(nodeCount_ + 1);
     }
 
-    std::size_t i = numberOfNodes_++;
+    std::size_t i = nodeCount_++;
     siftUp(node, i);
 }
 
@@ -154,10 +154,10 @@ Heap::addNode(Node *node)
 void
 Heap::removeTop() noexcept
 {
-    assert(numberOfNodes_ >= 1);
+    assert(nodeCount_ >= 1);
 
-    if (--numberOfNodes_ >= 1) {
-        Node *top = nodes_[numberOfNodes_];
+    if (--nodeCount_ >= 1) {
+        Node *top = nodes_[nodeCount_];
         siftDown(top, 0);
     }
 }

@@ -44,6 +44,7 @@ private:
 
 #include <cassert>
 #include <cstdlib>
+#include <algorithm>
 #include <utility>
 
 #include "helper_macros.h"
@@ -54,11 +55,9 @@ namespace siren {
 
 MemoryPool::MemoryPool(std::size_t blockAlignment, std::size_t blockSize
                        , std::size_t firstChunkLength) noexcept
-  : blockAlignment_(NextPowerOfTwo(blockAlignment < alignof(void *) ? alignof(void *)
-                                                                    : blockAlignment)),
-    blockSize_(SIREN_ALIGN(blockSize < sizeof(void *) ? sizeof(void *) : blockSize
-                           , blockAlignment_)),
-    firstChunkSize_(NextPowerOfTwo((firstChunkLength < 1 ? 1 : firstChunkLength) * blockSize_))
+  : blockAlignment_(std::max(NextPowerOfTwo(blockAlignment), alignof(void *))),
+    blockSize_(SIREN_ALIGN(std::max(blockSize, sizeof(void *)), blockAlignment_)),
+    firstChunkSize_(std::max(NextPowerOfTwo(firstChunkLength), std::size_t(1)) * blockSize_)
 {
     assert(blockAlignment_ <= alignof(std::max_align_t));
     initialize();

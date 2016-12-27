@@ -49,7 +49,7 @@ public:
     inline Scheduler &operator=(Scheduler &&) noexcept;
 
     inline void reset() noexcept;
-    inline bool hasAliveFibers() const noexcept;
+    inline std::size_t getNumberOfAliveFibers() const noexcept;
     inline void suspendFiber(void *);
     inline void resumeFiber(void *) noexcept;
     inline void interruptFiber(void *);
@@ -103,6 +103,7 @@ class FiberInterruption
 
 
 #include <cassert>
+#include <algorithm>
 #include <utility>
 
 #include "next_power_of_two.h"
@@ -112,8 +113,7 @@ class FiberInterruption
 namespace siren {
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
-  : defaultFiberSize_(NextPowerOfTwo(defaultFiberSize < MinFiberSize ? MinFiberSize
-                                                                     : defaultFiberSize)),
+  : defaultFiberSize_(std::max(defaultFiberSize, std::size_t(MinFiberSize))),
     runningFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     aliveFiberCount_(0),
     deadFiber_(nullptr)
@@ -130,7 +130,7 @@ Scheduler::Scheduler(Scheduler &&other) noexcept
     aliveFiberCount_(0),
     deadFiber_(nullptr)
 {
-    assert(!other.hasAliveFibers());
+    assert(other.aliveFiberCount_ == 0);
     idleFiber_.isInterrupted = false;
 }
 
@@ -147,7 +147,7 @@ Scheduler::operator=(Scheduler &&other) noexcept
 {
     if (&other != this) {
         assert(isIdle());
-        assert(!other.hasAliveFibers());
+        assert(other.aliveFiberCount_ == 0);
         finalize();
         runnableFiberList_ = std::move(other.runnableFiberList_);
         suspendedFiberList_ = std::move(other.suspendedFiberList_);
@@ -178,7 +178,7 @@ Scheduler::finalize()
         }
     }
 
-    if (hasAliveFibers()) {
+    if (aliveFiberCount_ >= 1) {
         std::terminate();
     }
 }
@@ -193,10 +193,10 @@ Scheduler::reset() noexcept
 }
 
 
-bool
-Scheduler::hasAliveFibers() const noexcept
+std::size_t
+Scheduler::getNumberOfAliveFibers() const noexcept
 {
-    return aliveFiberCount_ >= 1;
+    return aliveFiberCount_;
 }
 
 
@@ -317,7 +317,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize)
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
-        fiberSize = NextPowerOfTwo(fiberSize < MinFiberSize ? MinFiberSize : fiberSize);
+        fiberSize = std::max(fiberSize, std::size_t(MinFiberSize));
     }
 
     Fiber *fiber = allocateFiber(fiberSize);

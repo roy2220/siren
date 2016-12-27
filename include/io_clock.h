@@ -69,6 +69,7 @@ private:
 
 
 #include <cassert>
+#include <algorithm>
 #include <utility>
 
 
@@ -162,7 +163,7 @@ IOClock::getDueTime() const noexcept
         return std::chrono::milliseconds(-1);
     } else {
         auto timer = static_cast<const IOTimer *>(heapNode);
-        return timer->expiryTime_ > now_ ? timer->expiryTime_ - now_ : std::chrono::milliseconds(0);
+        return std::max(timer->expiryTime_ - now_, std::chrono::milliseconds(0));
     }
 }
 
@@ -171,7 +172,13 @@ void
 IOClock::addTimer(Timer *timer, std::chrono::milliseconds interval)
 {
     assert(timer != nullptr);
-    timer->expiryTime_ = now_ + interval;
+
+    if (interval.count() < 0) {
+        timer->expiryTime_ = std::chrono::milliseconds::max();
+    } else {
+        timer->expiryTime_ = now_ + interval;
+    }
+
     timerHeap_.addNode(timer);
 }
 

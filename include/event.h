@@ -96,7 +96,11 @@ Event::waitFor()
 {
     Waiter waiter;
     waiterList_.addTail(&waiter);
-    auto scopeGuard = MakeScopeGuard([&waiter] () -> void { waiter.remove(); });
+
+    auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+        waiter.remove();
+    });
+
     scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
 }
 
