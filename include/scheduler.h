@@ -50,8 +50,6 @@ public:
 
     inline void reset() noexcept;
     inline bool hasAliveFibers() const noexcept;
-    inline void *createFiber(const std::function<void ()> &, std::size_t = 0);
-    inline void *createFiber(std::function<void ()> &&, std::size_t = 0);
     inline void suspendFiber(void *);
     inline void resumeFiber(void *) noexcept;
     inline void interruptFiber(void *);
@@ -59,6 +57,9 @@ public:
     inline void yieldTo();
     inline void yieldToFiber(void *);
     inline void run();
+
+    template <class T>
+    inline void *createFiber(T &&, std::size_t = 0);
 
 private:
     typedef detail::Fiber Fiber;
@@ -208,54 +209,6 @@ Scheduler::isIdle() const noexcept
 #endif
 
 
-void *
-Scheduler::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize)
-{
-    if (fiberSize == 0) {
-        fiberSize = defaultFiberSize_;
-    } else {
-        fiberSize = NextPowerOfTwo(fiberSize < MinFiberSize ? MinFiberSize : fiberSize);
-    }
-
-    Fiber *fiber = allocateFiber(fiberSize);
-
-    auto scopeGuard = MakeScopeGuard([this, fiber] () -> void {
-        freeFiber(fiber);
-    });
-
-    fiber->procedure = procedure;
-    fiber->context = nullptr;
-    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
-    scopeGuard.dismiss();
-    fiber->isInterrupted = false;
-    return fiber;
-}
-
-
-void *
-Scheduler::createFiber(std::function<void ()> &&procedure, std::size_t fiberSize)
-{
-    if (fiberSize == 0) {
-        fiberSize = defaultFiberSize_;
-    } else {
-        fiberSize = NextPowerOfTwo(fiberSize < MinFiberSize ? MinFiberSize : fiberSize);
-    }
-
-    Fiber *fiber = allocateFiber(fiberSize);
-
-    auto scopeGuard = MakeScopeGuard([this, fiber] () -> void {
-        freeFiber(fiber);
-    });
-
-    fiber->procedure = procedure;
-    fiber->context = nullptr;
-    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
-    scopeGuard.dismiss();
-    fiber->isInterrupted = false;
-    return fiber;
-}
-
-
 void
 Scheduler::suspendFiber(void *fiberHandle)
 {
@@ -354,6 +307,31 @@ Scheduler::run()
             std::rethrow_exception(std::move(exception_));
         }
     }
+}
+
+
+template <class T>
+void *
+Scheduler::createFiber(T &&procedure, std::size_t fiberSize)
+{
+    if (fiberSize == 0) {
+        fiberSize = defaultFiberSize_;
+    } else {
+        fiberSize = NextPowerOfTwo(fiberSize < MinFiberSize ? MinFiberSize : fiberSize);
+    }
+
+    Fiber *fiber = allocateFiber(fiberSize);
+
+    auto scopeGuard = MakeScopeGuard([this, fiber] () -> void {
+        freeFiber(fiber);
+    });
+
+    fiber->procedure = std::forward<T>(procedure);
+    fiber->context = nullptr;
+    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
+    scopeGuard.dismiss();
+    fiber->isInterrupted = false;
+    return fiber;
 }
 
 }
