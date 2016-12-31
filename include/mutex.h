@@ -38,7 +38,7 @@ private:
 namespace siren {
 
 Mutex::Mutex(Scheduler *scheduler) noexcept
-  : semaphore_(scheduler, 0, 1, 1)
+  : semaphore_(scheduler, 0, 0, 1)
 {
 }
 
@@ -53,14 +53,14 @@ Mutex::reset() noexcept
 void
 Mutex::lock() noexcept
 {
-    semaphore_.down();
+    semaphore_.up();
 }
 
 
 void
 Mutex::unlock() noexcept
 {
-    semaphore_.up();
+    semaphore_.down();
 }
 
 

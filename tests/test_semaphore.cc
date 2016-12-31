@@ -12,7 +12,7 @@ using namespace siren;
 SIREN_TEST("Up/Down semaphores")
 {
     Scheduler sched;
-    Semaphore sem(&sched, 0, 10, 0);
+    Semaphore sem(&sched, 0, 0, 10);
     std::list<int> p;
 
     sched.createFiber([&sem, &p] () -> void {
@@ -53,7 +53,7 @@ SIREN_TEST("Up/Down semaphores")
 SIREN_TEST("Try up/down semaphores")
 {
     Scheduler sched;
-    Semaphore sem(&sched, -1, 2, 1);
+    Semaphore sem(&sched, 1, -1, 2);
     SIREN_TEST_ASSERT(sem.tryDown());
     SIREN_TEST_ASSERT(sem.tryUp());
     SIREN_TEST_ASSERT(sem.tryDown());

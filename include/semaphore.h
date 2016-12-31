@@ -2,6 +2,7 @@
 
 
 #include <cstdint>
+#include <limits>
 
 #include "list.h"
 
@@ -25,7 +26,8 @@ struct SemaphoreWaiter
 class Semaphore final
 {
 public:
-    inline explicit Semaphore(Scheduler *, std::intmax_t, std::intmax_t, std::intmax_t) noexcept;
+    inline explicit Semaphore(Scheduler *, std::intmax_t = 0, std::intmax_t = 0
+                              , std::intmax_t = std::numeric_limits<std::intmax_t>::max()) noexcept;
     inline Semaphore(Semaphore &&) noexcept;
     inline ~Semaphore();
     inline Semaphore &operator=(Semaphore &&) noexcept;
@@ -42,9 +44,9 @@ private:
     Scheduler *const scheduler_;
     List upWaiterList_;
     List downWaiterList_;
+    const std::intmax_t initialValue_;
     const std::intmax_t minValue_;
     const std::intmax_t maxValue_;
-    const std::intmax_t initialValue_;
     std::intmax_t value_;
 
     inline void initialize() noexcept;
@@ -69,12 +71,12 @@ private:
 
 namespace siren {
 
-Semaphore::Semaphore(Scheduler *scheduler, std::intmax_t minValue, std::intmax_t maxValue
-                     , std::intmax_t initialValue) noexcept
+Semaphore::Semaphore(Scheduler *scheduler, std::intmax_t initialValue, std::intmax_t minValue
+                     , std::intmax_t maxValue) noexcept
   : scheduler_(scheduler),
+    initialValue_(initialValue),
     minValue_(minValue),
-    maxValue_(maxValue),
-    initialValue_(initialValue)
+    maxValue_(maxValue)
 {
     assert(scheduler != nullptr);
     assert(initialValue >= minValue);
@@ -85,9 +87,9 @@ Semaphore::Semaphore(Scheduler *scheduler, std::intmax_t minValue, std::intmax_t
 
 Semaphore::Semaphore(Semaphore &&other) noexcept
   : scheduler_(other.scheduler_),
+    initialValue_(other.initialValue_),
     minValue_(other.minValue_),
-    maxValue_(other.maxValue_),
-    initialValue_(other.initialValue_)
+    maxValue_(other.maxValue_)
 {
     assert(!other.isWaited());
     other.move(this);
@@ -106,9 +108,9 @@ Semaphore::operator=(Semaphore &&other) noexcept
     if (&other != this) {
         assert(!isWaited());
         assert(!other.isWaited());
+        assert(initialValue_ == other.initialValue_);
         assert(minValue_ == other.minValue_);
         assert(maxValue_ == other.maxValue_);
-        assert(initialValue_ == other.initialValue_);
         other.move(this);
     }
 
