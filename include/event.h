@@ -24,7 +24,9 @@ class Event final
 {
 public:
     inline explicit Event(Scheduler *) noexcept;
+    inline Event(Event &&) noexcept;
     inline ~Event();
+    inline Event &operator=(Event &&) noexcept;
 
     inline void trigger() noexcept;
     inline void waitFor();
@@ -34,9 +36,6 @@ private:
 
     Scheduler *scheduler_;
     List waiterList_;
-
-    Event(const Event &) = delete;
-    Event &operator=(const Event &) = delete;
 
 #ifndef NDEBUG
     inline bool isWaited() const noexcept;
@@ -66,9 +65,27 @@ Event::Event(Scheduler *scheduler) noexcept
 }
 
 
+Event::Event(Event &&other) noexcept
+  : scheduler_(other.scheduler_)
+{
+    assert(!other.isWaited());
+}
+
+
 Event::~Event()
 {
     assert(!isWaited());
+}
+
+
+Event &Event::operator=(Event &&other) noexcept
+{
+    if (&other != this) {
+        assert(!isWaited());
+        assert(!other.isWaited());
+    }
+
+    return *this;
 }
 
 
