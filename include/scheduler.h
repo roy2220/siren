@@ -106,14 +106,15 @@ class FiberInterruption
 #include <algorithm>
 #include <utility>
 
-#include "next_power_of_two.h"
+#include "helper_macros.h"
 #include "scope_guard.h"
 
 
 namespace siren {
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
-  : defaultFiberSize_(std::max(defaultFiberSize, std::size_t(MinFiberSize))),
+  : defaultFiberSize_(std::max(SIREN_ALIGN(defaultFiberSize, alignof(std::max_align_t))
+                               , std::size_t(MinFiberSize))),
     runningFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     aliveFiberCount_(0),
     deadFiber_(nullptr)
@@ -314,6 +315,8 @@ template <class T>
 void *
 Scheduler::createFiber(T &&procedure, std::size_t fiberSize)
 {
+    fiberSize = SIREN_ALIGN(fiberSize, alignof(std::max_align_t));
+
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
