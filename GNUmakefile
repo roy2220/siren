@@ -2,7 +2,7 @@ PREFIX = /usr/local
 BUILDDIR = objs
 
 CPPFLAGS =
-override CPPFLAGS += -iquote include -iquote src -MMD -MT $@ -MF $(BUILDDIR)/$*.d
+override CPPFLAGS += -iquote include -iquote src -MMD -MT $@ -MF $(BUILDDIR)/$*.d # -DUSE_VALGRIND
 CXXFLAGS = -g -O0
 override CXXFLAGS += -std=c++14 -pedantic -Wall -Wextra -Werror
 ARFLAGS =

@@ -1,10 +1,11 @@
-#include "loop.h"
-#include "test.h"
+#include <cstdlib>
+#include <cstring>
 
 #include <fcntl.h>
 #include <unistd.h>
-#include <cstdlib>
-#include <stdio.h>
+
+#include "loop.h"
+#include "test.h"
 
 
 namespace {
@@ -19,6 +20,7 @@ SIREN_TEST("Read/Write loop pipe")
     loop.pipe(fds);
     int dummySize = fcntl(fds[1], F_GETPIPE_SZ, 0);
     void *dummy = std::malloc(dummySize);
+    std::memset(dummy, 0, dummySize);
 
     loop.createFiber([&] () -> void {
         while (loop.read(fds[0], dummy, dummySize) >= 1) {}
