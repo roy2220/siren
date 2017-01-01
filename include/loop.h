@@ -22,8 +22,8 @@ class Loop final
 public:
     inline explicit Loop(std::size_t = 0);
 
-    inline void *createFiber(const std::function<void ()> &, std::size_t = 0);
-    inline void *createFiber(std::function<void ()> &&, std::size_t = 0);
+    inline void *createFiber(const std::function<void ()> &, std::size_t = 0, bool = false);
+    inline void *createFiber(std::function<void ()> &&, std::size_t = 0, bool = false);
     inline void interruptFiber(void *);
     inline void yieldToScheduler();
     inline Event makeEvent() noexcept;
@@ -41,7 +41,7 @@ public:
     ~Loop() = default;
     Loop &operator=(Loop &&) noexcept = default;
 
-    void run(std::size_t = 1);
+    void run();
     int open(const char *, int, mode_t);
     int pipe2(int [2], int);
     ssize_t read(int, void *, size_t, int = -1);
@@ -86,16 +86,18 @@ Loop::Loop(std::size_t defaultFiberSize)
 
 
 void *
-Loop::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize)
+Loop::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize
+                  , bool fiberIsBackground)
 {
-    return scheduler_.createFiber(procedure, fiberSize);
+    return scheduler_.createFiber(procedure, fiberSize, fiberIsBackground);
 }
 
 
 void *
-Loop::createFiber(std::function<void ()> &&procedure, std::size_t fiberSize)
+Loop::createFiber(std::function<void ()> &&procedure, std::size_t fiberSize
+                  , bool fiberIsBackground)
 {
-    return scheduler_.createFiber(std::move(procedure), fiberSize);
+    return scheduler_.createFiber(std::move(procedure), fiberSize, fiberIsBackground);
 }
 
 

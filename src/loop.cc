@@ -30,7 +30,7 @@ struct MyIOTimer
 
 
 void
-Loop::run(std::size_t leastNumberOfAliveFibers)
+Loop::run()
 {
     std::vector<IOWatcher *> ioWatchers;
     std::vector<IOTimer *> ioTimers;
@@ -38,7 +38,7 @@ Loop::run(std::size_t leastNumberOfAliveFibers)
     for (;;) {
         scheduler_.run();
 
-        if (scheduler_.getNumberOfAliveFibers() < leastNumberOfAliveFibers) {
+        if (scheduler_.getNumberOfForegroundFibers() == 0) {
             break;
         } else {
             ioPoller_.getReadyWatchers(&ioClock_, &ioWatchers);

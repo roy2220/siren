@@ -24,15 +24,15 @@ SIREN_TEST("Wait for/Trigger events")
     }
 
     sched.run();
-    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() >= 1);
+    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() == 3);
     s = 1;
     e.trigger();
     sched.run();
-    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() >= 1);
+    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() == 2);
     s = 2;
     e.trigger();
     sched.run();
-    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() >= 1);
+    SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() == 1);
     s = 3;
     e.trigger();
     sched.run();

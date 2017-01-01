@@ -113,7 +113,7 @@ void
 Scheduler::onFiberRun()
 {
     if (deadFiber_ != nullptr) {
-        freeFiber(deadFiber_);
+        destroyFiber(deadFiber_);
         deadFiber_ = nullptr;
     }
 
@@ -128,7 +128,7 @@ void
 Scheduler::fiberStart() noexcept
 {
     Fiber *fiber;
-    ++aliveFiberCount_;
+    ++activeFiberCount_;
 
     try {
         onFiberRun();
@@ -141,8 +141,8 @@ Scheduler::fiberStart() noexcept
         fiber = &idleFiber_;
     }
 
+    --activeFiberCount_;
     deadFiber_ = runningFiber_;
-    --aliveFiberCount_;
     runFiber(fiber);
 }
 

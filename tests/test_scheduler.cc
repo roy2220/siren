@@ -1,4 +1,4 @@
-#include <string>
+#include <utility>
 
 #include "scheduler.h"
 #include "scope_guard.h"
@@ -36,8 +36,11 @@ SIREN_TEST("Interrupt fibers")
             scheduler.suspendFiber(scheduler.getCurrentFiber());
         });
 
+        SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 2) ;
+        SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 0) ;
         scheduler.run();
-        SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() >= 1) ;
+        SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 2) ;
+        SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 2) ;
     }
 
     SIREN_TEST_ASSERT(i == 0);
@@ -87,18 +90,55 @@ SIREN_TEST("Suspend/Resume fibers")
         ++s;
     });
 
+    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 1);
     scheduler.suspendFiber(fh);
+    SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 0);
     scheduler.run();
-    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 0);
+    SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 0);
     SIREN_TEST_ASSERT(s == 0);
     scheduler.resumeFiber(fh);
     scheduler.run();
-    SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() >= 1);
+    SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 1);
     SIREN_TEST_ASSERT(s == 1);
     scheduler.resumeFiber(fh);
     scheduler.run();
+    SIREN_TEST_ASSERT(scheduler.getNumberOfActiveFibers() == 0);
     SIREN_TEST_ASSERT(scheduler.getNumberOfAliveFibers() == 0);
     SIREN_TEST_ASSERT(s == 2);
+}
+
+
+SIREN_TEST("Create background fibers")
+{
+    int s = 1;
+
+    {
+        Scheduler sched;
+
+        {
+            Scheduler temp;
+            temp.createFiber([] () -> void {});
+
+            temp.createFiber([&sched, &s] () -> void {
+                ++s;
+                auto sg = MakeScopeGuard([&s] () -> void { --s; });
+                sched.suspendFiber(sched.getCurrentFiber());
+            }, 0, true);
+
+            sched = std::move(temp);
+        }
+
+        SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() == 2);
+        SIREN_TEST_ASSERT(sched.getNumberOfForegroundFibers() == 1);
+        SIREN_TEST_ASSERT(sched.getNumberOfActiveFibers() == 0);
+        sched.run();
+        SIREN_TEST_ASSERT(sched.getNumberOfAliveFibers() == 1);
+        SIREN_TEST_ASSERT(sched.getNumberOfForegroundFibers() == 0);
+        SIREN_TEST_ASSERT(sched.getNumberOfActiveFibers() == 1);
+        SIREN_TEST_ASSERT(s == 2);
+    }
+
+    SIREN_TEST_ASSERT(s == 1);
 }
 
 }
