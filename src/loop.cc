@@ -1,11 +1,13 @@
 #include "loop.h"
 
+#include <cassert>
 #include <cerrno>
 #include <functional>
 #include <system_error>
 
 #include <fcntl.h>
 
+#include "helper_macros.h"
 #include "scope_guard.h"
 
 
@@ -25,6 +27,9 @@ struct MyIOTimer
 {
     std::function<void ()> callback;
 };
+
+
+bool SetBlocking(int, bool);
 
 }
 
@@ -62,6 +67,42 @@ Loop::run()
 }
 
 
+void
+Loop::registerFD(int fd)
+{
+    {
+        bool ok = SetBlocking(fd, false);
+        SIREN_UNUSED(ok);
+        assert(ok);
+    }
+
+    auto scopeGuard = MakeScopeGuard([fd] () -> void {
+        SetBlocking(fd, true);
+    });
+
+    ioPoller_.createObject(fd);
+    scopeGuard.dismiss();
+}
+
+
+void
+Loop::unregisterFD(int fd)
+{
+    {
+        bool ok = SetBlocking(fd, true);
+        SIREN_UNUSED(ok);
+        assert(ok);
+    }
+
+    auto scopeGuard = MakeScopeGuard([fd] () -> void {
+        SetBlocking(fd, false);
+    });
+
+    ioPoller_.destroyObject(fd);
+    scopeGuard.dismiss();
+}
+
+
 int
 Loop::open(const char *path, int flags, mode_t mode)
 {
@@ -75,7 +116,7 @@ Loop::open(const char *path, int flags, mode_t mode)
                 return -1;
             }
         } else {
-            auto scopeGuard = MakeScopeGuard([this, fd] () -> void {
+            auto scopeGuard = MakeScopeGuard([fd] () -> void {
                 if (::close(fd) < 0 && errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "close() failed");
                 }
@@ -95,7 +136,7 @@ Loop::pipe2(int fds[2], int flags)
     if (::pipe2(fds, flags | O_NONBLOCK) < 0) {
         return -1;
     } else {
-        auto scopeGuard1 = MakeScopeGuard([this, &fds] () -> void {
+        auto scopeGuard1 = MakeScopeGuard([fds] () -> void {
             if (::close(fds[0]) < 0 && errno != EINTR) {
                 throw std::system_error(errno, std::system_category(), "close() failed");
             }
@@ -107,7 +148,7 @@ Loop::pipe2(int fds[2], int flags)
 
         ioPoller_.createObject(fds[0]);
 
-        auto scopeGuard2 = MakeScopeGuard([this, &fds] () -> void {
+        auto scopeGuard2 = MakeScopeGuard([this, fds] () -> void {
             ioPoller_.destroyObject(fds[0]);
         });
 
@@ -231,7 +272,7 @@ Loop::socket(int domain, int type, int protocol)
     if (fd < 0) {
         return -1;
     } else {
-        auto scopeGuard = MakeScopeGuard([this, fd] () -> void {
+        auto scopeGuard = MakeScopeGuard([fd] () -> void {
             if (::close(fd) < 0 && errno != EINTR) {
                 throw std::system_error(errno, std::system_category(), "close() failed");
             }
@@ -264,7 +305,7 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
                 return -1;
             }
         } else {
-            auto scopeGuard = MakeScopeGuard([this, subFD] () -> void {
+            auto scopeGuard = MakeScopeGuard([subFD] () -> void {
                 if (::close(subFD) < 0 && errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "close() failed");
                 }
@@ -518,6 +559,41 @@ Loop::setDelay(std::chrono::milliseconds duration)
     (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
                                                     = scheduler_.getCurrentFiber());
     scopeGuard.dismiss();
+}
+
+
+namespace {
+
+bool
+SetBlocking(int fd, bool blocking)
+{
+    int flags = fcntl(fd, F_GETFL);
+
+    if (flags < 0) {
+        throw std::system_error(errno, std::system_category(), "fcntl() failed");
+    }
+
+    if ((flags & O_NONBLOCK) == O_NONBLOCK) {
+        if (blocking) {
+            flags &= ~O_NONBLOCK;
+        } else {
+            return false;
+        }
+    } else {
+        if (blocking) {
+            return false;
+        } else {
+            flags |= O_NONBLOCK;
+        }
+    }
+
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        throw std::system_error(errno, std::system_category(), "fcntl() failed");
+    }
+
+    return true;
+}
+
 }
 
 }

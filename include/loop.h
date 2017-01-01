@@ -42,6 +42,8 @@ public:
     Loop &operator=(Loop &&) noexcept = default;
 
     void run();
+    void registerFD(int);
+    void unregisterFD(int);
     int open(const char *, int, mode_t);
     int pipe2(int [2], int);
     ssize_t read(int, void *, size_t, int = -1);

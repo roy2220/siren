@@ -15,3 +15,6 @@
 
 #define SIREN_ALIGN(X, Y) \
     (((X) + (Y) - 1) & ~((Y) - 1))
+
+#define SIREN_UNUSED(X) \
+    ((void)(X))

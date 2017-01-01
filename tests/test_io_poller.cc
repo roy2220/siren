@@ -1,9 +1,11 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "helper_macros.h"
 #include "io_clock.h"
 #include "io_poller.h"
 #include "test.h"
@@ -22,8 +24,11 @@ SIREN_TEST("Add/Remove io watchers")
     struct IOWatcherContext : IOWatcher {
     };
 
+    int r;
+    SIREN_UNUSED(r);
     int fds[2];
-    assert(pipe2(fds, O_NONBLOCK) == 0);
+    r = pipe2(fds, O_NONBLOCK);
+    assert(r == 0);
     IOClock ioClock;
     IOTimerContext ioTimerContext;
     ioClock.addTimer(&ioTimerContext, std::chrono::milliseconds(100));
@@ -39,12 +44,15 @@ SIREN_TEST("Add/Remove io watchers")
     SIREN_TEST_ASSERT(expiredTimers.size() == 1);
     SIREN_TEST_ASSERT(expiredTimers[0] == &ioTimerContext);
     char c;
-    assert(read(fds[0], &c, 1) == -1);
+    r = read(fds[0], &c, 1);
+    assert(r == -1);
 
     std::thread t([fds] {
         usleep(100 * 1000);
         char c = 'a';
-        assert(write(fds[1], &c, 1) == 1);
+        int r = write(fds[1], &c, 1);
+        SIREN_UNUSED(r);
+        assert(r == 1);
     });
 
     ioPoller.getReadyWatchers(&ioClock, &readyWatchers);

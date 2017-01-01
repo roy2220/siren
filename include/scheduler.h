@@ -82,9 +82,9 @@ private:
     Fiber *deadFiber_;
     std::exception_ptr exception_;
 
-    inline void initialize();
+    inline void initialize() noexcept;
     inline void finalize();
-    inline void move(Scheduler *);
+    inline void move(Scheduler *) noexcept;
 #ifndef NDEBUG
     inline bool isIdle() const noexcept;
 #endif
@@ -99,7 +99,7 @@ private:
 };
 
 
-class FiberInterruption
+struct FiberInterruption
 {
 };
 
@@ -171,7 +171,7 @@ Scheduler::operator=(Scheduler &&other) noexcept
 
 
 void
-Scheduler::initialize()
+Scheduler::initialize() noexcept
 {
     aliveFiberCount_ = 0;
     backgroundFiberCount_ = 0;
@@ -206,7 +206,7 @@ Scheduler::finalize()
 
 
 void
-Scheduler::move(Scheduler *other)
+Scheduler::move(Scheduler *other) noexcept
 {
     other->aliveFiberCount_ = aliveFiberCount_;
     other->backgroundFiberCount_ = backgroundFiberCount_;
@@ -219,7 +219,6 @@ Scheduler::reset() noexcept
 {
     assert(isIdle());
     finalize();
-    initialize();
 }
 
 
