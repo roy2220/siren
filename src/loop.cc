@@ -1,6 +1,5 @@
 #include "loop.h"
 
-#include <cassert>
 #include <cerrno>
 #include <functional>
 #include <system_error>

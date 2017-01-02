@@ -34,7 +34,7 @@ public:
 private:
     typedef detail::EventWaiter Waiter;
 
-    Scheduler *scheduler_;
+    Scheduler *const scheduler_;
     List waiterList_;
 
 #ifndef NDEBUG
