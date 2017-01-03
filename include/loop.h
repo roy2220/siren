@@ -25,6 +25,7 @@ public:
     inline void *createFiber(const std::function<void ()> &, std::size_t = 0, bool = false);
     inline void *createFiber(std::function<void ()> &&, std::size_t = 0, bool = false);
     inline void interruptFiber(void *);
+    inline void *getCurrentFiber() noexcept;
     inline void yieldToScheduler();
     inline Event makeEvent() noexcept;
     inline Mutex makeMutex() noexcept;
@@ -110,6 +111,13 @@ void
 Loop::interruptFiber(void *fiberHandle)
 {
     return scheduler_.interruptFiber(fiberHandle);
+}
+
+
+void *
+Loop::getCurrentFiber() noexcept
+{
+    return scheduler_.getCurrentFiber();
 }
 
 

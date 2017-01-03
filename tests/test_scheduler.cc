@@ -22,7 +22,6 @@ SIREN_TEST("Interrupt fibers")
             scheduler.suspendFiber(scheduler.getCurrentFiber());
         });
 
-        scheduler.run();
         scheduler.interruptFiber(fh);
         SIREN_TEST_ASSERT(i == 2);
 

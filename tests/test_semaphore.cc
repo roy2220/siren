@@ -32,7 +32,7 @@ SIREN_TEST("Up/Down semaphores")
 
         try {
             sem.down();
-        } catch (const FiberInterruption &) {
+        } catch (FiberInterruption) {
             throw 2349;
         }
     });

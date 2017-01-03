@@ -498,14 +498,14 @@ Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeo
             IOClock *ioClock;
             void *fiberHandle;
             Scheduler *scheduler;
-            bool oK;
+            bool ok;
         } context;
 
         context.myIOWatcher.callback = [&context] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
             context.ioClock->removeTimer(&context.myIOTimer);
             context.scheduler->resumeFiber(context.fiberHandle);
-            context.oK = true;
+            context.ok = true;
         };
 
         (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioCondition);
@@ -517,7 +517,7 @@ Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeo
         context.myIOTimer.callback = [&context] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
             context.scheduler->resumeFiber(context.fiberHandle);
-            context.oK = false;
+            context.ok = false;
         };
 
         (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, timeout);
@@ -530,7 +530,7 @@ Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeo
                                                         = scheduler_.getCurrentFiber());
         scopeGuard1.dismiss();
         scopeGuard2.dismiss();
-        return context.oK;
+        return context.ok;
     }
 }
 
