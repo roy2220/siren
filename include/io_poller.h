@@ -54,13 +54,14 @@ public:
 private:
     typedef detail::IOObject Object;
 
-    int fd_;
+    int epollFD_;
     MemoryPool objectMemoryPool_;
     std::vector<detail::IOObject *> objects_;
     List dirtyObjectList_;
     Buffer<epoll_event> events_;
 
     inline void move(IOPoller *) noexcept;
+    inline bool isValid() const noexcept;
 #ifndef NDEBUG
     inline bool objectExists(int) const noexcept;
 #endif
@@ -150,8 +151,15 @@ IOPoller::operator=(IOPoller &&other) noexcept
 void
 IOPoller::move(IOPoller *other) noexcept
 {
-    other->fd_ = fd_;
-    fd_ = -1;
+    other->epollFD_ = epollFD_;
+    epollFD_ = -1;
+}
+
+
+bool
+IOPoller::isValid() const noexcept
+{
+    return epollFD_ >= 0;
 }
 
 

@@ -27,14 +27,14 @@ const unsigned int IOEventFlags[2] = {
 void
 IOPoller::initialize()
 {
-    fd_ = epoll_create1(0);
+    epollFD_ = epoll_create1(0);
 
-    if (fd_ < 0) {
+    if (epollFD_ < 0) {
         throw std::system_error(errno, std::system_category(), "epoll_create1() failed");
     }
 
-    auto scopeGuard = MakeScopeGuard([fd_ = fd_] () -> void {
-        if (close(fd_) < 0 && errno != EINTR) {
+    auto scopeGuard = MakeScopeGuard([epollFD_ = epollFD_] () -> void {
+        if (close(epollFD_) < 0 && errno != EINTR) {
             throw std::system_error(errno, std::system_category(), "close() failed");
         }
     });
@@ -47,8 +47,8 @@ IOPoller::initialize()
 void
 IOPoller::finalize()
 {
-    if (fd_ >= 0) {
-        if (close(fd_) < 0 && errno != EINTR) {
+    if (isValid()) {
+        if (close(epollFD_) < 0 && errno != EINTR) {
             throw std::system_error(errno, std::system_category(), "close() failed");
         }
 
@@ -66,7 +66,7 @@ IOPoller::finalize()
 void
 IOPoller::createObject(int objectFd)
 {
-    assert(fd_ >= 0);
+    assert(isValid());
     assert(objectFd >= 0);
     assert(!objectExists(objectFd));
 
@@ -85,13 +85,13 @@ IOPoller::createObject(int objectFd)
 void
 IOPoller::destroyObject(int objectFd)
 {
-    assert(fd_ >= 0);
+    assert(isValid());
     assert(objectFd >= 0);
     assert(objectExists(objectFd));
     Object *object = objects_[objectFd];
 
     if (object->eventFlags != 0) {
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, objectFd, nullptr) < 0) {
+        if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, objectFd, nullptr) < 0) {
             throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
         }
     }
@@ -108,7 +108,7 @@ IOPoller::destroyObject(int objectFd)
 void
 IOPoller::addWatcher(Watcher *watcher, int objectFd, Condition condition) noexcept
 {
-    assert(fd_ >= 0);
+    assert(isValid());
     assert(watcher != nullptr);
     assert(objectFd >= 0);
     assert(objectExists(objectFd));
@@ -130,7 +130,7 @@ IOPoller::addWatcher(Watcher *watcher, int objectFd, Condition condition) noexce
 void
 IOPoller::removeWatcher(Watcher *watcher) noexcept
 {
-    assert(fd_ >= 0);
+    assert(isValid());
     assert(watcher != nullptr);
     assert(watcher->objectFd_ >= 0);
     assert(objectExists(watcher->objectFd_));
@@ -171,7 +171,7 @@ IOPoller::flushObjects()
             event.events = object->pendingEventFlags | EPOLLET;
             event.data.ptr = object;
 
-            if (epoll_ctl(fd_, op, object->fd, &event) < 0) {
+            if (epoll_ctl(epollFD_, op, object->fd, &event) < 0) {
                 throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
             }
 
@@ -188,7 +188,7 @@ IOPoller::flushObjects()
 void
 IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
 {
-    assert(fd_ >= 0);
+    assert(isValid());
     assert(clock != nullptr);
     assert(watchers != nullptr);
     flushObjects();
@@ -197,8 +197,8 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     int timeout = clock->getDueTime().count();
 
     for (;;) {
-        int numberOfEvents = epoll_wait(fd_, events_ + eventCount, events_.getLength() - eventCount
-                                        , timeout);
+        int numberOfEvents = epoll_wait(epollFD_, events_ + eventCount
+                                        , events_.getLength() - eventCount, timeout);
 
         if (numberOfEvents < 0) {
             if (errno != EINTR) {

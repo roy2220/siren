@@ -69,6 +69,7 @@ public:
 
     inline explicit Archive(Stream *) noexcept;
     inline Archive(Archive &&) noexcept;
+    inline ~Archive();
     inline Archive &operator=(Archive &&) noexcept;
 
     template <class T>
@@ -137,15 +138,16 @@ public:
     template <class T>
     inline std::enable_if_t<std::is_class<T>::value, Archive &> operator>>(T &);
 
-    inline void flush() noexcept;
-
 private:
     Stream *stream_;
     std::size_t writtenByteCount_;
     std::size_t readByteCount_;
 
     inline void initialize() noexcept;
+    inline void finalize() noexcept;
     inline void move(Archive *) noexcept;
+    inline bool isValid() const noexcept;
+    inline void reset() noexcept;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
@@ -181,6 +183,7 @@ private:
 
 
 #include <cassert>
+#include <exception>
 #include <limits>
 
 #include "stream.h"
@@ -238,6 +241,12 @@ Archive::Archive(Archive &&other) noexcept
 }
 
 
+Archive::~Archive()
+{
+    finalize();
+}
+
+
 Archive &
 Archive::operator=(Archive &&other) noexcept
 {
@@ -254,7 +263,7 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator<<(T integer)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeInteger(integer);
     return *this;
 }
@@ -264,7 +273,7 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator>>(T &integer)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     deserializeInteger(&integer);
     return *this;
 }
@@ -276,7 +285,7 @@ Archive::operator<<(T integer)
 {
     typedef std::make_unsigned_t<T> U;
 
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeInteger<U>(integer);
     return *this;
 }
@@ -288,7 +297,7 @@ Archive::operator>>(T &integer)
 {
     typedef std::make_unsigned_t<T> U;
 
-    assert(stream_ != nullptr);
+    assert(isValid());
     U temp;
     integer = UnsignedToSigned((deserializeInteger(&temp), temp));
     return *this;
@@ -301,7 +310,7 @@ Archive::operator<<(T enumerator)
 {
     typedef std::underlying_type_t<T> U;
 
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator<<(static_cast<U>(enumerator));
     return *this;
 }
@@ -313,7 +322,7 @@ Archive::operator>>(T &enumerator)
 {
     typedef std::underlying_type_t<T> U;
 
-    assert(stream_ != nullptr);
+    assert(isValid());
     U temp;
     enumerator = static_cast<T>(operator>>(temp), temp);
     return *this;
@@ -323,7 +332,7 @@ Archive::operator>>(T &enumerator)
 Archive &
 Archive::operator<<(bool boolean)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator<<(static_cast<unsigned char>(boolean));
     return *this;
 }
@@ -332,7 +341,7 @@ Archive::operator<<(bool boolean)
 Archive &
 Archive::operator>>(bool &boolean)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     unsigned char temp;
     boolean = (operator>>(temp), temp);
     return *this;
@@ -346,7 +355,7 @@ static_assert(sizeof(float) == sizeof(std::uint32_t) && alignof(float) == aligno
 Archive &
 Archive::operator<<(float floatingPoint)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator<<(reinterpret_cast<std::uint32_t &>(floatingPoint));
     return *this;
 }
@@ -355,7 +364,7 @@ Archive::operator<<(float floatingPoint)
 Archive &
 Archive::operator>>(float &floatingPoint)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator>>(reinterpret_cast<std::uint32_t &>(floatingPoint));
     return *this;
 }
@@ -368,7 +377,7 @@ static_assert(sizeof(double) == sizeof(std::uint64_t) && alignof(double) == alig
 Archive &
 Archive::operator<<(double floatingPoint)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator<<(reinterpret_cast<std::uint64_t &>(floatingPoint));
     return *this;
 }
@@ -377,7 +386,7 @@ Archive::operator<<(double floatingPoint)
 Archive &
 Archive::operator>>(double &floatingPoint)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     operator>>(reinterpret_cast<std::uint64_t &>(floatingPoint));
     return *this;
 }
@@ -387,7 +396,7 @@ template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeBytes(array, N);
     return *this;
 }
@@ -397,7 +406,7 @@ template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     deserializeBytes(array, N);
     return *this;
 }
@@ -407,7 +416,7 @@ template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
 
     for (const T &x : array) {
         operator<<(x);
@@ -421,7 +430,7 @@ template <class T, std::size_t N>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(T (&array)[N])
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
 
     for (T &x : array) {
         operator>>(x);
@@ -435,7 +444,7 @@ template <class T>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeVariableLengthInteger(vector.size());
     serializeBytes(&vector.front(), vector.size());
     return *this;
@@ -446,7 +455,7 @@ template <class T>
 std::enable_if_t<sizeof(T) == sizeof(char) && alignof(T) == alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&vector.front(), vector.size());
@@ -458,7 +467,7 @@ template <class T>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeVariableLengthInteger(vector.size());
 
     for (const T &x : vector) {
@@ -473,7 +482,7 @@ template <class T>
 std::enable_if_t<sizeof(T) != sizeof(char) || alignof(T) != alignof(char), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
 
@@ -488,7 +497,7 @@ Archive::operator>>(std::vector<T> &vector)
 Archive &
 Archive::operator<<(const std::string &string)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     serializeVariableLengthInteger(string.size());
     serializeBytes(&string.front(), string.size());
     return *this;
@@ -498,7 +507,7 @@ Archive::operator<<(const std::string &string)
 Archive &
 Archive::operator>>(std::string &string)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     std::uintmax_t temp;
     string.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&string.front(), string.size());
@@ -510,7 +519,7 @@ template <class T>
 std::enable_if_t<std::is_class<T>::value, Archive &>
 Archive::operator<<(const T &object)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     object.serialize(this);
     return *this;
 }
@@ -520,7 +529,7 @@ template <class T>
 std::enable_if_t<std::is_class<T>::value, Archive &>
 Archive::operator>>(T &object)
 {
-    assert(stream_ != nullptr);
+    assert(isValid());
     object.deserialize(this);
     return *this;
 }
@@ -535,6 +544,16 @@ Archive::initialize() noexcept
 
 
 void
+Archive::finalize() noexcept
+{
+    if (isValid() && !std::uncaught_exception()) {
+        stream_->pickData(writtenByteCount_);
+        stream_->dropData(readByteCount_);
+    }
+}
+
+
+void
 Archive::move(Archive *other) noexcept
 {
     other->writtenByteCount_ = writtenByteCount_;
@@ -543,14 +562,18 @@ Archive::move(Archive *other) noexcept
 }
 
 
-void
-Archive::flush() noexcept
+bool
+Archive::isValid() const noexcept
 {
-    assert(stream_ != nullptr);
-    stream_->pickData(writtenByteCount_);
-    writtenByteCount_ = 0;
-    stream_->dropData(readByteCount_);
-    readByteCount_ = 0;
+    return stream_ != nullptr;
+}
+
+
+void
+Archive::reset() noexcept
+{
+    assert(isValid());
+    initialize();
 }
 
 
