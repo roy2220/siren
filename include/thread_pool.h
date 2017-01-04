@@ -20,7 +20,7 @@ class ThreadPoolTask
   : private ListNode
 {
 public:
-    inline void finish();
+    inline void check();
 
 protected:
     inline explicit ThreadPoolTask() noexcept;
@@ -46,16 +46,18 @@ public:
     inline explicit ThreadPool(std::size_t = 0);
     inline ~ThreadPool();
 
-    inline int getFD() const noexcept;
+    inline int getEventFD() const noexcept;
+    inline std::vector<Task *> getCompletedTasks() noexcept;
 
     template <class T>
     inline void addTask(Task *, T &&);
 
 private:
-    List taskList_;
+    List pendingTaskList_;
     Task noTask_;
-    int fds_[2];
-    std::mutex mutex_;
+    std::vector<Task *> completedTasks_;
+    int eventFD_;
+    std::mutex mutexes_[2];
     std::condition_variable conditionVariable_;
     std::vector<std::thread> threads_;
 
@@ -92,7 +94,7 @@ ThreadPoolTask::ThreadPoolTask() noexcept
 
 
 void
-ThreadPoolTask::finish()
+ThreadPoolTask::check()
 {
     if (exception_ != nullptr) {
         std::rethrow_exception(std::move(exception_));
@@ -125,9 +127,9 @@ ThreadPool::~ThreadPool()
 
 
 int
-ThreadPool::getFD() const noexcept
+ThreadPool::getEventFD() const noexcept
 {
-    return fds_[0];
+    return eventFD_;
 }
 
 
@@ -153,8 +155,8 @@ void
 ThreadPool::stop()
 {
     {
-        std::lock_guard<std::mutex> lockGuard(mutex_);
-        taskList_.addTail(&noTask_);
+        std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
+        pendingTaskList_.addTail(&noTask_);
         conditionVariable_.notify_all();
     }
 
@@ -172,10 +174,24 @@ ThreadPool::addTask(Task *task, T &&procedure)
     task->procedure_ = std::forward<T>(procedure);
 
     {
-        std::lock_guard<std::mutex> lockGuard(mutex_);
-        taskList_.addTail(task);
+        std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
+        pendingTaskList_.addTail(task);
         conditionVariable_.notify_one();
     }
+}
+
+
+std::vector<ThreadPool::Task *>
+ThreadPool::getCompletedTasks() noexcept
+{
+    std::vector<ThreadPool::Task *> completedTasks;
+
+    {
+        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
+        completedTasks = std::move(completedTasks_);
+    }
+
+    return completedTasks;
 }
 
 }

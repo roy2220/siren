@@ -1,8 +1,10 @@
 #include "thread_pool.h"
 
 #include <cerrno>
+#include <cstdint>
 #include <system_error>
 
+#include <sys/eventfd.h>
 #include <unistd.h>
 
 
@@ -11,8 +13,10 @@ namespace siren {
 void
 ThreadPool::initialize()
 {
-    if (pipe(fds_) < 0) {
-        throw std::system_error(errno, std::system_category(), "pipe() failed");
+    eventFD_ = eventfd(0, 0);
+
+    if (eventFD_ < 0) {
+        throw std::system_error(errno, std::system_category(), "eventfd() failed");
     }
 }
 
@@ -20,11 +24,7 @@ ThreadPool::initialize()
 void
 ThreadPool::finalize()
 {
-    if (close(fds_[0]) < 0 && errno != EINTR) {
-        throw std::system_error(errno, std::system_category(), "close() failed");
-    }
-
-    if (close(fds_[1]) < 0 && errno != EINTR) {
+    if (close(eventFD_) < 0 && errno != EINTR) {
         throw std::system_error(errno, std::system_category(), "close() failed");
     }
 }
@@ -37,13 +37,13 @@ ThreadPool::worker()
         ThreadPoolTask *task;
 
         {
-            std::unique_lock<std::mutex> uniqueLock(mutex_);
+            std::unique_lock<std::mutex> uniqueLock(mutexes_[0]);
 
-            while (taskList_.isEmpty()) {
+            while (pendingTaskList_.isEmpty()) {
                 conditionVariable_.wait(uniqueLock);
             }
 
-            task = static_cast<ThreadPoolTask *>(taskList_.getHead());
+            task = static_cast<ThreadPoolTask *>(pendingTaskList_.getHead());
 
             if (task == &noTask_) {
                 return;
@@ -60,8 +60,14 @@ ThreadPool::worker()
 
         task->procedure_ = nullptr;
 
+        {
+            std::unique_lock<std::mutex> uniqueLock(mutexes_[1]);
+            completedTasks_.push_back(task);
+        }
+
         for (;;) {
-            ssize_t numberOfBytes = write(fds_[1], &task, sizeof task);
+            std::uint64_t dummy = 1;
+            ssize_t numberOfBytes = write(eventFD_, &dummy, sizeof(dummy));
 
             if (numberOfBytes < 0) {
                 if (errno != EINTR) {

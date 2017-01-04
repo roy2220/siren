@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint>
 
 #include <unistd.h>
 
@@ -29,20 +30,28 @@ SIREN_TEST("Post thread pool works")
         });
     }
 
-    for (int i = 0; i < 5; ++i) {
-        MyThreadPoolTask *t;
-        int r = read(tp.getFD(), &t, sizeof(t));
-        SIREN_UNUSED(r);
-        assert(r == sizeof(t));
-        int j = t - ts;
-        SIREN_TEST_ASSERT(j >= 0 && j < 5);
+    int n = 5;
 
-        try {
-            t->finish();
-        } catch (int k) {
-            SIREN_TEST_ASSERT(k >= 0 && k < 5);
+    do {
+        std::uint64_t dummy;
+        int r = read(tp.getEventFD(), &dummy, sizeof(dummy));
+        SIREN_UNUSED(r);
+        assert(r == sizeof(dummy));
+        std::vector<ThreadPoolTask *> ts2 = tp.getCompletedTasks();
+
+        for (ThreadPoolTask *t : ts2) {
+            int j = static_cast<MyThreadPoolTask *>(t) - ts;
+            SIREN_TEST_ASSERT(j >= 0 && j < 5);
+
+            try {
+                t->check();
+            } catch (int k) {
+                SIREN_TEST_ASSERT(k >= 0 && k < 5);
+            }
         }
-    }
+
+        n -= ts2.size();
+    } while (n >= 1);
 }
 
 }
