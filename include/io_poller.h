@@ -45,6 +45,8 @@ public:
     inline ~IOPoller();
     inline IOPoller &operator=(IOPoller &&) noexcept;
 
+    inline bool isValid() const noexcept;
+
     void createObject(int);
     void destroyObject(int);
     void addWatcher(Watcher *, int, Condition) noexcept;
@@ -61,7 +63,6 @@ private:
     Buffer<epoll_event> events_;
 
     inline void move(IOPoller *) noexcept;
-    inline bool isValid() const noexcept;
 #ifndef NDEBUG
     inline bool objectExists(int) const noexcept;
 #endif

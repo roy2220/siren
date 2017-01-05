@@ -325,7 +325,7 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
         if (errno == EINTR || errno == EINPROGRESS) {
             if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                 int errorNumber;
-                socklen_t errorNumberSize = sizeof errorNumber;
+                socklen_t errorNumberSize = sizeof(errorNumber);
 
                 if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &errorNumber, &errorNumberSize) < 0) {
                     throw std::system_error(errno, std::system_category(), "getsockopt() failed");

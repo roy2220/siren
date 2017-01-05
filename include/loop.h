@@ -15,6 +15,26 @@
 #include "semaphore.h"
 
 
+#define SIREN_DEFER_FIBER_INTERRUPTION(LOOP, EXPRESSION)     \
+    do {                                                     \
+        bool sirenFiberWasInterrupted = false;               \
+                                                             \
+        for (;;) {                                           \
+            try {                                            \
+                (EXPRESSION);                                \
+                break;                                       \
+            } catch (FiberInterruption) {                    \
+                sirenFiberWasInterrupted = true;             \
+                continue;                                    \
+            }                                                \
+        }                                                    \
+                                                             \
+        if (sirenFiberWasInterrupted) {                      \
+            (LOOP).interruptFiber((LOOP).getCurrentFiber()); \
+        }                                                    \
+    } while (false)
+
+
 namespace siren {
 
 class Loop final

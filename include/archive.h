@@ -138,16 +138,16 @@ public:
     template <class T>
     inline std::enable_if_t<std::is_class<T>::value, Archive &> operator>>(T &);
 
+    inline bool isValid() const noexcept;
+
 private:
     Stream *stream_;
     std::size_t writtenByteCount_;
     std::size_t readByteCount_;
 
-    inline void initialize() noexcept;
+    inline void initialize(Stream *) noexcept;
     inline void finalize() noexcept;
     inline void move(Archive *) noexcept;
-    inline bool isValid() const noexcept;
-    inline void reset() noexcept;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
@@ -227,15 +227,13 @@ Deserializer::operator,(T &x) const
 
 
 Archive::Archive(Stream *stream) noexcept
-  : stream_(stream)
 {
     assert(stream != nullptr);
-    initialize();
+    initialize(stream);
 }
 
 
 Archive::Archive(Archive &&other) noexcept
-  : stream_(other.stream_)
 {
     other.move(this);
 }
@@ -251,7 +249,7 @@ Archive &
 Archive::operator=(Archive &&other) noexcept
 {
     if (&other != this) {
-        stream_ = other.stream_;
+        finalize();
         other.move(this);
     }
 
@@ -536,8 +534,9 @@ Archive::operator>>(T &object)
 
 
 void
-Archive::initialize() noexcept
+Archive::initialize(Stream *stream) noexcept
 {
+    stream_ = stream;
     writtenByteCount_ = 0;
     readByteCount_ = 0;
 }
@@ -556,9 +555,10 @@ Archive::finalize() noexcept
 void
 Archive::move(Archive *other) noexcept
 {
+    other->stream_ = stream_;
+    stream_ = nullptr;
     other->writtenByteCount_ = writtenByteCount_;
     other->readByteCount_ = readByteCount_;
-    stream_ = nullptr;
 }
 
 
@@ -566,14 +566,6 @@ bool
 Archive::isValid() const noexcept
 {
     return stream_ != nullptr;
-}
-
-
-void
-Archive::reset() noexcept
-{
-    assert(isValid());
-    initialize();
 }
 
 

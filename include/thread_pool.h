@@ -184,14 +184,14 @@ ThreadPool::addTask(Task *task, T &&procedure)
 std::vector<ThreadPool::Task *>
 ThreadPool::getCompletedTasks() noexcept
 {
-    std::vector<ThreadPool::Task *> completedTasks;
+    std::vector<ThreadPool::Task *> tasks;
 
     {
         std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
-        completedTasks = std::move(completedTasks_);
+        tasks = std::move(completedTasks_);
     }
 
-    return completedTasks;
+    return tasks;
 }
 
 }
