@@ -347,22 +347,26 @@ Scheduler::interruptFiber(void *fiberHandle)
     assert(fiberHandle != nullptr);
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
-    if (fiber->state == FiberState::Runnable || fiber->state == FiberState::Running) {
+    if (fiber->state == FiberState::Running) {
         fiber->isPostInterrupted = true;
     } else {
-        fiber->isPreInterrupted = true;
-    }
+        if (fiber->state == FiberState::Runnable) {
+            fiber->isPostInterrupted = true;
+        } else {
+            fiber->isPreInterrupted = true;
+        }
 
-    runnableFiberList_.addTail((currentFiber_->state = FiberState::Runnable, currentFiber_));
+        runnableFiberList_.addTail((currentFiber_->state = FiberState::Runnable, currentFiber_));
 
-    auto scopeGuard = MakeScopeGuard([this] () -> void {
-        (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
-    });
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
 
-    switchToFiber(fiber);
+        switchToFiber(fiber);
 
-    if (exception_ != nullptr) {
-        std::rethrow_exception(std::move(exception_));
+        if (exception_ != nullptr) {
+            std::rethrow_exception(std::move(exception_));
+        }
     }
 }
 
