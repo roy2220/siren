@@ -1,5 +1,6 @@
+/.makesettings
 /.ycm_extra_conf.pyc
-/GTAGS
-/GRTAGS
 /GPATH
+/GRTAGS
+/GTAGS
 /objs

@@ -1,17 +1,35 @@
-PREFIX = /usr/local
-BUILDDIR = objs
+-include .makesettings
 
-CPPFLAGS =
-override CPPFLAGS += -iquote include -iquote src -MMD -MT $@ -MF $(BUILDDIR)/$*.d # -DUSE_VALGRIND
-CXXFLAGS = -g -O0
-override CXXFLAGS += -std=c++14 -pedantic -Wall -Wextra -Werror
-ARFLAGS =
-override ARFLAGS += rc
+PREFIX ?= /usr/local
+BUILDDIR ?= objs
+CPPFLAGS ?=
+CXXFLAGS ?=
+ARFLAGS ?=
+DEBUG ?=
 
-objs := $(patsubst %.cc,%.o,$(wildcard src/*.cc))
-testobjs := $(objs) $(patsubst %.cc,%.o,$(wildcard tests/*.cc))
+override define settings :=
+PREFIX = $(PREFIX)
+BUILDDIR = $(BUILDDIR)
+CPPFLAGS = $(CPPFLAGS)
+CXXFLAGS = $(CXXFLAGS)
+ARFLAGS = $(ARFLAGS)
+DEBUG = $(DEBUG)
+endef
 
-cmds := help build test install uninstall tag clean
+$(file >.makesettings,$(settings))
+
+override define prependflags :=
+override CPPFLAGS = -iquote include -iquote src -MMD -MT $$@ -MF $$(@:%.o=%.d) $(CPPFLAGS)
+override CXXFLAGS = -std=c++14 -pedantic -Wall -Wextra -Werror $(CXXFLAGS)
+override ARFLAGS = rc $(ARFLAGS)
+endef
+
+$(eval $(call prependflags))
+
+override objs := $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard src/*.cc))
+override testobjs := $(objs) $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard tests/*.cc))
+
+override cmds := help build test install uninstall tag clean
 .PHONY: $(cmds)
 
 
@@ -23,7 +41,7 @@ build: $(BUILDDIR)/libsiren.a
 
 
 test: $(BUILDDIR)/test
-	$(BUILDDIR)/test
+	$(DEBUG) $(BUILDDIR)/test
 
 
 install: build
@@ -48,23 +66,23 @@ clean:
 	rm -rf $(BUILDDIR)
 
 
-$(BUILDDIR)/libsiren.a: $(addprefix $(BUILDDIR)/,$(objs))
+$(BUILDDIR)/libsiren.a: $(objs)
 	@mkdir -p $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
 
 ifneq ($(filter build,$(MAKECMDGOALS)),)
--include $(objs:%.o=$(BUILDDIR)/%.d)
+-include $(objs:%.o=%.d)
 endif
 
 
-$(BUILDDIR)/test: $(addprefix $(BUILDDIR)/,$(testobjs))
+$(BUILDDIR)/test: $(testobjs)
 	@mkdir -p $(@D)
 	$(CXX) -o $@ $^ -pthread
 
 
 ifneq ($(filter test,$(MAKECMDGOALS)),)
--include $(testobjs:%.o=$(BUILDDIR)/%.d)
+-include $(testobjs:%.o=%.d)
 endif
 
 
