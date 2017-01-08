@@ -25,7 +25,6 @@
                 break;                                       \
             } catch (FiberInterruption) {                    \
                 sirenFiberWasInterrupted = true;             \
-                continue;                                    \
             }                                                \
         }                                                    \
                                                              \

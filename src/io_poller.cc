@@ -53,9 +53,7 @@ IOPoller::finalize()
         }
 
         for (Object *object : objects_) {
-            if (object == nullptr) {
-                continue;
-            } else {
+            if (object != nullptr) {
                 object->~IOObject();
             }
         }

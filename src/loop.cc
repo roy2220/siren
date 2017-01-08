@@ -109,9 +109,7 @@ Loop::open(const char *path, int flags, mode_t mode)
         int fd = ::open(path, flags, mode | O_NONBLOCK);
 
         if (fd < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else {
+            if (errno != EINTR) {
                 return -1;
             }
         } else {
@@ -166,17 +164,15 @@ Loop::read(int fd, void *buffer, size_t bufferSize, int timeout)
         ssize_t numberOfBytes = ::read(fd, buffer, bufferSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -192,17 +188,15 @@ Loop::write(int fd, const void *data, size_t dataSize, int timeout)
         ssize_t numberOfBytes = ::write(fd, data, dataSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -218,17 +212,15 @@ Loop::readv(int fd, const iovec *vector, int vectorLength, int timeout)
         ssize_t numberOfBytes = ::readv(fd, vector, vectorLength);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -244,17 +236,15 @@ Loop::writev(int fd, const iovec *vector, int vectorLength, int timeout)
         ssize_t numberOfBytes = ::writev(fd, vector, vectorLength);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -291,17 +281,15 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
         int subFD = ::accept4(fd, name, nameSize, flags | SOCK_NONBLOCK);
 
         if (subFD < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             auto scopeGuard = MakeScopeGuard([subFD] () -> void {
@@ -358,17 +346,15 @@ Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *nam
         ssize_t numberOfBytes = ::recvfrom(fd, buffer, bufferSize, flags, name, nameSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -385,17 +371,15 @@ Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockadd
         ssize_t numberOfBytes = ::sendto(fd, data, dataSize, flags, name, nameSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -411,17 +395,15 @@ Loop::recvmsg(int fd, msghdr *message, int flags, int timeout)
         ssize_t numberOfBytes = ::recvmsg(fd, message, flags);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;
@@ -437,17 +419,15 @@ Loop::sendmsg(int fd, const msghdr *message, int flags, int timeout)
         ssize_t numberOfBytes = ::sendmsg(fd, message, flags);
 
         if (numberOfBytes < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    continue;
-                } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                     errno = ETIME;
                     return -1;
                 }
             } else {
-                return -1;
+                if (errno != EINTR) {
+                    return -1;
+                }
             }
         } else {
             return numberOfBytes;

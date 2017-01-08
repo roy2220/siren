@@ -73,8 +73,6 @@ ThreadPool::worker()
                 if (errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "write() failed");
                 }
-
-                continue;
             } else {
                 break;
             }
