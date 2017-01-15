@@ -281,7 +281,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
 
     fiber->procedure = std::forward<T>(procedure);
     fiber->context = nullptr;
-    runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber));
+    runnableFiberList_.appendNode((fiber->state = FiberState::Runnable, fiber));
     fiber->isBackground = fiberIsBackground;
     fiber->isPreInterrupted = fiber->isPostInterrupted = false;
     ++aliveFiberCount_;
@@ -315,9 +315,11 @@ Scheduler::suspendFiber(void *fiberHandle)
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Runnable) {
-        suspendedFiberList_.addTail((fiber->state = FiberState::Suspended, fiber->remove(), fiber));
+        suspendedFiberList_.appendNode((fiber->state = FiberState::Suspended, fiber->remove()
+                                        , fiber));
     } else if (fiber->state == FiberState::Running) {
-        suspendedFiberList_.addTail((currentFiber_->state = FiberState::Suspended, currentFiber_));
+        suspendedFiberList_.appendNode((currentFiber_->state = FiberState::Suspended
+                                        , currentFiber_));
 
         auto scopeGuard = MakeScopeGuard([this] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
@@ -336,7 +338,8 @@ Scheduler::resumeFiber(void *fiberHandle) noexcept
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Suspended) {
-        runnableFiberList_.addTail((fiber->state = FiberState::Runnable, fiber->remove(), fiber));
+        runnableFiberList_.appendNode((fiber->state = FiberState::Runnable, fiber->remove()
+                                       , fiber));
     }
 }
 
@@ -356,7 +359,7 @@ Scheduler::interruptFiber(void *fiberHandle)
             fiber->isPreInterrupted = true;
         }
 
-        runnableFiberList_.addTail((currentFiber_->state = FiberState::Runnable, currentFiber_));
+        runnableFiberList_.appendNode((currentFiber_->state = FiberState::Runnable, currentFiber_));
 
         auto scopeGuard = MakeScopeGuard([this] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
@@ -422,7 +425,7 @@ Scheduler::run()
     assert(isIdle());
 
     if (!runnableFiberList_.isEmpty()) {
-        runnableFiberList_.addHead((currentFiber_->state = FiberState::Runnable, currentFiber_));
+        runnableFiberList_.prependNode((currentFiber_->state = FiberState::Runnable, currentFiber_));
 
         auto scopeGuard = MakeScopeGuard([this] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();

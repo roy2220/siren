@@ -112,7 +112,7 @@ void
 Event::waitFor()
 {
     Waiter waiter;
-    waiterList_.addTail(&waiter);
+    waiterList_.appendNode(&waiter);
 
     auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
         waiter.remove();

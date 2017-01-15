@@ -156,7 +156,7 @@ ThreadPool::stop()
 {
     {
         std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
-        pendingTaskList_.addTail(&noTask_);
+        pendingTaskList_.appendNode(&noTask_);
         conditionVariable_.notify_all();
     }
 
@@ -175,7 +175,7 @@ ThreadPool::addTask(Task *task, T &&procedure)
 
     {
         std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
-        pendingTaskList_.addTail(task);
+        pendingTaskList_.appendNode(task);
         conditionVariable_.notify_one();
     }
 }

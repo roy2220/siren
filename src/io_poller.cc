@@ -112,14 +112,14 @@ IOPoller::addWatcher(Watcher *watcher, int objectFd, Condition condition) noexce
     assert(objectExists(objectFd));
     Object *object = objects_[watcher->objectFd_ = objectFd];
     auto i = static_cast<std::size_t>(watcher->condition_ = condition);
-    object->watcherLists[i].addTail(watcher);
+    object->watcherLists[i].appendNode(watcher);
 
     if (watcher->isOnly()) {
         object->pendingEventFlags |= IOEventFlags[i];
 
         if (!object->isDirty) {
             object->isDirty = true;
-            dirtyObjectList_.addTail(object);
+            dirtyObjectList_.appendNode(object);
         }
     }
 }
@@ -140,7 +140,7 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
         object->pendingEventFlags &= ~IOEventFlags[i];
 
         if (!object->isDirty) {
-            dirtyObjectList_.addTail((object->isDirty = true, object));
+            dirtyObjectList_.appendNode((object->isDirty = true, object));
         }
     }
 }

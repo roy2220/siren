@@ -58,6 +58,10 @@ class List final
 public:
     typedef ListNode Node;
 
+    inline static void InsertNodesBefore(Node *, Node *, Node *) noexcept;
+    inline static void InsertNodesAfter(Node *, Node *, Node *) noexcept;
+    inline static void RemoveNodes(Node *, Node *) noexcept;
+
     inline explicit List() noexcept;
     inline List(List &&) noexcept;
     inline List &operator=(List &&) noexcept;
@@ -69,15 +73,30 @@ public:
     inline const Node *getHead() const noexcept;
     inline Node *getHead() noexcept;
     inline bool isNil(const Node *) const noexcept;
-    inline void addTail(Node *) noexcept;
-    inline void addHead(Node *) noexcept;
+    inline void appendNode(Node *) noexcept;
+    inline void prependNode(Node *) noexcept;
+    inline void appendNodes(Node *, Node *) noexcept;
+    inline void prependNodes(Node *, Node *) noexcept;
+    inline void append(List *) noexcept;
+    inline void prepend(List *) noexcept;
+
+    void sort(bool (*)(const Node *, const Node *)) noexcept;
 
 private:
     Node nil_;
 
+    inline static void InsertNodes(Node *, Node *, Node *, Node *) noexcept;
+
     inline void initialize() noexcept;
     inline void move(List *) noexcept;
+
+    void SortNodes(Node **, Node **, bool (*)(const Node *, const Node *)) noexcept;
 };
+
+
+constexpr auto InsertListNodesBefore = List::InsertNodesBefore;
+constexpr auto InsertListNodesAfter = List::InsertNodesAfter;
+constexpr auto RemoveListNodes = List::RemoveNodes;
 
 }
 
@@ -161,6 +180,46 @@ ListNode::remove() noexcept
 {
     prev_->next_ = next_;
     next_->prev_ = prev_;
+}
+
+
+void
+List::InsertNodesBefore(Node *firstNode, Node *lastNode, Node *node) noexcept
+{
+    assert(firstNode != nullptr);
+    assert(lastNode != nullptr);
+    assert(node != nullptr);
+    InsertNodes(firstNode, lastNode, node->prev_, node);
+}
+
+
+void
+List::InsertNodesAfter(Node *firstNode, Node *lastNode, Node *node) noexcept
+{
+    assert(firstNode != nullptr);
+    assert(lastNode != nullptr);
+    assert(node != nullptr);
+    InsertNodes(firstNode, lastNode, node, node->next_);
+}
+
+
+void
+List::InsertNodes(Node *firstNode, Node *lastNode, Node *firstNodePrev, Node *lastNodeNext) noexcept
+{
+    (firstNode->prev_ = firstNodePrev)->next_ = firstNode;
+    (lastNode->next_ = lastNodeNext)->prev_ = lastNode;
+}
+
+
+void
+List::RemoveNodes(Node *firstNode, Node *lastNode) noexcept
+{
+    assert(firstNode != nullptr);
+    assert(lastNode != nullptr);
+    Node *firstNodePrev = firstNode->prev_;
+    Node *lastNodeNext = lastNode->next_;
+    firstNodePrev->next_ = lastNodeNext;
+    lastNodeNext->prev_ = firstNodePrev;
 }
 
 
@@ -258,18 +317,62 @@ List::isNil(const Node *node) const noexcept
 
 
 void
-List::addTail(Node *tail) noexcept
+List::appendNode(Node *node) noexcept
 {
-    assert(tail != nullptr);
-    tail->insert(getTail(), &nil_);
+    assert(node != nullptr);
+    node->insert(getTail(), &nil_);
 }
 
 
 void
-List::addHead(Node *head) noexcept
+List::prependNode(Node *node) noexcept
 {
-    assert(head != nullptr);
-    head->insert(&nil_, getHead());
+    assert(node != nullptr);
+    node->insert(&nil_, getHead());
+}
+
+
+void
+List::appendNodes(Node *firstNode, Node *lastNode) noexcept
+{
+    assert(firstNode != nullptr);
+    assert(lastNode != nullptr);
+    InsertNodes(firstNode, lastNode, getTail(), &nil_);
+}
+
+
+void
+List::prependNodes(Node *firstNode, Node *lastNode) noexcept
+{
+    assert(firstNode != nullptr);
+    assert(lastNode != nullptr);
+    InsertNodes(firstNode, lastNode, &nil_, getHead());
+}
+
+
+void
+List::append(List *other) noexcept
+{
+    assert(other != nullptr);
+    assert(other != this);
+
+    if (!isEmpty()) {
+        InsertNodes(getHead(), getTail(), other->getTail(), &other->nil_);
+        initialize();
+    }
+}
+
+
+void
+List::prepend(List *other) noexcept
+{
+    assert(other != nullptr);
+    assert(other != this);
+
+    if (!isEmpty()) {
+        InsertNodes(getHead(), getTail(), &other->nil_, other->getHead());
+        initialize();
+    }
 }
 
 }

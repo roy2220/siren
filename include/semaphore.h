@@ -161,7 +161,7 @@ Semaphore::up()
     } else {
         {
             Waiter waiter;
-            upWaiterList_.addTail(&waiter);
+            upWaiterList_.appendNode(&waiter);
 
             auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
                 waiter.remove();
@@ -189,7 +189,7 @@ Semaphore::down()
     if (value_ == minValue_) {
         {
             Waiter waiter;
-            downWaiterList_.addTail(&waiter);
+            downWaiterList_.appendNode(&waiter);
 
             auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
                 waiter.remove();
