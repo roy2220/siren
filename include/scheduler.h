@@ -3,6 +3,7 @@
 
 #include <csetjmp>
 #include <cstddef>
+#include <chrono>
 #include <exception>
 #include <functional>
 
@@ -37,6 +38,7 @@ struct alignas(std::max_align_t) Fiber
     bool isBackground;
     bool isPreInterrupted;
     bool isPostInterrupted;
+    std::chrono::steady_clock::time_point creationTime;
 };
 
 }
@@ -185,18 +187,16 @@ Scheduler::finalize()
 {
     {
         List list = std::move(runnableFiberList_);
+        suspendedFiberList_.append(&list);
 
-        SIREN_LIST_FOREACH_SAFE_REVERSE(listNode, list) {
-            auto fiber = static_cast<Fiber *>(listNode);
-            interruptFiber(fiber);
-        }
-    }
+        list.sort([] (const ListNode *listNode1, const ListNode *listNode2) -> bool {
+            auto fiber1 = static_cast<const Fiber *>(listNode1);
+            auto fiber2 = static_cast<const Fiber *>(listNode2);
+            return fiber1->creationTime <= fiber2->creationTime;
+        });
 
-    {
-        List list = std::move(suspendedFiberList_);
-
-        SIREN_LIST_FOREACH_SAFE_REVERSE(listNode, list) {
-            auto fiber = static_cast<Fiber *>(listNode);
+        while (!list.isEmpty()) {
+            auto fiber = static_cast<Fiber *>(list.getTail());
             interruptFiber(fiber);
         }
     }
@@ -284,6 +284,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
     runnableFiberList_.appendNode((fiber->state = FiberState::Runnable, fiber));
     fiber->isBackground = fiberIsBackground;
     fiber->isPreInterrupted = fiber->isPostInterrupted = false;
+    fiber->creationTime = std::chrono::steady_clock::now();
     ++aliveFiberCount_;
 
     if (fiberIsBackground) {

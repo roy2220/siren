@@ -78,7 +78,8 @@ Event::~Event()
 }
 
 
-Event &Event::operator=(Event &&other) noexcept
+Event &
+Event::operator=(Event &&other) noexcept
 {
     if (&other != this) {
         assert(!isWaited());
