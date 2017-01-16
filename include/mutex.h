@@ -15,8 +15,8 @@ public:
     inline explicit Mutex(Scheduler *) noexcept;
 
     inline void reset() noexcept;
-    inline void lock() noexcept;
-    inline void unlock() noexcept;
+    inline void lock();
+    inline void unlock();
     inline bool tryLock() noexcept;
     inline bool tryUnlock() noexcept;
 
@@ -51,14 +51,14 @@ Mutex::reset() noexcept
 
 
 void
-Mutex::lock() noexcept
+Mutex::lock()
 {
     semaphore_.up();
 }
 
 
 void
-Mutex::unlock() noexcept
+Mutex::unlock()
 {
     semaphore_.down();
 }
