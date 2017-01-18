@@ -13,7 +13,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Post thread pool works")
+SIREN_TEST("Add thread pool tasks")
 {
     struct MyThreadPoolTask : ThreadPoolTask
     {
@@ -37,7 +37,8 @@ SIREN_TEST("Post thread pool works")
         int r = read(tp.getEventFD(), &dummy, sizeof(dummy));
         SIREN_UNUSED(r);
         assert(r == sizeof(dummy));
-        std::vector<ThreadPoolTask *> ts2 = tp.getCompletedTasks();
+        std::vector<ThreadPoolTask *> ts2;
+        tp.getCompletedTasks(&ts2);
 
         for (ThreadPoolTask *t : ts2) {
             int j = static_cast<MyThreadPoolTask *>(t) - ts;
@@ -52,6 +53,27 @@ SIREN_TEST("Post thread pool works")
 
         n -= ts2.size();
     } while (n >= 1);
+}
+
+
+SIREN_TEST("Remove thread pool tasks")
+{
+    struct MyThreadPoolTask : ThreadPoolTask
+    {
+    };
+
+    ThreadPool tp(1);
+    MyThreadPoolTask t;
+    bool done = false;
+
+    tp.addTask(&t, [&] () -> void {
+        usleep(100 * 1000);
+        done = true;
+    });
+
+    tp.removeTask(&t);
+    SIREN_TEST_ASSERT(done);
+    t.check();
 }
 
 }

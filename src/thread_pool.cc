@@ -58,18 +58,17 @@ ThreadPool::worker()
             task->exception_ = std::current_exception();
         }
 
-        task->procedure_ = nullptr;
-
         {
             std::unique_lock<std::mutex> uniqueLock(mutexes_[1]);
-            completedTasks_.push_back(task);
+            completedTaskList_.appendNode(task);
         }
+
+        task->phaseNumber_.store(2, std::memory_order_release);
 
         for (;;) {
             std::uint64_t dummy = 1;
-            ssize_t numberOfBytes = write(eventFD_, &dummy, sizeof(dummy));
 
-            if (numberOfBytes < 0) {
+            if (write(eventFD_, &dummy, sizeof(dummy)) < 0) {
                 if (errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "write() failed");
                 }

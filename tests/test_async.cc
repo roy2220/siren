@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "async.h"
 #include "loop.h"
 #include "test.h"
@@ -33,7 +35,22 @@ SIREN_TEST("Execute async task")
         });
 
         SIREN_TEST_ASSERT(t == 99);
+    });
 
+    loop.run();
+    bool ok = false;
+
+    void *f = loop.createFiber([&] () {
+        async.executeTask([&] () {
+            usleep(100 * 1000);
+        });
+
+        ok = true;
+    });
+
+    loop.createFiber([&] () {
+        loop.interruptFiber(f);
+        SIREN_TEST_ASSERT(ok);
     });
 
     loop.run();

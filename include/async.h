@@ -39,14 +39,17 @@ public:
 private:
     typedef detail::AsyncTask Task;
 
-    inline void initialize();
-    inline void finalize();
-    inline void move(Async *) noexcept;
-
-    std::shared_ptr<ThreadPool> threadPool_;
+    std::unique_ptr<ThreadPool> threadPool_;
     Loop *loop_;
     void *fiberHandle_;
     std::size_t taskCount_;
+
+    inline void initialize();
+    inline void finalize();
+    inline void move(Async *) noexcept;
+    inline void waitForTask(Task *) noexcept;
+
+    static void EventTrigger(ThreadPool *, Loop *);
 };
 
 }
@@ -58,9 +61,7 @@ private:
 
 
 #include <cassert>
-#include <cerrno>
 #include <cstdint>
-#include <system_error>
 #include <utility>
 
 #include "event.h"
@@ -71,7 +72,7 @@ private:
 namespace siren {
 
 Async::Async(Loop *loop, std::size_t numberOfThreads)
-  : threadPool_(std::make_shared<ThreadPool>(numberOfThreads)),
+  : threadPool_(std::make_unique<ThreadPool>(numberOfThreads)),
     loop_(loop),
     taskCount_(0)
 {
@@ -122,23 +123,7 @@ Async::initialize()
         loop_->unregisterFD(threadPool_->getEventFD());
     });
 
-    fiberHandle_ = loop_->createFiber([threadPool = threadPool_, loop = loop_] () -> void {
-        for (;;) {
-            std::uint64_t dummy;
-
-            if (loop->read(threadPool->getEventFD(), &dummy, sizeof(dummy)) < 0) {
-                throw std::system_error(errno, std::system_category(), "read() failed");
-            }
-
-            std::vector<ThreadPoolTask *> threadPoolTasks = threadPool->getCompletedTasks();
-
-            for (ThreadPoolTask *threadPoolTask : threadPoolTasks) {
-                auto task = static_cast<Task *>(threadPoolTask);
-                task->event->trigger();
-            }
-        }
-    }, 0, true);
-
+    fiberHandle_ = loop_->createFiber(std::bind(EventTrigger, threadPool_.get(), loop_), 0, true);
     scopeGuard.dismiss();
 }
 
@@ -161,6 +146,20 @@ Async::move(Async *other) noexcept
 }
 
 
+void
+Async::waitForTask(Task *task) noexcept
+{
+    Event event = loop_->makeEvent();
+
+    try {
+        (task->event = &event)->waitFor();
+    } catch (FiberInterruption) {
+        threadPool_->removeTask(task);
+        loop_->interruptFiber(loop_->getCurrentFiber());
+    }
+}
+
+
 bool
 Async::isValid() const noexcept
 {
@@ -175,13 +174,10 @@ Async::executeTask(const std::function<void ()> &procedure)
     assert(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, procedure);
-    Event event = loop_->makeEvent();
-    task.event = &event;
     ++taskCount_;
-    SIREN_DEFER_FIBER_INTERRUPTION(*loop_, event.waitFor());
+    waitForTask(&task);
     --taskCount_;
     task.check();
-
 }
 
 
@@ -192,10 +188,8 @@ Async::executeTask(std::function<void ()> &&procedure)
     assert(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, std::move(procedure));
-    Event event = loop_->makeEvent();
-    task.event = &event;
     ++taskCount_;
-    SIREN_DEFER_FIBER_INTERRUPTION(*loop_, event.waitFor());
+    waitForTask(&task);
     --taskCount_;
     task.check();
 }

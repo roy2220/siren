@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <condition_variable>
 #include <functional>
+#include <atomic>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -24,10 +25,10 @@ public:
 
 protected:
     inline explicit ThreadPoolTask() noexcept;
-
-    ~ThreadPoolTask() = default;
+    inline ~ThreadPoolTask();
 
 private:
+    std::atomic_uint phaseNumber_;
     std::function<void ()> procedure_;
     std::exception_ptr exception_;
 
@@ -47,15 +48,16 @@ public:
     inline ~ThreadPool();
 
     inline int getEventFD() const noexcept;
-    inline std::vector<Task *> getCompletedTasks() noexcept;
+    inline void removeTask(Task *);
+    inline void getCompletedTasks(std::vector<Task *> *);
 
     template <class T>
     inline void addTask(Task *, T &&);
 
 private:
-    List pendingTaskList_;
     Task noTask_;
-    std::vector<Task *> completedTasks_;
+    List pendingTaskList_;
+    List completedTaskList_;
     int eventFD_;
     std::mutex mutexes_[2];
     std::condition_variable conditionVariable_;
@@ -89,13 +91,24 @@ private:
 namespace siren {
 
 ThreadPoolTask::ThreadPoolTask() noexcept
+  : phaseNumber_(0)
 {
+}
+
+
+ThreadPoolTask::~ThreadPoolTask()
+{
+    assert(phaseNumber_.load(std::memory_order_relaxed) == 0);
 }
 
 
 void
 ThreadPoolTask::check()
 {
+    assert(phaseNumber_.load(std::memory_order_relaxed) == 2);
+    phaseNumber_.store(0, std::memory_order_relaxed);
+    procedure_ = nullptr;
+
     if (exception_ != nullptr) {
         std::rethrow_exception(std::move(exception_));
     }
@@ -137,14 +150,14 @@ void
 ThreadPool::start(std::size_t numberOfThreads)
 {
     threads_.reserve(numberOfThreads);
+    threads_.emplace_back(&ThreadPool::worker, this);
 
     auto scopeGuard = MakeScopeGuard([this] () -> void {
         stop();
     });
 
-    while (numberOfThreads >= 1) {
+    while (--numberOfThreads >= 1) {
         threads_.emplace_back(&ThreadPool::worker, this);
-        --numberOfThreads;
     }
 
     scopeGuard.dismiss();
@@ -171,6 +184,8 @@ void
 ThreadPool::addTask(Task *task, T &&procedure)
 {
     assert(task != nullptr);
+    assert(task->phaseNumber_.load(std::memory_order_relaxed) == 0);
+    task->phaseNumber_.store(1, std::memory_order_relaxed);
     task->procedure_ = std::forward<T>(procedure);
 
     {
@@ -181,17 +196,37 @@ ThreadPool::addTask(Task *task, T &&procedure)
 }
 
 
-std::vector<ThreadPool::Task *>
-ThreadPool::getCompletedTasks() noexcept
+void
+ThreadPool::removeTask(Task *task)
 {
-    std::vector<ThreadPool::Task *> tasks;
+    assert(task != nullptr);
+    assert(task->phaseNumber_.load(std::memory_order_relaxed) >= 1);
+
+    while (task->phaseNumber_.load(std::memory_order_acquire) < 2) {
+        std::this_thread::yield();
+    }
+
+    {
+        std::unique_lock<std::mutex> uniqueLock(mutexes_[1]);
+        task->remove();
+    }
+}
+
+
+void
+ThreadPool::getCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
+{
+    List list;
 
     {
         std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
-        tasks = std::move(completedTasks_);
+        list = std::move(completedTaskList_);
     }
 
-    return tasks;
+    SIREN_LIST_FOREACH_REVERSE(ListNode, list) {
+        auto task = static_cast<Task *>(ListNode);
+        tasks->push_back(task);
+    }
 }
 
 }
