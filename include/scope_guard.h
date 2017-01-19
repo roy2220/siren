@@ -17,6 +17,7 @@ public:
     inline explicit ScopeGuard(T &&) noexcept;
     inline ScopeGuard(ScopeGuard &&) noexcept;
     inline ~ScopeGuard();
+    inline ScopeGuard &operator=(ScopeGuard &&) noexcept;
 
     inline void dismiss() noexcept;
 
@@ -25,6 +26,7 @@ private:
     T rollback_;
 
     inline void initialize() noexcept;
+    inline void finalize();
     inline void move(ScopeGuard *) noexcept;
 };
 
@@ -65,9 +67,21 @@ ScopeGuard<T, true>::ScopeGuard(ScopeGuard &&other) noexcept
 template <class T>
 ScopeGuard<T, true>::~ScopeGuard()
 {
-    if (isEngaged_) {
-        rollback_();
+    finalize();
+}
+
+
+template <class T>
+ScopeGuard<T, true> &
+ScopeGuard<T, true>::operator=(ScopeGuard &&other) noexcept
+{
+    if (&other != this) {
+        finalize();
+        rollback_ = std::move(other.rollback_);
+        other.move(this);
     }
+
+    return *this;
 }
 
 
@@ -76,6 +90,16 @@ void
 ScopeGuard<T, true>::initialize() noexcept
 {
     isEngaged_ = true;
+}
+
+
+template <class T>
+void
+ScopeGuard<T, true>::finalize()
+{
+    if (isEngaged_) {
+        rollback_();
+    }
 }
 
 
