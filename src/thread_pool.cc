@@ -63,7 +63,7 @@ ThreadPool::worker()
             completedTaskList_.appendNode(task);
         }
 
-        task->phaseNumber_.store(2, std::memory_order_release);
+        task->state_.store(TaskState::Completed, std::memory_order_release);
 
         for (;;) {
             std::uint64_t dummy = 1;

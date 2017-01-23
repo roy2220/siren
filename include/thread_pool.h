@@ -17,6 +17,18 @@ namespace siren {
 class ThreadPool;
 
 
+namespace detail {
+
+enum class ThreadPoolTaskState
+{
+    Initial,
+    Uncompleted,
+    Completed
+};
+
+}
+
+
 class ThreadPoolTask
   : private ListNode
 {
@@ -28,7 +40,9 @@ protected:
     inline ~ThreadPoolTask();
 
 private:
-    std::atomic_uint phaseNumber_;
+    typedef detail::ThreadPoolTaskState State;
+
+    std::atomic<State> state_;
     std::function<void ()> procedure_;
     std::exception_ptr exception_;
 
@@ -55,6 +69,8 @@ public:
     inline void addTask(Task *, T &&);
 
 private:
+    typedef detail::ThreadPoolTaskState TaskState;
+
     Task noTask_;
     List pendingTaskList_;
     List completedTaskList_;
@@ -91,22 +107,22 @@ private:
 namespace siren {
 
 ThreadPoolTask::ThreadPoolTask() noexcept
-  : phaseNumber_(0)
+  : state_(State::Initial)
 {
 }
 
 
 ThreadPoolTask::~ThreadPoolTask()
 {
-    assert(phaseNumber_.load(std::memory_order_relaxed) == 0);
+    assert(state_.load(std::memory_order_relaxed) == State::Initial);
 }
 
 
 void
 ThreadPoolTask::check()
 {
-    assert(phaseNumber_.load(std::memory_order_relaxed) == 2);
-    phaseNumber_.store(0, std::memory_order_relaxed);
+    assert(state_.load(std::memory_order_relaxed) == State::Completed);
+    state_.store(State::Initial, std::memory_order_relaxed);
     procedure_ = nullptr;
 
     if (exception_ != nullptr) {
@@ -184,8 +200,8 @@ void
 ThreadPool::addTask(Task *task, T &&procedure)
 {
     assert(task != nullptr);
-    assert(task->phaseNumber_.load(std::memory_order_relaxed) == 0);
-    task->phaseNumber_.store(1, std::memory_order_relaxed);
+    assert(task->state_.load(std::memory_order_relaxed) == TaskState::Initial);
+    task->state_.store(TaskState::Uncompleted, std::memory_order_relaxed);
     task->procedure_ = std::forward<T>(procedure);
 
     {
@@ -200,9 +216,9 @@ void
 ThreadPool::removeTask(Task *task)
 {
     assert(task != nullptr);
-    assert(task->phaseNumber_.load(std::memory_order_relaxed) >= 1);
+    assert(task->state_.load(std::memory_order_relaxed) != TaskState::Initial);
 
-    while (task->phaseNumber_.load(std::memory_order_acquire) < 2) {
+    while (task->state_.load(std::memory_order_acquire) != TaskState::Completed) {
         std::this_thread::yield();
     }
 
