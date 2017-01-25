@@ -15,47 +15,34 @@
       : public ::siren::detail::Test                                  \
     {                                                                 \
     public:                                                           \
-        explicit SIREN_TEST_IMPL();                                   \
+        explicit SIREN_TEST_IMPL() {}                                 \
                                                                       \
-        const char *getFileName() const noexcept override;            \
-        unsigned int getLineNumber() const noexcept override;         \
-        const char *getDescription() const noexcept override;         \
-        void run() const override;                                    \
+        const char *getFileName() const noexcept override {           \
+            return __FILE__;                                          \
+        }                                                             \
+                                                                      \
+        unsigned int getLineNumber() const noexcept override {        \
+            return __LINE__;                                          \
+        }                                                             \
+                                                                      \
+        const char *getDescription() const noexcept override {        \
+            return (DESCRIPTION);                                     \
+        }                                                             \
+                                                                      \
+        void run() override {                                         \
+            Run();                                                    \
+        }                                                             \
                                                                       \
     private:                                                          \
+        static void Run();                                            \
+                                                                      \
         SIREN_TEST_IMPL(const SIREN_TEST_IMPL &) = delete;            \
         SIREN_TEST_IMPL &operator=(const SIREN_TEST_IMPL &) = delete; \
     } SIREN_TEST_IMPL;                                                \
                                                                       \
                                                                       \
-    SIREN_TEST_IMPL::SIREN_TEST_IMPL()                                \
-    {                                                                 \
-    }                                                                 \
-                                                                      \
-                                                                      \
-    const char *                                                      \
-    SIREN_TEST_IMPL::getFileName() const noexcept                     \
-    {                                                                 \
-        return __FILE__;                                              \
-    }                                                                 \
-                                                                      \
-                                                                      \
-    unsigned int                                                      \
-    SIREN_TEST_IMPL::getLineNumber() const noexcept                   \
-    {                                                                 \
-        return __LINE__;                                              \
-    }                                                                 \
-                                                                      \
-                                                                      \
-    const char *                                                      \
-    SIREN_TEST_IMPL::getDescription() const noexcept                  \
-    {                                                                 \
-        return (DESCRIPTION);                                         \
-    }                                                                 \
-                                                                      \
-                                                                      \
     void                                                              \
-    SIREN_TEST_IMPL::run() const
+    SIREN_TEST_IMPL::Run()
 
 #define SIREN_TEST_ASSERT(EXPRESSION)                                                     \
     do {                                                                                  \
@@ -75,14 +62,16 @@ public:
     virtual const char *getFileName() const noexcept = 0;
     virtual unsigned int getLineNumber() const noexcept = 0;
     virtual const char *getDescription() const noexcept = 0;
-    virtual void run() const = 0;
+    virtual void run() = 0;
 
 protected:
     inline explicit Test();
 
-    Test(const Test &) noexcept = default;
     ~Test() = default;
-    Test &operator=(const Test &) noexcept = default;
+
+private:
+    Test(const Test &) = delete;
+    Test &operator=(const Test &) = delete;
 };
 
 

@@ -1,7 +1,7 @@
 -include .makesettings
 
 PREFIX ?= /usr/local
-BUILDDIR ?= objs
+BUILDDIR ?= obj
 CPPFLAGS ?=
 CXXFLAGS ?=
 ARFLAGS ?=

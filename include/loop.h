@@ -58,7 +58,6 @@ public:
     inline ssize_t send(int, const void *, size_t, int, int = -1);
 
     Loop(Loop &&) noexcept = default;
-    ~Loop() = default;
     Loop &operator=(Loop &&) noexcept = default;
 
     void run();
