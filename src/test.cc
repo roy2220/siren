@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <exception>
 #include <list>
+#include <utility>
 
 
 namespace siren {
@@ -11,18 +12,7 @@ namespace {
 
 std::list<detail::Test *> Tests;
 
-}
-
-
-namespace detail {
-
-void
-AddTest(Test *test)
-{
-    Tests.push_back(test);
-}
-
-}
+} // namespace
 
 
 std::size_t
@@ -43,4 +33,30 @@ RunTests() noexcept
     return failedTestCount;
 }
 
+
+namespace detail {
+
+Test::Test()
+{
+    Tests.push_back(this);
 }
+
+
+TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int lineNumber)
+{
+    description_ = "Assert `";
+    description_ += expression;
+    description_ += "` failed at line ";
+    description_ += std::to_string(lineNumber);
+}
+
+
+const char *
+TestAssertionFailure::what() const noexcept
+{
+    return description_.data();
+}
+
+} // namespace detail
+
+} // namespace siren

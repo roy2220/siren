@@ -14,6 +14,21 @@
 
 namespace siren {
 
+namespace detail {
+
+struct IOObject
+  : ListNode
+{
+    int fd;
+    int eventFlags;
+    int pendingEventFlags;
+    bool isDirty;
+    List watcherLists[2];
+};
+
+} // namespace detail
+
+
 namespace {
 
 const unsigned int IOEventFlags[2] = {
@@ -21,6 +36,45 @@ const unsigned int IOEventFlags[2] = {
     EPOLLOUT
 };
 
+} // namespace
+
+
+IOPoller::IOPoller()
+  : objectMemoryPool_(alignof(Object), sizeof(Object), 64)
+{
+    initialize();
+}
+
+
+IOPoller::IOPoller(IOPoller &&other) noexcept
+  : objectMemoryPool_(std::move(other.objectMemoryPool_)),
+    objects_(std::move(other.objects_)),
+    dirtyObjectList_(std::move(other.dirtyObjectList_)),
+    events_(std::move(other.events_))
+{
+    other.move(this);
+}
+
+
+IOPoller::~IOPoller()
+{
+    finalize();
+}
+
+
+IOPoller &
+IOPoller::operator=(IOPoller &&other) noexcept
+{
+    if (&other != this) {
+        finalize();
+        objectMemoryPool_ = std::move(other.objectMemoryPool_);
+        objects_ = std::move(other.objects_);
+        dirtyObjectList_ = std::move(other.dirtyObjectList_);
+        events_ = std::move(other.events_);
+        other.move(this);
+    }
+
+    return *this;
 }
 
 
@@ -59,6 +113,23 @@ IOPoller::finalize()
         }
     }
 }
+
+
+void
+IOPoller::move(IOPoller *other) noexcept
+{
+    other->epollFD_ = epollFD_;
+    epollFD_ = -1;
+}
+
+
+#ifndef NDEBUG
+bool
+IOPoller::objectExists(int objectFd) const noexcept
+{
+    return static_cast<std::size_t>(objectFd) < objects_.size() && objects_[objectFd] != nullptr;
+}
+#endif
 
 
 void
@@ -240,4 +311,4 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     }
 }
 
-}
+} // namespace siren

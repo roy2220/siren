@@ -12,25 +12,10 @@
 
 namespace siren {
 
-enum class IOCondition;
-
-class IOWatcher;
 class IOClock;
-
-
-namespace detail {
-
-struct IOObject
-  : ListNode
-{
-    int fd;
-    int eventFlags;
-    int pendingEventFlags;
-    bool isDirty;
-    List watcherLists[2];
-};
-
-}
+class IOWatcher;
+enum class IOCondition;
+namespace detail { struct IOObject; }
 
 
 class IOPoller final
@@ -40,12 +25,12 @@ public:
     typedef IOCondition Condition;
     typedef IOClock Clock;
 
-    inline explicit IOPoller();
-    inline IOPoller(IOPoller &&) noexcept;
-    inline ~IOPoller();
-    inline IOPoller &operator=(IOPoller &&) noexcept;
-
     inline bool isValid() const noexcept;
+
+    explicit IOPoller();
+    IOPoller(IOPoller &&) noexcept;
+    ~IOPoller();
+    IOPoller &operator=(IOPoller &&) noexcept;
 
     void createObject(int);
     void destroyObject(int);
@@ -62,13 +47,12 @@ private:
     List dirtyObjectList_;
     Buffer<epoll_event> events_;
 
-    inline void move(IOPoller *) noexcept;
-#ifndef NDEBUG
-    inline bool objectExists(int) const noexcept;
-#endif
-
     void initialize();
     void finalize();
+    void move(IOPoller *) noexcept;
+#ifndef NDEBUG
+    bool objectExists(int) const noexcept;
+#endif
     void flushObjects();
 };
 
@@ -97,10 +81,10 @@ private:
 enum class IOCondition
 {
     Readable = 0,
-    Writable
+    Writable,
 };
 
-}
+} // namespace siren
 
 
 /*
@@ -110,53 +94,6 @@ enum class IOCondition
 
 namespace siren {
 
-IOPoller::IOPoller()
-  : objectMemoryPool_(alignof(Object), sizeof(Object), 64)
-{
-    initialize();
-}
-
-
-IOPoller::IOPoller(IOPoller &&other) noexcept
-  : objectMemoryPool_(std::move(other.objectMemoryPool_)),
-    objects_(std::move(other.objects_)),
-    dirtyObjectList_(std::move(other.dirtyObjectList_)),
-    events_(std::move(other.events_))
-{
-    other.move(this);
-}
-
-
-IOPoller::~IOPoller()
-{
-    finalize();
-}
-
-
-IOPoller &
-IOPoller::operator=(IOPoller &&other) noexcept
-{
-    if (&other != this) {
-        finalize();
-        objectMemoryPool_ = std::move(other.objectMemoryPool_);
-        objects_ = std::move(other.objects_);
-        dirtyObjectList_ = std::move(other.dirtyObjectList_);
-        events_ = std::move(other.events_);
-        other.move(this);
-    }
-
-    return *this;
-}
-
-
-void
-IOPoller::move(IOPoller *other) noexcept
-{
-    other->epollFD_ = epollFD_;
-    epollFD_ = -1;
-}
-
-
 bool
 IOPoller::isValid() const noexcept
 {
@@ -164,17 +101,8 @@ IOPoller::isValid() const noexcept
 }
 
 
-#ifndef NDEBUG
-bool
-IOPoller::objectExists(int objectFd) const noexcept
-{
-    return static_cast<std::size_t>(objectFd) < objects_.size() && objects_[objectFd] != nullptr;
-}
-#endif
-
-
 IOWatcher::IOWatcher() noexcept
 {
 }
 
-}
+} // namespace siren

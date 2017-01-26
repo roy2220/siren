@@ -10,7 +10,7 @@ template <class T>
 inline std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>> UnsignedToSigned(T)
     noexcept;
 
-}
+} // namespace siren
 
 
 /*
@@ -34,4 +34,4 @@ UnsignedToSigned(T x) noexcept
     return x <= k1 ? static_cast<U>(x) : -static_cast<U>(k2 - x) - 1;
 }
 
-}
+} // namespace siren

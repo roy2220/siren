@@ -44,6 +44,8 @@ private:
     ListNode *prev_;
     ListNode *next_;
 
+    inline void setPrev(ListNode *) noexcept;
+    inline void setNext(ListNode *) noexcept;
     inline void insert(ListNode *, ListNode *) noexcept;
 
     ListNode(const ListNode &) = delete;
@@ -98,7 +100,7 @@ constexpr auto InsertListNodesBefore = List::InsertNodesBefore;
 constexpr auto InsertListNodesAfter = List::InsertNodesAfter;
 constexpr auto RemoveListNodes = List::RemoveNodes;
 
-}
+} // namespace siren
 
 
 /*
@@ -119,7 +121,7 @@ ListNode::ListNode() noexcept
 bool
 ListNode::isOnly() const noexcept
 {
-    return prev_ == next_;
+    return getPrev() == getNext();
 }
 
 
@@ -134,6 +136,13 @@ ListNode *
 ListNode::getPrev() noexcept
 {
     return prev_;
+}
+
+
+void
+ListNode::setPrev(ListNode *prev) noexcept
+{
+    (prev_ = prev)->next_ = this;
 }
 
 
@@ -152,9 +161,17 @@ ListNode::getNext() noexcept
 
 
 void
+ListNode::setNext(ListNode *next) noexcept
+{
+    (next_ = next)->prev_ = this;
+}
+
+
+void
 ListNode::insertBefore(ListNode *other) noexcept
 {
     assert(other != nullptr);
+    assert(other != this);
     insert(other->prev_, other);
 }
 
@@ -163,6 +180,7 @@ void
 ListNode::insertAfter(ListNode *other) noexcept
 {
     assert(other != nullptr);
+    assert(other != this);
     insert(other, other->next_);
 }
 
@@ -170,16 +188,15 @@ ListNode::insertAfter(ListNode *other) noexcept
 void
 ListNode::insert(ListNode *prev, ListNode *next) noexcept
 {
-    (prev_ = prev)->next_ = this;
-    (next_ = next)->prev_ = this;
+    setPrev(prev);
+    setNext(next);
 }
 
 
 void
 ListNode::remove() noexcept
 {
-    prev_->next_ = next_;
-    next_->prev_ = prev_;
+    prev_->setNext(next_);
 }
 
 
@@ -187,7 +204,9 @@ void
 List::InsertNodesBefore(Node *firstNode, Node *lastNode, Node *node) noexcept
 {
     assert(firstNode != nullptr);
+    assert(firstNode != node);
     assert(lastNode != nullptr);
+    assert(lastNode != node);
     assert(node != nullptr);
     InsertNodes(firstNode, lastNode, node->prev_, node);
 }
@@ -197,7 +216,9 @@ void
 List::InsertNodesAfter(Node *firstNode, Node *lastNode, Node *node) noexcept
 {
     assert(firstNode != nullptr);
+    assert(firstNode != node);
     assert(lastNode != nullptr);
+    assert(lastNode != node);
     assert(node != nullptr);
     InsertNodes(firstNode, lastNode, node, node->next_);
 }
@@ -206,8 +227,8 @@ List::InsertNodesAfter(Node *firstNode, Node *lastNode, Node *node) noexcept
 void
 List::InsertNodes(Node *firstNode, Node *lastNode, Node *firstNodePrev, Node *lastNodeNext) noexcept
 {
-    (firstNode->prev_ = firstNodePrev)->next_ = firstNode;
-    (lastNode->next_ = lastNodeNext)->prev_ = lastNode;
+    firstNode->setPrev(firstNodePrev);
+    lastNode->setNext(lastNodeNext);
 }
 
 
@@ -216,10 +237,7 @@ List::RemoveNodes(Node *firstNode, Node *lastNode) noexcept
 {
     assert(firstNode != nullptr);
     assert(lastNode != nullptr);
-    Node *firstNodePrev = firstNode->prev_;
-    Node *lastNodeNext = lastNode->next_;
-    firstNodePrev->next_ = lastNodeNext;
-    lastNodeNext->prev_ = firstNodePrev;
+    firstNode->prev_->setNext(lastNode->next_);
 }
 
 
@@ -249,8 +267,7 @@ List::operator=(List &&other) noexcept
 void
 List::initialize() noexcept
 {
-    nil_.prev_ = &nil_;
-    nil_.next_ = &nil_;
+    nil_.setNext(&nil_);
 }
 
 
@@ -260,7 +277,7 @@ List::move(List *other) noexcept
     if (isEmpty()) {
         other->initialize();
     } else {
-        other->nil_.insert(nil_.prev_, nil_.next_);
+        InsertNodes(getHead(), getTail(), &other->nil_, &other->nil_);
         initialize();
     }
 }
@@ -276,35 +293,35 @@ List::reset() noexcept
 bool
 List::isEmpty() const noexcept
 {
-    return nil_.prev_ == &nil_;
+    return getHead() == &nil_;
 }
 
 
 const List::Node *
 List::getTail() const noexcept
 {
-    return nil_.prev_;
+    return nil_.getPrev();
 }
 
 
 List::Node *
 List::getTail() noexcept
 {
-    return nil_.prev_;
+    return nil_.getPrev();
 }
 
 
 const List::Node *
 List::getHead() const noexcept
 {
-    return nil_.next_;
+    return nil_.getNext();
 }
 
 
 List::Node *
 List::getHead() noexcept
 {
-    return nil_.next_;
+    return nil_.getNext();
 }
 
 
@@ -320,6 +337,7 @@ void
 List::appendNode(Node *node) noexcept
 {
     assert(node != nullptr);
+    assert(node != &nil_);
     node->insert(getTail(), &nil_);
 }
 
@@ -328,6 +346,7 @@ void
 List::prependNode(Node *node) noexcept
 {
     assert(node != nullptr);
+    assert(node != &nil_);
     node->insert(&nil_, getHead());
 }
 
@@ -336,7 +355,9 @@ void
 List::appendNodes(Node *firstNode, Node *lastNode) noexcept
 {
     assert(firstNode != nullptr);
+    assert(firstNode != &nil_);
     assert(lastNode != nullptr);
+    assert(lastNode != &nil_);
     InsertNodes(firstNode, lastNode, getTail(), &nil_);
 }
 
@@ -345,7 +366,9 @@ void
 List::prependNodes(Node *firstNode, Node *lastNode) noexcept
 {
     assert(firstNode != nullptr);
+    assert(firstNode != &nil_);
     assert(lastNode != nullptr);
+    assert(lastNode != &nil_);
     InsertNodes(firstNode, lastNode, &nil_, getHead());
 }
 
@@ -375,4 +398,4 @@ List::prepend(List *other) noexcept
     }
 }
 
-}
+} // namespace siren

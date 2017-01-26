@@ -5,6 +5,66 @@
 
 namespace siren {
 
+Archive::Archive(Stream *stream) noexcept
+{
+    assert(stream != nullptr);
+    initialize(stream);
+}
+
+
+Archive::Archive(Archive &&other) noexcept
+{
+    other.move(this);
+}
+
+
+Archive::~Archive()
+{
+    finalize();
+}
+
+
+Archive &
+Archive::operator=(Archive &&other) noexcept
+{
+    if (&other != this) {
+        finalize();
+        other.move(this);
+    }
+
+    return *this;
+}
+
+
+void
+Archive::initialize(Stream *stream) noexcept
+{
+    stream_ = stream;
+    writtenByteCount_ = 0;
+    readByteCount_ = 0;
+}
+
+
+void
+Archive::finalize() noexcept
+{
+    if (isValid() && !std::uncaught_exception()) {
+        stream_->pickData(writtenByteCount_);
+        stream_->dropData(readByteCount_);
+    }
+}
+
+
+void
+Archive::move(Archive *other) noexcept
+{
+    other->stream_ = stream_;
+    stream_ = nullptr;
+    other->writtenByteCount_ = writtenByteCount_;
+    other->readByteCount_ = readByteCount_;
+}
+
+
 void
 Archive::serializeVariableLengthInteger(std::uintmax_t integer)
 {
@@ -69,4 +129,16 @@ Archive::deserializeBytes(void *bytes, std::size_t numberOfBytes)
     readByteCount_ += numberOfBytes;
 }
 
+
+ArchiveEndOfStream::ArchiveEndOfStream() noexcept
+{
 }
+
+
+const char *
+ArchiveEndOfStream::what() const noexcept
+{
+    return "Siren: Archive: End of stream";
+}
+
+} // namespace siren

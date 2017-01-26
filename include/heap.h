@@ -16,28 +16,33 @@ class Heap final
 public:
     typedef HeapNode Node;
 
-    inline explicit Heap(bool (*)(const Node *, const Node *)) noexcept;
-    inline Heap(Heap &&) noexcept;
-    inline Heap &operator=(Heap &&) noexcept;
-
-    inline void reset() noexcept;
     inline const Node *getTop() const noexcept;
     inline Node *getTop() noexcept;
-    inline void addNode(Node *);
-    inline void removeTop() noexcept;
 
+    explicit Heap(bool (*)(const Node *, const Node *)) noexcept;
+    Heap(Heap &&) noexcept;
+    Heap &operator=(Heap &&) noexcept;
+
+    void reset() noexcept;
+    void addNode(Node *);
     void removeNode(Node *) noexcept;
+    void removeTop() noexcept;
 
 private:
     bool (*const nodeOrderer_)(const Node *, const Node *);
     Buffer<Node *> nodes_;
     std::size_t nodeCount_;
 
-    inline void initialize() noexcept;
-    inline void move(Heap *) noexcept;
+    inline const Node *getNode(std::size_t) const noexcept;
+    inline Node *getNode(std::size_t) noexcept;
 
+    void initialize() noexcept;
+    void move(Heap *) noexcept;
+    std::size_t getMaxNumberOfNodes() const noexcept;
+    void setMaxNumberOfNodes(std::size_t);
     void siftUp(Node *, std::size_t) noexcept;
     void siftDown(Node *, std::size_t) noexcept;
+    void setNode(std::size_t, Node *) noexcept;
 };
 
 
@@ -57,7 +62,7 @@ private:
     friend Heap;
 };
 
-}
+} // namespace siren
 
 
 /*
@@ -65,101 +70,33 @@ private:
  */
 
 
-#include <cassert>
-#include <utility>
-
-
 namespace siren {
-
-Heap::Heap(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
-  : nodeOrderer_(nodeOrderer)
-{
-    assert(nodeOrderer != nullptr);
-    initialize();
-}
-
-
-Heap::Heap(Heap &&other) noexcept
-  : nodeOrderer_(other.nodeOrderer_),
-    nodes_(std::move(other.nodes_))
-{
-    other.move(this);
-}
-
-
-Heap &
-Heap::operator=(Heap &&other) noexcept
-{
-    if (&other != this) {
-        assert(nodeOrderer_ == other.nodeOrderer_);
-        nodes_ = std::move(other.nodes_);
-        other.move(this);
-    }
-
-    return *this;
-}
-
-
-void
-Heap::initialize() noexcept
-{
-    nodeCount_ = 0;
-}
-
-
-void
-Heap::move(Heap *other) noexcept
-{
-    other->nodeCount_ = nodeCount_;
-    initialize();
-}
-
-
-void
-Heap::reset() noexcept
-{
-    nodes_.reset();
-    initialize();
-}
-
 
 const Heap::Node *
 Heap::getTop() const noexcept
 {
-    return nodeCount_ == 0 ? nullptr : nodes_[0];
+    return nodeCount_ == 0 ? nullptr : getNode(0);
 }
 
 
 Heap::Node *
 Heap::getTop() noexcept
 {
-    return nodeCount_ == 0 ? nullptr : nodes_[0];
+    return nodeCount_ == 0 ? nullptr : getNode(0);
 }
 
 
-void
-Heap::addNode(Node *node)
+const HeapNode *
+Heap::getNode(std::size_t nodeIndex) const noexcept
 {
-    assert(node != nullptr);
-
-    if (nodeCount_ == nodes_.getLength()) {
-        nodes_.setLength(nodeCount_ + 1);
-    }
-
-    std::size_t i = nodeCount_++;
-    siftUp(node, i);
+    return nodes_[nodeIndex];
 }
 
 
-void
-Heap::removeTop() noexcept
+HeapNode *
+Heap::getNode(std::size_t nodeIndex) noexcept
 {
-    assert(nodeCount_ >= 1);
-
-    if (--nodeCount_ >= 1) {
-        Node *top = nodes_[nodeCount_];
-        siftDown(top, 0);
-    }
+    return nodes_[nodeIndex];
 }
 
 
@@ -167,4 +104,4 @@ HeapNode::HeapNode() noexcept
 {
 }
 
-}
+} // namespace siren

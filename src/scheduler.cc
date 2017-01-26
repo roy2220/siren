@@ -11,6 +11,127 @@
 
 namespace siren {
 
+Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
+  : defaultFiberSize_(std::max(SIREN_ALIGN(defaultFiberSize, alignof(std::max_align_t))
+                               , std::size_t(MinFiberSize))),
+    currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
+    deadFiber_(nullptr),
+    activeFiberCount_(0)
+{
+    idleFiber_.isPreInterrupted = idleFiber_.isPostInterrupted = false;
+    initialize();
+}
+
+
+Scheduler::Scheduler(Scheduler &&other) noexcept
+  : defaultFiberSize_(other.defaultFiberSize_),
+    currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
+    deadFiber_(nullptr),
+    runnableFiberList_(std::move(other.runnableFiberList_)),
+    suspendedFiberList_(std::move(other.suspendedFiberList_)),
+    activeFiberCount_(0)
+{
+    assert(other.activeFiberCount_ == 0);
+    idleFiber_.isPreInterrupted = idleFiber_.isPostInterrupted = false;
+    other.move(this);
+}
+
+
+Scheduler::~Scheduler()
+{
+    assert(isIdle());
+    finalize();
+}
+
+
+Scheduler &
+Scheduler::operator=(Scheduler &&other) noexcept
+{
+    if (&other != this) {
+        assert(isIdle());
+        assert(other.activeFiberCount_ == 0);
+        finalize();
+        runnableFiberList_ = std::move(other.runnableFiberList_);
+        suspendedFiberList_ = std::move(other.suspendedFiberList_);
+        other.move(this);
+    }
+
+    return *this;
+}
+
+
+void
+Scheduler::initialize() noexcept
+{
+    aliveFiberCount_ = 0;
+    backgroundFiberCount_ = 0;
+}
+
+
+void
+Scheduler::finalize()
+{
+    {
+        List list = std::move(runnableFiberList_);
+        suspendedFiberList_.append(&list);
+
+        list.sort([] (const ListNode *listNode1, const ListNode *listNode2) -> bool {
+            auto fiber1 = static_cast<const Fiber *>(listNode1);
+            auto fiber2 = static_cast<const Fiber *>(listNode2);
+            return fiber1->creationTime <= fiber2->creationTime;
+        });
+
+        while (!list.isEmpty()) {
+            auto fiber = static_cast<Fiber *>(list.getTail());
+            interruptFiber(fiber);
+        }
+    }
+
+    if (aliveFiberCount_ >= 1) {
+        std::terminate();
+    }
+}
+
+
+void
+Scheduler::move(Scheduler *other) noexcept
+{
+    other->aliveFiberCount_ = aliveFiberCount_;
+    other->backgroundFiberCount_ = backgroundFiberCount_;
+    initialize();
+}
+
+
+void
+Scheduler::reset() noexcept
+{
+    assert(isIdle());
+    finalize();
+}
+
+
+#ifndef NDEBUG
+bool
+Scheduler::isIdle() const noexcept
+{
+    return currentFiber_ == &idleFiber_;
+}
+#endif
+
+
+void
+Scheduler::destroyFiber(Fiber *fiber) noexcept
+{
+    bool fiberIsBackground = fiber->isBackground;
+    freeFiber(fiber);
+    --aliveFiberCount_;
+
+    if (fiberIsBackground) {
+        --backgroundFiberCount_;
+    }
+}
+
+
 Scheduler::Fiber *
 Scheduler::allocateFiber(std::size_t fiberSize)
 {
@@ -52,6 +173,132 @@ Scheduler::freeFiber(Fiber *fiber) noexcept
 #endif
     fiber->~Fiber();
     std::free(base);
+}
+
+
+void
+Scheduler::suspendFiber(void *fiberHandle)
+{
+    assert(fiberHandle != nullptr);
+    auto fiber = static_cast<Fiber *>(fiberHandle);
+
+    if (fiber->state == FiberState::Runnable) {
+        suspendedFiberList_.appendNode((fiber->state = FiberState::Suspended, fiber->remove()
+                                        , fiber));
+    } else if (fiber->state == FiberState::Running) {
+        suspendedFiberList_.appendNode((currentFiber_->state = FiberState::Suspended
+                                        , currentFiber_));
+
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
+
+        fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+        switchToFiber(fiber);
+    }
+}
+
+
+void
+Scheduler::resumeFiber(void *fiberHandle) noexcept
+{
+    assert(fiberHandle != nullptr);
+    auto fiber = static_cast<Fiber *>(fiberHandle);
+
+    if (fiber->state == FiberState::Suspended) {
+        runnableFiberList_.appendNode((fiber->state = FiberState::Runnable, fiber->remove()
+                                       , fiber));
+    }
+}
+
+
+void
+Scheduler::interruptFiber(void *fiberHandle)
+{
+    assert(fiberHandle != nullptr);
+    auto fiber = static_cast<Fiber *>(fiberHandle);
+
+    if (fiber->state == FiberState::Running) {
+        fiber->isPostInterrupted = true;
+    } else {
+        if (fiber->state == FiberState::Runnable) {
+            fiber->isPostInterrupted = true;
+        } else {
+            fiber->isPreInterrupted = true;
+        }
+
+        runnableFiberList_.appendNode((currentFiber_->state = FiberState::Runnable, currentFiber_));
+
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
+
+        switchToFiber(fiber);
+
+        if (exception_ != nullptr) {
+            std::rethrow_exception(std::move(exception_));
+        }
+    }
+}
+
+
+void
+Scheduler::yieldToFiber(void *fiberHandle)
+{
+    assert(!isIdle());
+    assert(fiberHandle != nullptr);
+    auto fiber = static_cast<Fiber *>(fiberHandle);
+
+    if (fiber->state == FiberState::Runnable) {
+        (currentFiber_->state = FiberState::Runnable, currentFiber_)->insertAfter(&idleFiber_);
+
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
+
+        switchToFiber(fiber);
+    }
+}
+
+
+void
+Scheduler::yieldTo()
+{
+    assert(!isIdle());
+
+    if (!idleFiber_.isOnly()) {
+        (currentFiber_->state = FiberState::Runnable, currentFiber_)->insertAfter(&idleFiber_);
+
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
+
+        auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+        switchToFiber(fiber);
+    }
+}
+
+
+void
+Scheduler::run()
+{
+    assert(isIdle());
+
+    if (!runnableFiberList_.isEmpty()) {
+        runnableFiberList_.prependNode((currentFiber_->state = FiberState::Runnable
+                                        , currentFiber_));
+
+        auto scopeGuard = MakeScopeGuard([this] () -> void {
+            (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
+        });
+
+        auto fiber = static_cast<Fiber *>(runnableFiberList_.getTail());
+        switchToFiber(fiber);
+
+        if (exception_ != nullptr) {
+            std::rethrow_exception(std::move(exception_));
+        }
+    }
 }
 
 
@@ -162,4 +409,4 @@ Scheduler::fiberStart() noexcept
     runFiber(fiber);
 }
 
-}
+} // namespace siren

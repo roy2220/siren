@@ -9,7 +9,7 @@ namespace siren {
 template <class T>
 inline std::enable_if_t<std::is_unsigned<T>::value, T> NextPowerOfTwo(T) noexcept;
 
-}
+} // namespace siren
 
 
 /*
@@ -38,4 +38,4 @@ NextPowerOfTwo(T x) noexcept
     return x;
 }
 
-}
+} // namespace siren

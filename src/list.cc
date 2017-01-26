@@ -38,4 +38,4 @@ List::SortNodes(Node **firstNode, Node **lastNode, bool (*nodeOrderer)(const Nod
     }
 }
 
-}
+} // namespace siren

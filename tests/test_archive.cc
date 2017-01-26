@@ -12,7 +12,7 @@ SIREN_TEST("Serialize/Deserialize structures")
 {
     enum class Flag : unsigned int {
         A,
-        B
+        B,
     };
 
     struct Dummy {

@@ -27,7 +27,7 @@ private:
     Semaphore semaphore_;
 };
 
-}
+} // namespace siren
 
 
 /*
@@ -77,4 +77,4 @@ Mutex::tryUnlock() noexcept
     return semaphore_.tryUp();
 }
 
-}
+} // namespace siren

@@ -30,7 +30,7 @@ struct MyIOTimer
 
 bool SetBlocking(int, bool);
 
-}
+} // namespace
 
 
 void
@@ -573,6 +573,6 @@ SetBlocking(int fd, bool blocking)
     return true;
 }
 
-}
+} // namespace
 
-}
+} // namespace siren

@@ -35,7 +35,7 @@ private:
     inline void move(Buffer *) noexcept;
 };
 
-}
+} // namespace siren
 
 
 /*
@@ -165,4 +165,4 @@ Buffer<T, true>::setLength(std::size_t length)
     length_ = size / sizeof(T);
 }
 
-}
+} // namespace siren

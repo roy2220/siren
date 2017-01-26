@@ -34,7 +34,7 @@ private:
 template <class T>
 inline ScopeGuard<std::remove_reference_t<T>> MakeScopeGuard(T &&) noexcept;
 
-}
+} // namespace siren
 
 
 /*
@@ -130,4 +130,4 @@ MakeScopeGuard(T &&rollback) noexcept
     return ScopeGuard<U>(std::forward<T>(rollback));
 }
 
-}
+} // namespace siren

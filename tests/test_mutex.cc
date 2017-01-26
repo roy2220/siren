@@ -1,6 +1,7 @@
 #include <random>
 
 #include "mutex.h"
+#include "scheduler.h"
 #include "test.h"
 
 

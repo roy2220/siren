@@ -15,25 +15,6 @@
 #include "semaphore.h"
 
 
-#define SIREN_DEFER_FIBER_INTERRUPTION(LOOP, EXPRESSION)     \
-    do {                                                     \
-        bool sirenFiberWasInterrupted = false;               \
-                                                             \
-        for (;;) {                                           \
-            try {                                            \
-                (EXPRESSION);                                \
-                break;                                       \
-            } catch (FiberInterruption) {                    \
-                sirenFiberWasInterrupted = true;             \
-            }                                                \
-        }                                                    \
-                                                             \
-        if (sirenFiberWasInterrupted) {                      \
-            (LOOP).interruptFiber((LOOP).getCurrentFiber()); \
-        }                                                    \
-    } while (false)
-
-
 namespace siren {
 
 class Loop final
@@ -87,7 +68,7 @@ private:
     void setDelay(std::chrono::milliseconds);
 };
 
-}
+} // namespace siren
 
 
 /*
@@ -203,4 +184,4 @@ Loop::send(int fd, const void *data, size_t dataSize, int flags, int timeout)
     return sendto(fd, data, dataSize, flags, nullptr, 0, timeout);
 }
 
-}
+} // namespace siren

@@ -1,17 +1,17 @@
 #pragma once
 
 
-#define SIREN_STR_IMPL(X) \
+#define SIREN__STR(X) \
     #X
 
 #define SIREN_STR(X) \
-    SIREN_STR_IMPL(X)
+    SIREN__STR(X)
 
-#define SIREN_CONCAT_IMPL(X, Y) \
+#define SIREN__CONCAT(X, Y) \
     X##Y
 
 #define SIREN_CONCAT(X, Y) \
-    SIREN_CONCAT_IMPL(X, Y)
+    SIREN__CONCAT(X, Y)
 
 #define SIREN_ALIGN(X, Y) \
     (((X) + (Y) - 1) & ~((Y) - 1))

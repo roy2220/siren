@@ -1,5 +1,6 @@
 #include <list>
 
+#include "scheduler.h"
 #include "semaphore.h"
 #include "test.h"
 
