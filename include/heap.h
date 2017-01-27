@@ -16,8 +16,15 @@ class Heap final
 public:
     typedef HeapNode Node;
 
+    inline bool isEmpty() const noexcept;
     inline const Node *getTop() const noexcept;
     inline Node *getTop() noexcept;
+
+    template <class T>
+    inline void traverse(T &&) const;
+
+    template <class T>
+    inline void traverse(T &&);
 
     explicit Heap(bool (*)(const Node *, const Node *)) noexcept;
     Heap(Heap &&) noexcept;
@@ -70,19 +77,31 @@ private:
  */
 
 
+#include <cassert>
+
+
 namespace siren {
+
+bool
+Heap::isEmpty() const noexcept
+{
+    return nodeCount_ == 0;
+}
+
 
 const Heap::Node *
 Heap::getTop() const noexcept
 {
-    return nodeCount_ == 0 ? nullptr : getNode(0);
+    assert(!isEmpty());
+    return getNode(0);
 }
 
 
 Heap::Node *
 Heap::getTop() noexcept
 {
-    return nodeCount_ == 0 ? nullptr : getNode(0);
+    assert(!isEmpty());
+    return getNode(0);
 }
 
 
@@ -97,6 +116,28 @@ HeapNode *
 Heap::getNode(std::size_t nodeIndex) noexcept
 {
     return nodes_[nodeIndex];
+}
+
+
+template <class T>
+void
+Heap::traverse(T &&callback) const
+{
+    for (std::size_t i = 0; i < nodeCount_; ++i) {
+        const Node *x = getNode(i);
+        callback(x);
+    }
+}
+
+
+template <class T>
+void
+Heap::traverse(T &&callback)
+{
+    for (std::size_t i = 0; i < nodeCount_; ++i) {
+        Node *x = getNode(i);
+        callback(x);
+    }
 }
 
 

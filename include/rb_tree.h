@@ -22,6 +22,13 @@ protected:
 
     ~RBTreeNode() = default;
 
+private:
+    typedef detail::RBTreeNodeColor Color;
+
+    RBTreeNode *children_[2];
+    RBTreeNode *parent_;
+    Color color_;
+
     void setLeftChild(RBTreeNode *) noexcept;
     void setLeftChildToNil(RBTreeNode *) noexcept;
     void setRightChild(RBTreeNode *) noexcept;
@@ -29,13 +36,6 @@ protected:
     void replace(RBTreeNode *) noexcept;
     void rotateLeft() noexcept;
     void rotateRight() noexcept;
-
-private:
-    typedef detail::RBTreeNodeColor Color;
-
-    RBTreeNode *children_[2];
-    RBTreeNode *parent_;
-    Color color_;
 
     RBTreeNode(const RBTreeNode &) = delete;
     RBTreeNode &operator=(const RBTreeNode &) = delete;
@@ -57,6 +57,12 @@ public:
     inline const RBTreeNode *getMax() const noexcept;
     inline RBTreeNode *getMax() noexcept;
     inline bool isNil(const Node *) const noexcept;
+
+    template <class T>
+    inline void traverse(T &&) const;
+
+    template <class T>
+    inline void traverse(T &&);
 
     explicit RBTree(bool (*)(const Node *, const Node *)) noexcept;
     RBTree(RBTree &&) noexcept;
@@ -201,6 +207,56 @@ RBTree::isNil(const Node *node) const noexcept
 {
     assert(node != nullptr);
     return node == &nil_;
+}
+
+
+template <class T>
+void
+RBTree::traverse(T &&callback) const
+{
+    const Node *s[64];
+    int i = -1;
+    const Node *x = getRoot();
+
+    for (;;) {
+        if (x == &nil_) {
+            if (i < 0) {
+                return;
+            } else {
+                x = s[i--];
+                callback(x);
+                x = x->getRightChild();
+            }
+        } else {
+            s[++i] = x;
+            x = x->getLeftChild();
+        }
+    }
+}
+
+
+template <class T>
+void
+RBTree::traverse(T &&callback)
+{
+    Node *s[64];
+    int i = -1;
+    Node *x = getRoot();
+
+    for (;;) {
+        if (x == &nil_) {
+            if (i < 0) {
+                return;
+            } else {
+                x = s[i--];
+                callback(x);
+                x = x->getRightChild();
+            }
+        } else {
+            s[++i] = x;
+            x = x->getLeftChild();
+        }
+    }
 }
 
 } // namespace siren

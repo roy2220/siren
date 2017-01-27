@@ -1,6 +1,5 @@
 #include "heap.h"
 
-#include <cassert>
 #include <utility>
 
 
@@ -94,7 +93,7 @@ Heap::removeNode(Node *node) noexcept
 void
 Heap::removeTop() noexcept
 {
-    assert(nodeCount_ >= 1);
+    assert(!isEmpty());
     std::size_t lastNodeIndex = --nodeCount_;
 
     if (lastNodeIndex >= 1) {

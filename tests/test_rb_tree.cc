@@ -37,27 +37,13 @@ SIREN_TEST("Insert/Remove red-black tree nodes")
         rbt.removeNode(&d[i]);
     }
 
-    RBTreeNode *s[64];
-    int i = -1;
-    RBTreeNode *n = rbt.getRoot();
     unsigned int pv = 0;
 
-    for (;;) {
-        if (rbt.isNil(n)) {
-            if (i < 0) {
-                break;
-            } else {
-                n = s[i--];
-                unsigned int v = static_cast<Dummy *>(n)->val;
-                SIREN_TEST_ASSERT(v >= pv);
-                pv = v;
-                n = n->getRightChild();
-            }
-        } else {
-            s[++i] = n;
-            n = n->getLeftChild();
-        }
-    }
+    rbt.traverse([&] (RBTreeNode *n) -> void {
+        unsigned int v = static_cast<Dummy *>(n)->val;
+        SIREN_TEST_ASSERT(v >= pv);
+        pv = v;
+    });
 
     for (int i = 512; i < 1024; ++i) {
         rbt.removeNode(&d[i]);

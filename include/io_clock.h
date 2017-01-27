@@ -76,12 +76,10 @@ namespace siren {
 std::chrono::milliseconds
 IOClock::getDueTime() const noexcept
 {
-    const HeapNode *heapNode = timerHeap_.getTop();
-
-    if (heapNode == nullptr) {
+    if (timerHeap_.isEmpty()) {
         return std::chrono::milliseconds(-1);
     } else {
-        auto timer = static_cast<const IOTimer *>(heapNode);
+        auto timer = static_cast<const IOTimer *>(timerHeap_.getTop());
         return std::max(timer->expiryTime_ - now_, std::chrono::milliseconds(0));
     }
 }

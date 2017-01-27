@@ -35,21 +35,16 @@ SIREN_TEST("Insert/Remove heap nodes")
         h.removeNode(&d[i]);
     }
 
+    SIREN_TEST_ASSERT(!h.isEmpty());
     auto pd = static_cast<Dummy *>(h.getTop());
-    SIREN_TEST_ASSERT(pd != nullptr);
     h.removeTop();
     int t = pd->val;
 
-    for (;;) {
+    while (!h.isEmpty()) {
         pd = static_cast<Dummy *>(h.getTop());
-
-        if (pd == nullptr) {
-            break;
-        } else {
-            h.removeTop();
-            SIREN_TEST_ASSERT(pd->val >= t);
-            t = pd->val;
-        }
+        h.removeTop();
+        SIREN_TEST_ASSERT(pd->val >= t);
+        t = pd->val;
     }
 
     for (int i = 0; i < 1024; ++i) {
@@ -80,10 +75,10 @@ SIREN_TEST("Move heap nodes")
     }
 
     Heap h2 = std::move(h1);
-    SIREN_TEST_ASSERT(h1.getTop() == nullptr);
+    SIREN_TEST_ASSERT(h1.isEmpty());
 
     for (int i = 0; i < 5; ++i) {
-        SIREN_TEST_ASSERT(h2.getTop() != nullptr);
+        SIREN_TEST_ASSERT(!h2.isEmpty());
         h2.removeTop();
     }
 
@@ -92,10 +87,10 @@ SIREN_TEST("Move heap nodes")
     }
 
     h1 = std::move(h2);
-    SIREN_TEST_ASSERT(h2.getTop() == nullptr);
+    SIREN_TEST_ASSERT(h2.isEmpty());
 
     for (int i = 0; i < 5; ++i) {
-        SIREN_TEST_ASSERT(h1.getTop() != nullptr);
+        SIREN_TEST_ASSERT(!h1.isEmpty());
         h1.removeTop();
     }
 }

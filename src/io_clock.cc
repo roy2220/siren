@@ -117,9 +117,8 @@ IOClock::getExpiredTimers(std::vector<Timer *> *timers)
 {
     assert(timers != nullptr);
 
-    for (HeapNode *heapNode = timerHeap_.getTop(); heapNode != nullptr
-         ; heapNode = timerHeap_.getTop()) {
-        auto timer = static_cast<Timer *>(heapNode);
+    while (!timerHeap_.isEmpty()) {
+        auto timer = static_cast<Timer *>(timerHeap_.getTop());
 
         if (timer->expiryTime_ <= now_) {
             timerHeap_.removeTop();
