@@ -10,7 +10,7 @@ namespace {
 using namespace siren;
 
 
-SIREN_TEST("Add/Remove heap nodes")
+SIREN_TEST("Insert/Remove heap nodes")
 {
     struct Dummy : HeapNode {
         int val;
@@ -28,7 +28,7 @@ SIREN_TEST("Add/Remove heap nodes")
 
     for (int i = 0; i < 1024; ++i) {
         d[i].val = gen();
-        h.addNode(&d[i]);
+        h.insertNode(&d[i]);
     }
 
     for (int i = 0; i < 512; ++i) {
@@ -53,7 +53,7 @@ SIREN_TEST("Add/Remove heap nodes")
     }
 
     for (int i = 0; i < 1024; ++i) {
-        h.addNode(&d[i]);
+        h.insertNode(&d[i]);
     }
 }
 
@@ -76,7 +76,7 @@ SIREN_TEST("Move heap nodes")
     Dummy d[] = {23, 48, -1, -7777773, 999};
 
     for (int i = 0; i < 5; ++i) {
-        h1.addNode(&d[i]);
+        h1.insertNode(&d[i]);
     }
 
     Heap h2 = std::move(h1);
@@ -88,7 +88,7 @@ SIREN_TEST("Move heap nodes")
     }
 
     for (int i = 0; i < 5; ++i) {
-        h2.addNode(&d[i]);
+        h2.insertNode(&d[i]);
     }
 
     h1 = std::move(h2);

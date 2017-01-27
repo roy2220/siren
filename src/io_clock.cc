@@ -100,7 +100,7 @@ IOClock::addTimer(Timer *timer, std::chrono::milliseconds interval)
         timer->expiryTime_ = now_ + interval;
     }
 
-    timerHeap_.addNode(timer);
+    timerHeap_.insertNode(timer);
 }
 
 

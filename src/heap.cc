@@ -59,7 +59,7 @@ Heap::reset() noexcept
 
 
 void
-Heap::addNode(Node *node)
+Heap::insertNode(Node *node)
 {
     assert(node != nullptr);
 

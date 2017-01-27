@@ -24,7 +24,7 @@ public:
     Heap &operator=(Heap &&) noexcept;
 
     void reset() noexcept;
-    void addNode(Node *);
+    void insertNode(Node *);
     void removeNode(Node *) noexcept;
     void removeTop() noexcept;
 
