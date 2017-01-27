@@ -26,12 +26,12 @@ private:
     const std::size_t firstChunkSize_;
     std::size_t chunkSize_;
     std::vector<void *> chunks_;
-    void *lastFreeBlock_;
+    void *lastBlock_;
 
     void initialize() noexcept;
     void finalize() noexcept;
     void move(MemoryPool *) noexcept;
-    void makeFreeBlocks();
+    void makeBlocks();
 };
 
 } // namespace siren
@@ -50,12 +50,12 @@ namespace siren {
 void *
 MemoryPool::allocateBlock()
 {
-    if (lastFreeBlock_ == nullptr) {
-        makeFreeBlocks();
+    if (lastBlock_ == nullptr) {
+        makeBlocks();
     }
 
-    void *block = lastFreeBlock_;
-    lastFreeBlock_ = *static_cast<void **>(block);
+    void *block = lastBlock_;
+    lastBlock_ = *static_cast<void **>(block);
     return block;
 }
 
@@ -64,8 +64,8 @@ void
 MemoryPool::freeBlock(void *block) noexcept
 {
     assert(block != nullptr);
-    *static_cast<void **>(block) = lastFreeBlock_;
-    lastFreeBlock_ = block;
+    *static_cast<void **>(block) = lastBlock_;
+    lastBlock_ = block;
 }
 
 } // namespace siren

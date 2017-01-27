@@ -172,7 +172,7 @@ ThreadPool::getWaitingTask()
         conditionVariable_.wait(uniqueLock);
     }
 
-    Task *task = static_cast<ThreadPoolTask *>(waitingTaskList_.getHead());
+    Task *task = static_cast<ThreadPoolTask *>(waitingTaskList_.getTail());
 
     if (task == &noTask_) {
         return nullptr;
@@ -187,7 +187,7 @@ void
 ThreadPool::closeWaitingTaskList()
 {
     std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
-    waitingTaskList_.appendNode(&noTask_);
+    waitingTaskList_.prependNode(&noTask_);
     conditionVariable_.notify_all();
 }
 

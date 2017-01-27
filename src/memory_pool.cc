@@ -59,7 +59,7 @@ void
 MemoryPool::initialize() noexcept
 {
     chunkSize_ = firstChunkSize_;
-    lastFreeBlock_ = nullptr;
+    lastBlock_ = nullptr;
 }
 
 
@@ -76,7 +76,7 @@ void
 MemoryPool::move(MemoryPool *other) noexcept
 {
     other->chunkSize_ = chunkSize_;
-    other->lastFreeBlock_ = lastFreeBlock_;
+    other->lastBlock_ = lastBlock_;
     initialize();
 }
 
@@ -91,7 +91,7 @@ MemoryPool::reset() noexcept
 
 
 void
-MemoryPool::makeFreeBlocks()
+MemoryPool::makeBlocks()
 {
     void *chunk = std::malloc(chunkSize_);
 
@@ -100,16 +100,14 @@ MemoryPool::makeFreeBlocks()
     }
 
     chunks_.push_back(chunk);
-    void *firstFreeBlock = &lastFreeBlock_;
     void *block = static_cast<char *>(chunk) + chunkSize_ - blockSize_;
 
     do {
-        *static_cast<void **>(firstFreeBlock) = block;
-        firstFreeBlock = block;
+        *static_cast<void **>(block) = lastBlock_;
+        lastBlock_ = block;
         block = static_cast<char *>(block) - blockSize_;
     } while (block >= chunk);
 
-    *static_cast<void **>(firstFreeBlock) = nullptr;
     chunkSize_ *= 2;
 }
 

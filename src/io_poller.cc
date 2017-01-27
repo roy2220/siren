@@ -296,14 +296,14 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
         auto object = static_cast<Object *>(event->data.ptr);
 
         if ((event->events & (IOEventFlags[0] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH(listNode, object->watcherLists[0]) {
+            SIREN_LIST_FOREACH_REVERSE(listNode, object->watcherLists[0]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);
             }
         }
 
         if ((event->events & (IOEventFlags[1] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH(listNode, object->watcherLists[1]) {
+            SIREN_LIST_FOREACH_REVERSE(listNode, object->watcherLists[1]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);
             }

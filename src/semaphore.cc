@@ -102,7 +102,7 @@ Semaphore::up()
 {
     if (value_ < maxValue_) {
         if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
             scheduler_->suspendFiber(waiter->fiberHandle);
         }
     } else {
@@ -118,13 +118,13 @@ Semaphore::up()
         }
 
         if (++value_ < maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
             scheduler_->resumeFiber(waiter->fiberHandle);
         }
     }
 
     if (value_ == minValue_ + 1 && !downWaiterList_.isEmpty()) {
-        auto waiter = static_cast<Waiter *>(downWaiterList_.getHead());
+        auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
         scheduler_->resumeFiber(waiter->fiberHandle);
     }
 }
@@ -146,18 +146,18 @@ Semaphore::down()
         }
 
         if (--value_ > minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
             scheduler_->resumeFiber(waiter->fiberHandle);
         }
     } else {
         if (--value_ == minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
             scheduler_->suspendFiber(waiter->fiberHandle);
         }
     }
 
     if (value_ == maxValue_ - 1 && !upWaiterList_.isEmpty()) {
-        auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+        auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
         scheduler_->resumeFiber(waiter->fiberHandle);
     }
 }
@@ -168,12 +168,12 @@ Semaphore::tryUp() noexcept
 {
     if (value_ < maxValue_) {
         if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
             scheduler_->suspendFiber(waiter->fiberHandle);
         }
 
         if (value_ == minValue_ + 1 && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
             scheduler_->resumeFiber(waiter->fiberHandle);
         }
 
@@ -191,12 +191,12 @@ Semaphore::tryDown() noexcept
         return false;
     } else {
         if (--value_ == minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
             scheduler_->suspendFiber(waiter->fiberHandle);
         }
 
         if (value_ == maxValue_ - 1 && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getHead());
+            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
             scheduler_->resumeFiber(waiter->fiberHandle);
         }
 

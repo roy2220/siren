@@ -63,7 +63,7 @@ Event::isWaited() const noexcept
 void
 Event::trigger() noexcept
 {
-    SIREN_LIST_FOREACH(listNode, waiterList_) {
+    SIREN_LIST_FOREACH_REVERSE(listNode, waiterList_) {
         auto waiter = static_cast<Waiter *>(listNode);
         scheduler_->resumeFiber(waiter->fiberHandle);
     }
