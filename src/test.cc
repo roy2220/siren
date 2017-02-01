@@ -16,21 +16,28 @@ std::list<detail::Test *> Tests;
 
 
 std::size_t
+GetNumberOfTests() noexcept
+{
+    return Tests.size();
+}
+
+
+std::size_t
 RunTests() noexcept
 {
-    std::size_t failedTestCount = 0;
+    std::size_t passedTestCount = 0;
 
     for (detail::Test *test : Tests) {
         try {
             test->run();
+            ++passedTestCount;
         } catch (const std::exception &exception) {
-            std::fprintf(stderr, "%s:%d: %s: %s\n", test->getFileName()
+            std::fprintf(stderr, "%s:%u: %s: %s\n", test->getFileName()
                          , test->getLineNumber(), test->getDescription(), exception.what());
-            ++failedTestCount;
         }
     }
 
-    return failedTestCount;
+    return passedTestCount;
 }
 
 

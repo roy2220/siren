@@ -1,7 +1,7 @@
 -include .makesettings
 
 PREFIX ?= /usr/local
-BUILDDIR ?= obj
+BUILDDIR ?= build
 CPPFLAGS ?=
 CXXFLAGS ?=
 ARFLAGS ?=
@@ -26,8 +26,8 @@ endef
 
 $(eval $(call prependflags))
 
-override objs := $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard src/*.cc))
-override testobjs := $(objs) $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard tests/*.cc))
+override libobjs := $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard src/*.cc))
+override testobjs := $(libobjs) $(patsubst %.cc,$(BUILDDIR)/%.o,$(wildcard test/*.cc))
 
 override cmds := help build test install uninstall tag clean
 .PHONY: $(cmds)
@@ -40,8 +40,8 @@ help:
 build: $(BUILDDIR)/libsiren.a
 
 
-test: $(BUILDDIR)/test
-	$(DEBUG) $(BUILDDIR)/test
+test: $(BUILDDIR)/siren-test
+	$(DEBUG) $(BUILDDIR)/siren-test
 
 
 install: build
@@ -66,17 +66,17 @@ clean:
 	rm -rf $(BUILDDIR)
 
 
-$(BUILDDIR)/libsiren.a: $(objs)
+$(BUILDDIR)/libsiren.a: $(libobjs)
 	@mkdir -p $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
 
 ifneq ($(filter build,$(MAKECMDGOALS)),)
--include $(objs:%.o=%.d)
+-include $(libobjs:%.o=%.d)
 endif
 
 
-$(BUILDDIR)/test: $(testobjs)
+$(BUILDDIR)/siren-test: $(testobjs)
 	@mkdir -p $(@D)
 	$(CXX) -o $@ $^ -pthread
 

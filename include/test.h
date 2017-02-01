@@ -54,6 +54,7 @@
 
 namespace siren {
 
+std::size_t GetNumberOfTests() noexcept;
 std::size_t RunTests() noexcept;
 
 
