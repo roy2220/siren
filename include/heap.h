@@ -37,19 +37,19 @@ public:
 
 private:
     bool (*const nodeOrderer_)(const Node *, const Node *);
-    Buffer<Node *> nodes_;
+    Buffer<Node *> slots_;
     std::size_t nodeCount_;
 
-    inline const Node *getNode(std::size_t) const noexcept;
-    inline Node *getNode(std::size_t) noexcept;
+    inline const Node *getSlot(std::size_t) const noexcept;
+    inline Node *getSlot(std::size_t) noexcept;
 
     void initialize() noexcept;
     void move(Heap *) noexcept;
-    std::size_t getMaxNumberOfNodes() const noexcept;
-    void setMaxNumberOfNodes(std::size_t);
+    std::size_t getNumberOfSlots() const noexcept;
+    void setNumberOfSlots(std::size_t);
     void siftUp(Node *, std::size_t) noexcept;
     void siftDown(Node *, std::size_t) noexcept;
-    void setNode(std::size_t, Node *) noexcept;
+    void setSlot(std::size_t, Node *) noexcept;
 };
 
 
@@ -61,7 +61,9 @@ protected:
     ~HeapNode() = default;
 
 private:
-    std::size_t index_;
+    std::size_t slotIndex_;
+
+    std::size_t getSlotIndex() const noexcept;
 
     HeapNode(const HeapNode &) = delete;
     HeapNode &operator=(const HeapNode &) = delete;
@@ -93,7 +95,7 @@ const Heap::Node *
 Heap::getTop() const noexcept
 {
     assert(!isEmpty());
-    return getNode(0);
+    return getSlot(0);
 }
 
 
@@ -101,21 +103,21 @@ Heap::Node *
 Heap::getTop() noexcept
 {
     assert(!isEmpty());
-    return getNode(0);
+    return getSlot(0);
 }
 
 
 const HeapNode *
-Heap::getNode(std::size_t nodeIndex) const noexcept
+Heap::getSlot(std::size_t slotIndex) const noexcept
 {
-    return nodes_[nodeIndex];
+    return slots_[slotIndex];
 }
 
 
 HeapNode *
-Heap::getNode(std::size_t nodeIndex) noexcept
+Heap::getSlot(std::size_t slotIndex) noexcept
 {
-    return nodes_[nodeIndex];
+    return slots_[slotIndex];
 }
 
 
@@ -124,7 +126,7 @@ void
 Heap::traverse(T &&callback) const
 {
     for (std::size_t i = 0; i < nodeCount_; ++i) {
-        const Node *x = getNode(i);
+        const Node *x = getSlot(i);
         callback(x);
     }
 }
@@ -135,7 +137,7 @@ void
 Heap::traverse(T &&callback)
 {
     for (std::size_t i = 0; i < nodeCount_; ++i) {
-        Node *x = getNode(i);
+        Node *x = getSlot(i);
         callback(x);
     }
 }

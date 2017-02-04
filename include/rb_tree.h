@@ -59,6 +59,12 @@ public:
     inline bool isNil(const Node *) const noexcept;
 
     template <class T>
+    inline const Node *search(T &&) const;
+
+    template <class T>
+    inline Node *search(T &&);
+
+    template <class T>
     inline void traverse(T &&) const;
 
     template <class T>
@@ -207,6 +213,46 @@ RBTree::isNil(const Node *node) const noexcept
 {
     assert(node != nullptr);
     return node == &nil_;
+}
+
+
+template <class T>
+const RBTreeNode *
+RBTree::search(T &&nodeMatcher) const
+{
+    const Node *x = getRoot();
+
+    while (x != &nil_) {
+        int delta = nodeMatcher(x);
+
+        if (delta == 0) {
+            return x;
+        } else {
+            x = delta < 0 ? x->getLeftChild() : x->getRightChild();
+        }
+    }
+
+    return &nil_;
+}
+
+
+template <class T>
+RBTreeNode *
+RBTree::search(T &&nodeMatcher)
+{
+    Node *x = getRoot();
+
+    while (x != &nil_) {
+        int delta = nodeMatcher(x);
+
+        if (delta == 0) {
+            return x;
+        } else {
+            x = delta < 0 ? x->getLeftChild() : x->getRightChild();
+        }
+    }
+
+    return &nil_;
 }
 
 

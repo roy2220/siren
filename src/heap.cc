@@ -15,7 +15,7 @@ Heap::Heap(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
 
 Heap::Heap(Heap &&other) noexcept
   : nodeOrderer_(other.nodeOrderer_),
-    nodes_(std::move(other.nodes_))
+    slots_(std::move(other.slots_))
 {
     other.move(this);
 }
@@ -26,7 +26,7 @@ Heap::operator=(Heap &&other) noexcept
 {
     if (&other != this) {
         assert(nodeOrderer_ == other.nodeOrderer_);
-        nodes_ = std::move(other.nodes_);
+        slots_ = std::move(other.slots_);
         other.move(this);
     }
 
@@ -52,7 +52,7 @@ Heap::move(Heap *other) noexcept
 void
 Heap::reset() noexcept
 {
-    nodes_.reset();
+    slots_.reset();
     initialize();
 }
 
@@ -62,29 +62,30 @@ Heap::insertNode(Node *node)
 {
     assert(node != nullptr);
 
-    if (nodeCount_ == getMaxNumberOfNodes()) {
-        setMaxNumberOfNodes(nodeCount_ + 1);
+    if (nodeCount_ == getNumberOfSlots()) {
+        setNumberOfSlots(nodeCount_ + 1);
     }
 
-    std::size_t nodeIndex = nodeCount_++;
-    siftUp(node, nodeIndex);
+    std::size_t slotIndex = nodeCount_++;
+    siftUp(node, slotIndex);
 }
 
 
 void
-Heap::removeNode(Node *node) noexcept
+Heap::removeNode(Node *node1) noexcept
 {
-    assert(node != nullptr);
-    assert(node->index_ < nodeCount_ && node == getNode(node->index_));
-    std::size_t lastNodeIndex = --nodeCount_;
+    assert(!isEmpty());
+    assert(node1 != nullptr);
+    std::size_t slot1Index = node1->getSlotIndex();
+    std::size_t slot2Index = --nodeCount_;
 
-    if (node->index_ < lastNodeIndex) {
-        Node *lastNode = getNode(lastNodeIndex);
+    if (slot2Index > slot1Index) {
+        Node *node2 = getSlot(slot2Index);
 
-        if (nodeOrderer_(lastNode, node)) {
-            siftUp(lastNode, node->index_);
+        if (nodeOrderer_(node2, node1)) {
+            siftUp(node2, slot1Index);
         } else {
-            siftDown(lastNode, node->index_);
+            siftDown(node2, slot1Index);
         }
     }
 }
@@ -94,26 +95,26 @@ void
 Heap::removeTop() noexcept
 {
     assert(!isEmpty());
-    std::size_t lastNodeIndex = --nodeCount_;
+    std::size_t slotIndex = --nodeCount_;
 
-    if (lastNodeIndex >= 1) {
-        Node *lastNode = getNode(lastNodeIndex);
-        siftDown(lastNode, 0);
+    if (slotIndex > 0) {
+        Node *node = getSlot(slotIndex);
+        siftDown(node, 0);
     }
 }
 
 
 std::size_t
-Heap::getMaxNumberOfNodes() const noexcept
+Heap::getNumberOfSlots() const noexcept
 {
-    return nodes_.getLength();
+    return slots_.getLength();
 }
 
 
 void
-Heap::setMaxNumberOfNodes(std::size_t maxNumberOfNodes)
+Heap::setNumberOfSlots(std::size_t numberOfSlots)
 {
-    nodes_.setLength(maxNumberOfNodes);
+    slots_.setLength(numberOfSlots);
 }
 
 
@@ -122,17 +123,17 @@ Heap::siftUp(Node *x, std::size_t i) noexcept
 {
     while (i >= 1) {
         std::size_t j = (i - 1) / 2;
-        Node *y = getNode(j);
+        Node *y = getSlot(j);
 
         if (nodeOrderer_(y, x)) {
             break;
         } else {
-            setNode(i, y);
+            setSlot(i, y);
             i = j;
         }
     }
 
-    setNode(i, x);
+    setSlot(i, x);
 }
 
 
@@ -149,7 +150,7 @@ Heap::siftDown(Node *x, std::size_t i) noexcept
                 std::size_t j2 = j1 + 1;
 
                 if (j2 < nodeCount_) {
-                    j = nodeOrderer_(getNode(j1), getNode(j2)) ? j1 : j2;
+                    j = nodeOrderer_(getSlot(j1), getSlot(j2)) ? j1 : j2;
                 } else {
                     j = j1;
                 }
@@ -158,24 +159,31 @@ Heap::siftDown(Node *x, std::size_t i) noexcept
             }
         }
 
-        Node *y = getNode(j);
+        Node *y = getSlot(j);
 
         if (nodeOrderer_(x, y)) {
             break;
         } else {
-            setNode(i, y);
+            setSlot(i, y);
             i = j;
         }
     }
 
-    setNode(i, x);
+    setSlot(i, x);
 }
 
 
 void
-Heap::setNode(std::size_t nodeIndex, Node *node) noexcept
+Heap::setSlot(std::size_t slotIndex, Node *node) noexcept
 {
-    (nodes_[nodeIndex] = node)->index_ = nodeIndex;
+    (slots_[slotIndex] = node)->slotIndex_ = slotIndex;
+}
+
+
+std::size_t
+HeapNode::getSlotIndex() const noexcept
+{
+    return slotIndex_;
 }
 
 } // namespace siren

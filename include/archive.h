@@ -182,13 +182,6 @@ private:
 
 namespace siren {
 
-bool
-Archive::isValid() const noexcept
-{
-    return stream_ != nullptr;
-}
-
-
 Archive &
 Archive::operator<<(bool boolean)
 {
@@ -462,6 +455,13 @@ Archive::operator>>(T &object)
     assert(isValid());
     object.deserialize(this);
     return *this;
+}
+
+
+bool
+Archive::isValid() const noexcept
+{
+    return stream_ != nullptr;
 }
 
 

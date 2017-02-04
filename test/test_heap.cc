@@ -21,8 +21,7 @@ SIREN_TEST("Insert/Remove heap nodes")
         }
     };
 
-    std::mt19937 gen;
-    gen.seed(1);
+    std::mt19937 gen((std::random_device())());
     Dummy d[1024];
     Heap h(Dummy::OrderHeapNode);
 
@@ -42,6 +41,7 @@ SIREN_TEST("Insert/Remove heap nodes")
 
     while (!h.isEmpty()) {
         pd = static_cast<Dummy *>(h.getTop());
+        SIREN_TEST_ASSERT(pd - d >= 512);
         h.removeTop();
         SIREN_TEST_ASSERT(pd->val >= t);
         t = pd->val;

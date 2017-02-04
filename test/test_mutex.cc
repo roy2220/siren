@@ -14,7 +14,7 @@ SIREN_TEST("Lock/Unlock mutexes")
 {
     Scheduler sched;
     Mutex m(&sched);
-    std::mt19937 gen;
+    std::mt19937 gen((std::random_device())());
     char c[2];
 
     for (int i = 0; i < 26; ++i) {

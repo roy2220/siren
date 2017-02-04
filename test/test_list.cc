@@ -190,8 +190,7 @@ SIREN_TEST("Append/Prepend lists")
 
 SIREN_TEST("Sort lists")
 {
-    std::mt19937 gen;
-    gen.seed(19937);
+    std::mt19937 gen((std::random_device())());
 
     struct Dummy : ListNode {
         unsigned int val;

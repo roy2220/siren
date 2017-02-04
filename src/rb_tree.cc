@@ -183,6 +183,7 @@ RBTree::insertNode(Node *x) noexcept
 void
 RBTree::removeNode(Node *x) noexcept
 {
+    assert(!isEmpty());
     assert(x != nullptr);
     assert(x != &nil_);
     Node *y;
