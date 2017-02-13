@@ -33,7 +33,6 @@ class Archive final
 public:
     typedef ArchiveEndOfStream EndOfStream;
 
-    inline bool isValid() const noexcept;
     inline Archive &operator<<(bool);
     inline Archive &operator>>(bool &);
     inline Archive &operator<<(float);
@@ -42,6 +41,8 @@ public:
     inline Archive &operator>>(double &);
     inline Archive &operator<<(const std::string &);
     inline Archive &operator>>(std::string &);
+
+    inline bool isValid() const noexcept;
 
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator<<(T);

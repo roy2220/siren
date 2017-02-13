@@ -52,10 +52,10 @@ public:
     inline bool isEmpty() const noexcept;
     inline const Node *getRoot() const noexcept;
     inline Node *getRoot() noexcept;
-    inline const RBTreeNode *getMin() const noexcept;
-    inline RBTreeNode *getMin() noexcept;
-    inline const RBTreeNode *getMax() const noexcept;
-    inline RBTreeNode *getMax() noexcept;
+    inline const Node *getMin() const noexcept;
+    inline Node *getMin() noexcept;
+    inline const Node *getMax() const noexcept;
+    inline Node *getMax() noexcept;
     inline bool isNil(const Node *) const noexcept;
 
     template <class T>
@@ -295,8 +295,9 @@ RBTree::traverse(T &&callback)
                 return;
             } else {
                 x = s[i--];
-                callback(x);
+                Node *y = x;
                 x = x->getRightChild();
+                callback(y);
             }
         } else {
             s[++i] = x;

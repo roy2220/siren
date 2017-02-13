@@ -161,7 +161,8 @@ HashTable::traverse(T &&callback)
     for (std::size_t i = 0; i < nodeCount_; ++i) {
         Node **slot = locateSlot(i);
 
-        for (Node *node = *slot; node != nullptr; node = node->prev_) {
+        for (Node *node = *slot, *nodePrev; node != nullptr && (nodePrev = node->prev_, true)
+             ; node = nodePrev) {
             callback(node);
         }
     }
