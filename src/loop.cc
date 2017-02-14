@@ -164,9 +164,9 @@ Loop::read(int fd, void *buffer, size_t bufferSize, int timeout)
         ssize_t numberOfBytes = ::read(fd, buffer, bufferSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -188,9 +188,9 @@ Loop::write(int fd, const void *data, size_t dataSize, int timeout)
         ssize_t numberOfBytes = ::write(fd, data, dataSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -212,9 +212,9 @@ Loop::readv(int fd, const iovec *vector, int vectorLength, int timeout)
         ssize_t numberOfBytes = ::readv(fd, vector, vectorLength);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -236,9 +236,9 @@ Loop::writev(int fd, const iovec *vector, int vectorLength, int timeout)
         ssize_t numberOfBytes = ::writev(fd, vector, vectorLength);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -281,9 +281,9 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
         int subFD = ::accept4(fd, name, nameSize, flags | SOCK_NONBLOCK);
 
         if (subFD < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -326,7 +326,7 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
                     return -1;
                 }
             } else {
-                errno = ETIME;
+                errno = EAGAIN;
                 return -1;
             }
         } else {
@@ -346,9 +346,9 @@ Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *nam
         ssize_t numberOfBytes = ::recvfrom(fd, buffer, bufferSize, flags, name, nameSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -371,9 +371,9 @@ Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockadd
         ssize_t numberOfBytes = ::sendto(fd, data, dataSize, flags, name, nameSize);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -395,9 +395,9 @@ Loop::recvmsg(int fd, msghdr *message, int flags, int timeout)
         ssize_t numberOfBytes = ::recvmsg(fd, message, flags);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {
@@ -419,9 +419,9 @@ Loop::sendmsg(int fd, const msghdr *message, int flags, int timeout)
         ssize_t numberOfBytes = ::sendmsg(fd, message, flags);
 
         if (numberOfBytes < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN) {
                 if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = ETIME;
+                    errno = EAGAIN;
                     return -1;
                 }
             } else {

@@ -6,6 +6,8 @@
 #include <system_error>
 #include <utility>
 
+#include <fcntl.h>
+
 #include "event.h"
 #include "loop.h"
 #include "scope_guard.h"
@@ -122,6 +124,193 @@ Async::move(Async *other) noexcept
 {
     other->fiberHandle_ = fiberHandle_;
     fiberHandle_ = nullptr;
+}
+
+
+int
+Async::getaddrinfo(const char *hostName, const char *serviceName, const addrinfo *hints
+                   , addrinfo **result)
+{
+    struct {
+        const char *hostName;
+        const char *serviceName;
+        const addrinfo *hints;
+        addrinfo **result;
+        int errorCode;
+    } context;
+
+    context.hostName = hostName;
+    context.serviceName = serviceName;
+    context.hints = hints;
+    context.result = result;
+
+    executeTask([&context] () -> void {
+        context.errorCode = ::getaddrinfo(context.hostName, context.serviceName, context.hints
+                                          , context.result);
+    });
+
+    return context.errorCode;
+}
+
+
+int
+Async::getnameinfo(const sockaddr *name, socklen_t nameSize, char *hostName, socklen_t hostNameSize
+                   , char *serviceName, socklen_t serviceNameSize, int flags)
+{
+    struct {
+        const struct sockaddr *name;
+        socklen_t nameSize;
+        char *hostName;
+        socklen_t hostNameSize;
+        char *serviceName;
+        socklen_t serviceNameSize;
+        int flags;
+        int errorCode;
+    } context;
+
+    context.name = name;
+    context.nameSize = nameSize;
+    context.hostName = hostName;
+    context.hostNameSize = hostNameSize;
+    context.serviceName = serviceName;
+    context.serviceNameSize = serviceNameSize;
+    context.flags = flags;
+
+    executeTask([&context] () -> void {
+        context.errorCode = ::getnameinfo(context.name, context.nameSize, context.hostName
+                                          , context.hostNameSize, context.serviceName
+                                          , context.serviceNameSize, context.flags);
+    });
+
+    return context.errorCode;
+}
+
+
+int
+Async::open(const char *path, int flags, mode_t mode)
+{
+    struct {
+        const char *path;
+        int flags;
+        mode_t mode;
+        int result;
+    } context;
+
+    context.path = path;
+    context.flags = flags;
+    context.mode = mode;
+
+    executeTask([&context] () -> void {
+        context.result = ::open(context.path, context.flags, context.mode);
+    });
+
+    return context.result;
+}
+
+
+ssize_t
+Async::read(int fd, void *buffer, size_t bufferSize)
+{
+    struct {
+        int fd;
+        void *buffer;
+        size_t bufferSize;
+        ssize_t result;
+    } context;
+
+    context.fd = fd;
+    context.buffer = buffer;
+    context.bufferSize = bufferSize;
+
+    executeTask([&context] () -> void {
+        context.result = ::read(context.fd, context.buffer, context.bufferSize);
+    });
+
+    return context.result;
+}
+
+
+ssize_t
+Async::write(int fd, const void *data, size_t dataSize)
+{
+    struct {
+        int fd;
+        const void *data;
+        size_t dataSize;
+        ssize_t result;
+    } context;
+
+    context.fd = fd;
+    context.data = data;
+    context.dataSize= dataSize;
+
+    executeTask([&context] () -> void {
+        context.result = ::write(context.fd, context.data, context.dataSize);
+    });
+
+    return context.result;
+}
+
+
+ssize_t
+Async::readv(int fd, const iovec *vector, int vectorLength)
+{
+    struct {
+        int fd;
+        const iovec *vector;
+        int vectorLength;
+        ssize_t result;
+    } context;
+
+    context.fd = fd;
+    context.vector = vector;
+    context.vectorLength = vectorLength;
+
+    executeTask([&context] () -> void {
+        context.result = ::readv(context.fd, context.vector, context.vectorLength);
+    });
+
+    return context.result;
+}
+
+
+ssize_t
+Async::writev(int fd, const iovec *vector, int vectorLength)
+{
+    struct {
+        int fd;
+        const iovec *vector;
+        int vectorLength;
+        ssize_t result;
+    } context;
+
+    context.fd = fd;
+    context.vector = vector;
+    context.vectorLength = vectorLength;
+
+    executeTask([&context] () -> void {
+        context.result = ::writev(context.fd, context.vector, context.vectorLength);
+    });
+
+    return context.result;
+}
+
+
+int
+Async::close(int fd)
+{
+    struct {
+        int fd;
+        int result;
+    } context;
+
+    context.fd = fd;
+
+    executeTask([&context] () -> void {
+        context.result = ::close(context.fd);
+    });
+
+    return context.result;
 }
 
 
