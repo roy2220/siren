@@ -61,7 +61,7 @@ TestAssertionFailure::TestAssertionFailure(const char *expression, unsigned int 
 const char *
 TestAssertionFailure::what() const noexcept
 {
-    return description_.data();
+    return description_.c_str();
 }
 
 } // namespace detail

@@ -15,7 +15,7 @@ SIREN_TEST("Make ip endpoints")
     Async a(&l, 1);
 
     l.createFiber([&] () -> void {
-        IPEndpoint ipe = a.makeIPEndpoint("localhost", "http");
+        IPEndpoint ipe(&a, "localhost", "http");
         SIREN_TEST_ASSERT(ipe.address == ((127 << 24) | 1));
         SIREN_TEST_ASSERT(ipe.portNumber == 80);
     });

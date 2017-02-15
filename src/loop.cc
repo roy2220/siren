@@ -33,6 +33,12 @@ bool SetBlocking(int, bool);
 } // namespace
 
 
+Loop::Loop(std::size_t defaultFiberSize)
+  : scheduler_(defaultFiberSize)
+{
+}
+
+
 void
 Loop::run()
 {
@@ -470,6 +476,8 @@ Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeo
                                                         = scheduler_.getCurrentFiber());
         scopeGuard.dismiss();
         return true;
+    } else if (timeout.count() == 0) {
+        return false;
     } else {
         struct {
             MyIOWatcher myIOWatcher;
@@ -518,26 +526,30 @@ Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeo
 void
 Loop::setDelay(std::chrono::milliseconds duration)
 {
-    struct {
-        MyIOTimer myIOTimer;
-        IOClock *ioClock;
-        void *fiberHandle;
-        Scheduler *scheduler;
-    } context;
+    if (duration.count() < 0) {
+        scheduler_.suspendFiber(scheduler_.getCurrentFiber());
+    } else {
+        struct {
+            MyIOTimer myIOTimer;
+            IOClock *ioClock;
+            void *fiberHandle;
+            Scheduler *scheduler;
+        } context;
 
-    context.myIOTimer.callback = [&context] () -> void {
-        context.scheduler->resumeFiber(context.fiberHandle);
-    };
+        context.myIOTimer.callback = [&context] () -> void {
+            context.scheduler->resumeFiber(context.fiberHandle);
+        };
 
-    (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
+        (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
 
-    auto scopeGuard = MakeScopeGuard([&context] () -> void {
-        context.ioClock->removeTimer(&context.myIOTimer);
-    });
+        auto scopeGuard = MakeScopeGuard([&context] () -> void {
+            context.ioClock->removeTimer(&context.myIOTimer);
+        });
 
-    (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
-                                                    = scheduler_.getCurrentFiber());
-    scopeGuard.dismiss();
+        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
+                                                        = scheduler_.getCurrentFiber());
+        scopeGuard.dismiss();
+    }
 }
 
 

@@ -9,7 +9,6 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#include "ip_endpoint.h"
 #include "thread_pool.h"
 
 
@@ -24,7 +23,6 @@ class Async final
 {
 public:
     inline bool isValid() const noexcept;
-    inline IPEndpoint makeIPEndpoint(const char *, const char *);
 
     explicit Async(Loop *, std::size_t = 0);
     Async(Async &&) noexcept;
@@ -72,13 +70,6 @@ bool
 Async::isValid() const noexcept
 {
     return threadPool_ != nullptr && fiberHandle_ != nullptr;
-}
-
-
-IPEndpoint
-Async::makeIPEndpoint(const char *hostName, const char *serviceName)
-{
-    return IPEndpoint(this, hostName, serviceName);
 }
 
 } // namespace siren

@@ -20,8 +20,6 @@ namespace siren {
 class Loop final
 {
 public:
-    inline explicit Loop(std::size_t = 0);
-
     inline void *createFiber(const std::function<void ()> &, std::size_t = 0, bool = false);
     inline void *createFiber(std::function<void ()> &&, std::size_t = 0, bool = false);
     inline void interruptFiber(void *);
@@ -40,6 +38,8 @@ public:
 
     Loop(Loop &&) noexcept = default;
     Loop &operator=(Loop &&) noexcept = default;
+
+    explicit Loop(std::size_t = 0);
 
     void run();
     void registerFD(int);
@@ -81,12 +81,6 @@ private:
 
 
 namespace siren {
-
-Loop::Loop(std::size_t defaultFiberSize)
-  : scheduler_(defaultFiberSize)
-{
-}
-
 
 void *
 Loop::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize

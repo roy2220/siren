@@ -12,7 +12,7 @@ sockaddr_in
 IPEndpoint::ResolveName(Async *async, const char *hostName, const char *serviceName)
 {
     addrinfo hints;
-    std::memset(&hints, 0, sizeof hints);
+    std::memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     addrinfo *result;
     int errorCode = async->getaddrinfo(hostName, serviceName, &hints, &result);
@@ -29,16 +29,17 @@ IPEndpoint::ResolveName(Async *async, const char *hostName, const char *serviceN
 }
 
 
-GAIError::GAIError(int code) noexcept
-  : code_(code)
+GAIError::GAIError(int code)
 {
+    description_ = "getaddrinfo() failed: ";
+    description_ += gai_strerror(code);
 }
 
 
 const char *
 GAIError::what() const noexcept
 {
-    return gai_strerror(code_);
+    return description_.c_str();
 }
 
 } // namespace siren

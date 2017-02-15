@@ -193,7 +193,7 @@ Async::open(const char *path, int flags, mode_t mode)
         const char *path;
         int flags;
         mode_t mode;
-        int result;
+        int fd;
     } context;
 
     context.path = path;
@@ -201,10 +201,10 @@ Async::open(const char *path, int flags, mode_t mode)
     context.mode = mode;
 
     executeTask([&context] () -> void {
-        context.result = ::open(context.path, context.flags, context.mode);
+        context.fd = ::open(context.path, context.flags, context.mode);
     });
 
-    return context.result;
+    return context.fd;
 }
 
 
@@ -215,7 +215,7 @@ Async::read(int fd, void *buffer, size_t bufferSize)
         int fd;
         void *buffer;
         size_t bufferSize;
-        ssize_t result;
+        ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
@@ -223,10 +223,10 @@ Async::read(int fd, void *buffer, size_t bufferSize)
     context.bufferSize = bufferSize;
 
     executeTask([&context] () -> void {
-        context.result = ::read(context.fd, context.buffer, context.bufferSize);
+        context.numberOfBytes = ::read(context.fd, context.buffer, context.bufferSize);
     });
 
-    return context.result;
+    return context.numberOfBytes;
 }
 
 
@@ -237,7 +237,7 @@ Async::write(int fd, const void *data, size_t dataSize)
         int fd;
         const void *data;
         size_t dataSize;
-        ssize_t result;
+        ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
@@ -245,10 +245,10 @@ Async::write(int fd, const void *data, size_t dataSize)
     context.dataSize= dataSize;
 
     executeTask([&context] () -> void {
-        context.result = ::write(context.fd, context.data, context.dataSize);
+        context.numberOfBytes = ::write(context.fd, context.data, context.dataSize);
     });
 
-    return context.result;
+    return context.numberOfBytes;
 }
 
 
@@ -259,7 +259,7 @@ Async::readv(int fd, const iovec *vector, int vectorLength)
         int fd;
         const iovec *vector;
         int vectorLength;
-        ssize_t result;
+        ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
@@ -267,10 +267,10 @@ Async::readv(int fd, const iovec *vector, int vectorLength)
     context.vectorLength = vectorLength;
 
     executeTask([&context] () -> void {
-        context.result = ::readv(context.fd, context.vector, context.vectorLength);
+        context.numberOfBytes = ::readv(context.fd, context.vector, context.vectorLength);
     });
 
-    return context.result;
+    return context.numberOfBytes;
 }
 
 
@@ -281,7 +281,7 @@ Async::writev(int fd, const iovec *vector, int vectorLength)
         int fd;
         const iovec *vector;
         int vectorLength;
-        ssize_t result;
+        ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
@@ -289,10 +289,10 @@ Async::writev(int fd, const iovec *vector, int vectorLength)
     context.vectorLength = vectorLength;
 
     executeTask([&context] () -> void {
-        context.result = ::writev(context.fd, context.vector, context.vectorLength);
+        context.numberOfBytes = ::writev(context.fd, context.vector, context.vectorLength);
     });
 
-    return context.result;
+    return context.numberOfBytes;
 }
 
 
