@@ -243,7 +243,7 @@ TCPSocket::read(Stream *stream, int timeout)
     assert(stream != nullptr);
     void *buffer = stream->getBuffer();
     std::size_t bufferSize = stream->getBufferSize();
-    ssize_t numberOfBytes = loop_->read(fd_, buffer, bufferSize, timeout);
+    ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0, timeout);
 
     if (numberOfBytes < 0) {
         throw std::system_error(errno, std::system_category(), "read() failed");
@@ -261,10 +261,10 @@ TCPSocket::write(Stream *stream, int timeout)
     assert(stream != nullptr);
     const void *data = stream->getData();
     std::size_t dataSize = stream->getDataSize();
-    ssize_t numberOfBytes = loop_->write(fd_, data, dataSize, timeout);
+    ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL, timeout);
 
     if (numberOfBytes < 0) {
-        throw std::system_error(errno, std::system_category(), "write() failed");
+        throw std::system_error(errno, std::system_category(), "send() failed");
     }
 
     stream->dropData(numberOfBytes);

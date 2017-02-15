@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <functional>
 #include <system_error>
+#include <utility>
 
 #include <fcntl.h>
 
@@ -166,96 +167,28 @@ Loop::pipe2(int fds[2], int flags)
 ssize_t
 Loop::read(int fd, void *buffer, size_t bufferSize, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::read(fd, buffer, bufferSize);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return readFile(fd, timeout, ::read, buffer, bufferSize);
 }
 
 
 ssize_t
 Loop::write(int fd, const void *data, size_t dataSize, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::write(fd, data, dataSize);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return writeFile(fd, timeout, ::write, data, dataSize);
 }
 
 
 ssize_t
 Loop::readv(int fd, const iovec *vector, int vectorLength, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::readv(fd, vector, vectorLength);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return readFile(fd, timeout, ::readv, vector, vectorLength);
 }
 
 
 ssize_t
 Loop::writev(int fd, const iovec *vector, int vectorLength, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::writev(fd, vector, vectorLength);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return writeFile(fd, timeout, ::writev, vector, vectorLength);
 }
 
 
@@ -288,7 +221,7 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
 
         if (subFD < 0) {
             if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
+                if (!waitForFile(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
                     errno = EAGAIN;
                     return -1;
                 }
@@ -317,7 +250,7 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
 {
     if (::connect(fd, name, nameSize) < 0) {
         if (errno == EINTR || errno == EINPROGRESS) {
-            if (waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
+            if (waitForFile(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
                 int errorNumber;
                 socklen_t errorNumberSize = sizeof(errorNumber);
 
@@ -345,27 +278,24 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
 
 
 ssize_t
+Loop::recv(int fd, void *buffer, size_t bufferSize, int flags, int timeout)
+{
+    return readFile(fd, timeout, ::recv, buffer, bufferSize, flags);
+}
+
+
+ssize_t
+Loop::send(int fd, const void *data, size_t dataSize, int flags, int timeout)
+{
+    return writeFile(fd, timeout, ::send, data, dataSize, flags);
+}
+
+
+ssize_t
 Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *name
                , socklen_t *nameSize, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::recvfrom(fd, buffer, bufferSize, flags, name, nameSize);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return readFile(fd, timeout, ::recvfrom, buffer, bufferSize, flags, name, nameSize);
 }
 
 
@@ -373,72 +303,21 @@ ssize_t
 Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockaddr *name
              , socklen_t nameSize, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::sendto(fd, data, dataSize, flags, name, nameSize);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return writeFile(fd, timeout, ::sendto, data, dataSize, flags, name, nameSize);
 }
 
 
 ssize_t
 Loop::recvmsg(int fd, msghdr *message, int flags, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::recvmsg(fd, message, flags);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return readFile(fd, timeout, ::recvmsg, message, flags);
 }
 
 
 ssize_t
 Loop::sendmsg(int fd, const msghdr *message, int flags, int timeout)
 {
-    for (;;) {
-        ssize_t numberOfBytes = ::sendmsg(fd, message, flags);
-
-        if (numberOfBytes < 0) {
-            if (errno == EAGAIN) {
-                if (!waitForFD(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
-                    errno = EAGAIN;
-                    return -1;
-                }
-            } else {
-                if (errno != EINTR) {
-                    return -1;
-                }
-            }
-        } else {
-            return numberOfBytes;
-        }
-    }
+    return writeFile(fd, timeout, ::sendmsg, message, flags);
 }
 
 
@@ -450,8 +329,58 @@ Loop::close(int fd)
 }
 
 
+template <class Func, class ...Args>
+ssize_t
+Loop::readFile(int fd, int timeout, Func func, Args &&...args)
+{
+    for (;;) {
+        ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
+
+        if (numberOfBytes < 0) {
+            if (errno == EAGAIN) {
+                if (!waitForFile(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
+                    errno = EAGAIN;
+                    return -1;
+                }
+            } else {
+                if (errno != EINTR) {
+                    return -1;
+                }
+            }
+        } else {
+            return numberOfBytes;
+        }
+    }
+}
+
+
+template <class Func, class ...Args>
+ssize_t
+Loop::writeFile(int fd, int timeout, Func func, Args &&...args)
+{
+    for (;;) {
+        ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
+
+        if (numberOfBytes < 0) {
+            if (errno == EAGAIN) {
+                if (!waitForFile(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
+                    errno = EAGAIN;
+                    return -1;
+                }
+            } else {
+                if (errno != EINTR) {
+                    return -1;
+                }
+            }
+        } else {
+            return numberOfBytes;
+        }
+    }
+}
+
+
 bool
-Loop::waitForFD(int fd, IOCondition ioCondition, std::chrono::milliseconds timeout)
+Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds timeout)
 {
     if (timeout.count() < 0) {
         struct {

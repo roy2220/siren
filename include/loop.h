@@ -31,10 +31,9 @@ public:
                                    , std::intmax_t = std::numeric_limits<std::intmax_t>::max())
         noexcept;
     inline int sleep(int);
+    inline int usleep(useconds_t);
     inline int pipe(int [2]);
     inline int accept(int, sockaddr *, socklen_t *, int = -1);
-    inline ssize_t recv(int, void *, size_t, int, int = -1);
-    inline ssize_t send(int, const void *, size_t, int, int = -1);
 
     Loop(Loop &&) noexcept = default;
     Loop &operator=(Loop &&) noexcept = default;
@@ -53,6 +52,8 @@ public:
     int socket(int, int, int);
     int accept4(int, sockaddr *, socklen_t *, int, int = -1);
     int connect(int, const sockaddr *, socklen_t, int = -1);
+    ssize_t recv(int, void *, size_t, int, int = -1);
+    ssize_t send(int, const void *, size_t, int, int = -1);
     ssize_t recvfrom(int, void *, size_t, int, sockaddr *, socklen_t *, int = -1);
     ssize_t sendto(int, const void *, size_t, int, const sockaddr *, socklen_t, int = -1);
     ssize_t recvmsg(int, msghdr *, int, int = -1);
@@ -60,12 +61,18 @@ public:
     int close(int);
 
 private:
-    Scheduler scheduler_;
     IOPoller ioPoller_;
     IOClock ioClock_;
+    Scheduler scheduler_;
 
-    bool waitForFD(int, IOCondition, std::chrono::milliseconds);
+    bool waitForFile(int, IOCondition, std::chrono::milliseconds);
     void setDelay(std::chrono::milliseconds);
+
+    template <class Func, class ...Args>
+    ssize_t readFile(int, int, Func, Args &&...);
+
+    template <class Func, class ...Args>
+    ssize_t writeFile(int, int, Func, Args &&...);
 };
 
 } // namespace siren
@@ -152,6 +159,14 @@ Loop::sleep(int duration)
 
 
 int
+Loop::usleep(useconds_t duration)
+{
+    setDelay(std::chrono::milliseconds(duration) / 1000);
+    return 0;
+}
+
+
+int
 Loop::pipe(int fds[2])
 {
     return pipe2(fds, 0);
@@ -162,20 +177,6 @@ int
 Loop::accept(int fd, sockaddr *name, socklen_t *nameSize, int timeout)
 {
     return accept4(fd, name, nameSize, 0, timeout);
-}
-
-
-ssize_t
-Loop::recv(int fd, void *buffer, size_t bufferSize, int flags, int timeout)
-{
-    return recvfrom(fd, buffer, bufferSize, flags, nullptr, nullptr, timeout);
-}
-
-
-ssize_t
-Loop::send(int fd, const void *data, size_t dataSize, int flags, int timeout)
-{
-    return sendto(fd, data, dataSize, flags, nullptr, 0, timeout);
 }
 
 } // namespace siren

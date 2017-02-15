@@ -74,7 +74,13 @@ void
 Stream::reserveBuffer(std::size_t bufferSize)
 {
     if (buffer_.getLength() < writerIndex_ + bufferSize) {
-        buffer_.setLength(writerIndex_ + bufferSize);
+        if (buffer_.getLength() < writerIndex_ - readerIndex_ + bufferSize) {
+            buffer_.setLength(writerIndex_ + bufferSize);
+        } else {
+            std::memmove(buffer_, buffer_ + readerIndex_, writerIndex_ - readerIndex_);
+            writerIndex_ -= readerIndex_;
+            readerIndex_ = 0;
+        }
     }
 }
 

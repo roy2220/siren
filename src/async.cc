@@ -209,21 +209,24 @@ Async::open(const char *path, int flags, mode_t mode)
 
 
 ssize_t
-Async::read(int fd, void *buffer, size_t bufferSize)
+Async::pread(int fd, void *buffer, size_t bufferSize, off_t offset)
 {
     struct {
         int fd;
         void *buffer;
         size_t bufferSize;
+        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.buffer = buffer;
     context.bufferSize = bufferSize;
+    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::read(context.fd, context.buffer, context.bufferSize);
+        context.numberOfBytes = ::pread(context.fd, context.buffer, context.bufferSize
+                                        , context.offset);
     });
 
     return context.numberOfBytes;
@@ -231,21 +234,24 @@ Async::read(int fd, void *buffer, size_t bufferSize)
 
 
 ssize_t
-Async::write(int fd, const void *data, size_t dataSize)
+Async::pwrite(int fd, const void *data, size_t dataSize, off_t offset)
 {
     struct {
         int fd;
         const void *data;
         size_t dataSize;
+        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.data = data;
     context.dataSize= dataSize;
+    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::write(context.fd, context.data, context.dataSize);
+        context.numberOfBytes = ::pwrite(context.fd, context.data, context.dataSize
+                                         , context.offset);
     });
 
     return context.numberOfBytes;
@@ -253,21 +259,24 @@ Async::write(int fd, const void *data, size_t dataSize)
 
 
 ssize_t
-Async::readv(int fd, const iovec *vector, int vectorLength)
+Async::preadv(int fd, const iovec *vector, int vectorLength, off_t offset)
 {
     struct {
         int fd;
         const iovec *vector;
         int vectorLength;
+        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.vector = vector;
     context.vectorLength = vectorLength;
+    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::readv(context.fd, context.vector, context.vectorLength);
+        context.numberOfBytes = ::preadv(context.fd, context.vector, context.vectorLength
+                                         , context.offset);
     });
 
     return context.numberOfBytes;
@@ -275,21 +284,24 @@ Async::readv(int fd, const iovec *vector, int vectorLength)
 
 
 ssize_t
-Async::writev(int fd, const iovec *vector, int vectorLength)
+Async::pwritev(int fd, const iovec *vector, int vectorLength, off_t offset)
 {
     struct {
         int fd;
         const iovec *vector;
         int vectorLength;
+        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.vector = vector;
     context.vectorLength = vectorLength;
+    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::writev(context.fd, context.vector, context.vectorLength);
+        context.numberOfBytes = ::pwritev(context.fd, context.vector, context.vectorLength
+                                          , context.offset);
     });
 
     return context.numberOfBytes;

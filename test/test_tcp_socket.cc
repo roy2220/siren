@@ -36,7 +36,7 @@ SIREN_TEST("TCP echo client/server")
             } while(s.getDataSize() >= 1);
 
             cs.closeWrite();
-            while (cs.read(&s) >= 1);
+            while (cs.read(&s, 100) >= 1);
             SIREN_TEST_ASSERT(std::strcmp(static_cast<char *>(s.getData()), m) == 0);
         });
 
@@ -47,6 +47,7 @@ SIREN_TEST("TCP echo client/server")
         while (cs.read(&s) >= 1);
 
         do {
+            l.usleep(50 * 1000);
             cs.write(&s);
         } while(s.getDataSize() >= 1);
 
