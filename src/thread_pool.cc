@@ -141,15 +141,25 @@ ThreadPool::worker()
 
 
 void
-ThreadPool::removeTask(Task *task)
+ThreadPool::removeTask(Task *task, bool *taskIsCompleted)
 {
     assert(task != nullptr);
+    assert(taskIsCompleted != nullptr);
     assert(task->state_.load(std::memory_order_relaxed) != TaskState::Initial);
 
-    while (task->state_.load(std::memory_order_acquire) != TaskState::Completed) {
-        std::this_thread::yield();
+    if (task->state_.load(std::memory_order_acquire) == TaskState::Uncompleted) {
+        *taskIsCompleted = false;
+
+        if (removeWaitingTask(task)) {
+            return;
+        } else {
+            while (task->state_.load(std::memory_order_acquire) == TaskState::Uncompleted) {
+                std::this_thread::yield();
+            }
+        }
     }
 
+    *taskIsCompleted = true;
     removeCompletedTask(task);
 }
 
@@ -158,8 +168,22 @@ void
 ThreadPool::addWaitingTask(Task *task)
 {
     std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
-    waitingTaskList_.appendNode(task);
+    waitingTaskList_.appendNode((task->isWaiting_ = true, task));
     conditionVariable_.notify_one();
+}
+
+
+bool
+ThreadPool::removeWaitingTask(Task *task)
+{
+    std::unique_lock<std::mutex> uniqueLock(mutexes_[0]);
+
+    if (task->isWaiting_) {
+        task->remove();
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
@@ -172,12 +196,13 @@ ThreadPool::getWaitingTask()
         conditionVariable_.wait(uniqueLock);
     }
 
-    Task *task = static_cast<ThreadPoolTask *>(waitingTaskList_.getTail());
+    ListNode *listNode = waitingTaskList_.getTail();
 
-    if (task == &noTask_) {
+    if (listNode == &noListNode_) {
         return nullptr;
     } else {
-        task->remove();
+        Task *task = static_cast<ThreadPoolTask *>(listNode);
+        (task->isWaiting_ = false, task)->remove();
         return task;
     }
 }
@@ -187,7 +212,7 @@ void
 ThreadPool::closeWaitingTaskList()
 {
     std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
-    waitingTaskList_.prependNode(&noTask_);
+    waitingTaskList_.prependNode(&noListNode_);
     conditionVariable_.notify_all();
 }
 

@@ -30,7 +30,7 @@ public:
     inline Semaphore makeSemaphore(std::intmax_t = 0, std::intmax_t = 0
                                    , std::intmax_t = std::numeric_limits<std::intmax_t>::max())
         noexcept;
-    inline int sleep(int);
+    inline unsigned int sleep(unsigned int);
     inline int usleep(useconds_t);
     inline int pipe(int [2]);
     inline int accept(int, sockaddr *, socklen_t *, int = -1);
@@ -150,8 +150,8 @@ Loop::makeSemaphore(std::intmax_t initialValue, std::intmax_t minValue, std::int
 }
 
 
-int
-Loop::sleep(int duration)
+unsigned int
+Loop::sleep(unsigned int duration)
 {
     setDelay(std::chrono::milliseconds(duration) * 1000);
     return 0;

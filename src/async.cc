@@ -355,14 +355,20 @@ Async::executeTask(std::function<void ()> &&procedure)
 
 
 void
-Async::waitForTask(Task *task) noexcept
+Async::waitForTask(Task *task)
 {
     Event event = loop_->makeEvent();
 
     try {
         (task->event = &event)->waitFor();
     } catch (FiberInterruption) {
-        threadPool_->removeTask(task);
+        bool taskIsCompleted;
+        threadPool_->removeTask(task, &taskIsCompleted);
+
+        if (!taskIsCompleted) {
+            throw;
+        }
+
         loop_->interruptFiber(loop_->getCurrentFiber());
     }
 }

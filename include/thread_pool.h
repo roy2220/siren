@@ -33,6 +33,7 @@ private:
     typedef detail::ThreadPoolTaskState State;
 
     std::atomic<State> state_;
+    bool isWaiting_;
     std::function<void ()> procedure_;
     std::exception_ptr exception_;
 
@@ -56,13 +57,13 @@ public:
     explicit ThreadPool(std::size_t = 0);
     ~ThreadPool();
 
-    void removeTask(Task *);
+    void removeTask(Task *, bool *);
     void getCompletedTasks(std::vector<Task *> *);
 
 private:
     typedef detail::ThreadPoolTaskState TaskState;
 
-    Task noTask_;
+    Task noListNode_;
     List waitingTaskList_;
     List completedTaskList_;
     int eventFD_;
@@ -76,6 +77,7 @@ private:
     void stop();
     void worker();
     void addWaitingTask(Task *);
+    bool removeWaitingTask(Task *);
     Task *getWaitingTask();
     void closeWaitingTaskList();
     void addCompletedTask(Task *);

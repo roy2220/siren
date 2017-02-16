@@ -38,19 +38,23 @@ SIREN_TEST("Execute async task")
     });
 
     loop.run();
-    bool ok = false;
+    int x = 0;
 
     void *f = loop.createFiber([&] () {
-        async.executeTask([&] () {
-            usleep(100 * 1000);
-        });
+        try {
+            async.executeTask([&] () {
+                usleep(100 * 1000);
+            });
 
-        ok = true;
+            x = 1;
+        } catch (FiberInterruption) {
+            x = 2;
+        }
     });
 
     loop.createFiber([&] () {
         loop.interruptFiber(f);
-        SIREN_TEST_ASSERT(ok);
+        SIREN_TEST_ASSERT(x == 1 || x == 2);
     });
 
     loop.run();

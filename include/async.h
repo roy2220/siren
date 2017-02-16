@@ -53,7 +53,7 @@ private:
     void initialize();
     void finalize();
     void move(Async *) noexcept;
-    void waitForTask(Task *) noexcept;
+    void waitForTask(Task *);
 };
 
 } // namespace siren
