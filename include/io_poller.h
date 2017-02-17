@@ -7,7 +7,7 @@
 
 #include "buffer.h"
 #include "list.h"
-#include "memory_pool.h"
+#include "object_pool.h"
 
 
 namespace siren {
@@ -15,7 +15,21 @@ namespace siren {
 class IOClock;
 class IOWatcher;
 enum class IOCondition;
-namespace detail { struct IOObject; }
+
+
+namespace detail {
+
+struct IOObject
+  : ListNode
+{
+    int fd;
+    int eventFlags;
+    int pendingEventFlags;
+    bool isDirty;
+    List watcherLists[2];
+};
+
+} // namespace detail
 
 
 class IOPoller final
@@ -42,7 +56,7 @@ private:
     typedef detail::IOObject Object;
 
     int epollFD_;
-    MemoryPool objectMemoryPool_;
+    ObjectPool<Object> objectPool_;
     std::vector<detail::IOObject *> objects_;
     List dirtyObjectList_;
     Buffer<epoll_event> events_;
@@ -68,7 +82,7 @@ protected:
 private:
     typedef IOCondition Condition;
 
-    int objectFd_;
+    int objectFD_;
     Condition condition_;
 
     IOWatcher(const IOWatcher &) = delete;

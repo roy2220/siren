@@ -14,21 +14,6 @@
 
 namespace siren {
 
-namespace detail {
-
-struct IOObject
-  : ListNode
-{
-    int fd;
-    int eventFlags;
-    int pendingEventFlags;
-    bool isDirty;
-    List watcherLists[2];
-};
-
-} // namespace detail
-
-
 namespace {
 
 const unsigned int IOEventFlags[2] = {
@@ -40,14 +25,14 @@ const unsigned int IOEventFlags[2] = {
 
 
 IOPoller::IOPoller()
-  : objectMemoryPool_(alignof(Object), sizeof(Object), 64)
+  : objectPool_(64)
 {
     initialize();
 }
 
 
 IOPoller::IOPoller(IOPoller &&other) noexcept
-  : objectMemoryPool_(std::move(other.objectMemoryPool_)),
+  : objectPool_(std::move(other.objectPool_)),
     objects_(std::move(other.objects_)),
     dirtyObjectList_(std::move(other.dirtyObjectList_)),
     events_(std::move(other.events_))
@@ -67,7 +52,7 @@ IOPoller::operator=(IOPoller &&other) noexcept
 {
     if (&other != this) {
         finalize();
-        objectMemoryPool_ = std::move(other.objectMemoryPool_);
+        objectPool_ = std::move(other.objectPool_);
         objects_ = std::move(other.objects_);
         dirtyObjectList_ = std::move(other.dirtyObjectList_);
         events_ = std::move(other.events_);
@@ -108,7 +93,7 @@ IOPoller::finalize()
 
         for (Object *object : objects_) {
             if (object != nullptr) {
-                object->~IOObject();
+                objectPool_.destroyObject(object);
             }
         }
     }
@@ -125,42 +110,42 @@ IOPoller::move(IOPoller *other) noexcept
 
 #ifndef NDEBUG
 bool
-IOPoller::objectExists(int objectFd) const noexcept
+IOPoller::objectExists(int objectFD) const noexcept
 {
-    return static_cast<std::size_t>(objectFd) < objects_.size() && objects_[objectFd] != nullptr;
+    return static_cast<std::size_t>(objectFD) < objects_.size() && objects_[objectFD] != nullptr;
 }
 #endif
 
 
 void
-IOPoller::createObject(int objectFd)
+IOPoller::createObject(int objectFD)
 {
     assert(isValid());
-    assert(objectFd >= 0);
-    assert(!objectExists(objectFd));
+    assert(objectFD >= 0);
+    assert(!objectExists(objectFD));
 
-    if (static_cast<std::size_t>(objectFd) >= objects_.size()) {
-        objects_.resize(objectFd + 1, nullptr);
+    if (static_cast<std::size_t>(objectFD) >= objects_.size()) {
+        objects_.resize(objectFD + 1, nullptr);
     }
 
-    auto object = new (objectMemoryPool_.allocateBlock()) Object;
+    auto object = objectPool_.createObject();
     object->eventFlags = 0;
     object->pendingEventFlags = 0;
     object->isDirty = false;
-    objects_[object->fd = objectFd] = object;
+    objects_[object->fd = objectFD] = object;
 }
 
 
 void
-IOPoller::destroyObject(int objectFd)
+IOPoller::destroyObject(int objectFD)
 {
     assert(isValid());
-    assert(objectFd >= 0);
-    assert(objectExists(objectFd));
-    Object *object = objects_[objectFd];
+    assert(objectFD >= 0);
+    assert(objectExists(objectFD));
+    Object *object = objects_[objectFD];
 
     if (object->eventFlags != 0) {
-        if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, objectFd, nullptr) < 0) {
+        if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, objectFD, nullptr) < 0) {
             throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
         }
     }
@@ -169,19 +154,19 @@ IOPoller::destroyObject(int objectFd)
         object->remove();
     }
 
-    objects_[objectFd] = nullptr;
-    objectMemoryPool_.freeBlock((object->~IOObject(), object));
+    objects_[objectFD] = nullptr;
+    objectPool_.destroyObject(object);
 }
 
 
 void
-IOPoller::addWatcher(Watcher *watcher, int objectFd, Condition condition) noexcept
+IOPoller::addWatcher(Watcher *watcher, int objectFD, Condition condition) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
-    assert(objectFd >= 0);
-    assert(objectExists(objectFd));
-    Object *object = objects_[watcher->objectFd_ = objectFd];
+    assert(objectFD >= 0);
+    assert(objectExists(objectFD));
+    Object *object = objects_[watcher->objectFD_ = objectFD];
     auto i = static_cast<std::size_t>(watcher->condition_ = condition);
     object->watcherLists[i].appendNode(watcher);
 
@@ -201,9 +186,9 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
-    assert(watcher->objectFd_ >= 0);
-    assert(objectExists(watcher->objectFd_));
-    Object *object = objects_[watcher->objectFd_];
+    assert(watcher->objectFD_ >= 0);
+    assert(objectExists(watcher->objectFD_));
+    Object *object = objects_[watcher->objectFD_];
     auto i = static_cast<std::size_t>(watcher->condition_);
     watcher->remove();
 
