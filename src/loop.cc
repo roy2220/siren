@@ -82,7 +82,7 @@ Loop::registerFD(int fd)
         assert(ok);
     }
 
-    auto scopeGuard = MakeScopeGuard([fd] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         SetBlocking(fd, true);
     });
 
@@ -100,7 +100,7 @@ Loop::unregisterFD(int fd)
         assert(ok);
     }
 
-    auto scopeGuard = MakeScopeGuard([fd] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         SetBlocking(fd, false);
     });
 
@@ -120,7 +120,7 @@ Loop::open(const char *path, int flags, mode_t mode)
                 return -1;
             }
         } else {
-            auto scopeGuard = MakeScopeGuard([fd] () -> void {
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
                 if (::close(fd) < 0 && errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "close() failed");
                 }
@@ -140,7 +140,7 @@ Loop::pipe2(int fds[2], int flags)
     if (::pipe2(fds, flags | O_NONBLOCK) < 0) {
         return -1;
     } else {
-        auto scopeGuard1 = MakeScopeGuard([fds] () -> void {
+        auto scopeGuard1 = MakeScopeGuard([&] () -> void {
             if (::close(fds[0]) < 0 && errno != EINTR) {
                 throw std::system_error(errno, std::system_category(), "close() failed");
             }
@@ -152,7 +152,7 @@ Loop::pipe2(int fds[2], int flags)
 
         ioPoller_.createObject(fds[0]);
 
-        auto scopeGuard2 = MakeScopeGuard([this, fds] () -> void {
+        auto scopeGuard2 = MakeScopeGuard([&] () -> void {
             ioPoller_.destroyObject(fds[0]);
         });
 
@@ -200,7 +200,7 @@ Loop::socket(int domain, int type, int protocol)
     if (fd < 0) {
         return -1;
     } else {
-        auto scopeGuard = MakeScopeGuard([fd] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             if (::close(fd) < 0 && errno != EINTR) {
                 throw std::system_error(errno, std::system_category(), "close() failed");
             }
@@ -231,7 +231,7 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
                 }
             }
         } else {
-            auto scopeGuard = MakeScopeGuard([subFD] () -> void {
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
                 if (::close(subFD) < 0 && errno != EINTR) {
                     throw std::system_error(errno, std::system_category(), "close() failed");
                 }
@@ -397,7 +397,7 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 
         (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioCondition);
 
-        auto scopeGuard = MakeScopeGuard([&context] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
         });
 
@@ -427,7 +427,7 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 
         (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioCondition);
 
-        auto scopeGuard1 = MakeScopeGuard([&context] () -> void {
+        auto scopeGuard1 = MakeScopeGuard([&] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
         });
 
@@ -439,7 +439,7 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 
         (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, timeout);
 
-        auto scopeGuard2 = MakeScopeGuard([&context] () -> void {
+        auto scopeGuard2 = MakeScopeGuard([&] () -> void {
             context.ioClock->removeTimer(&context.myIOTimer);
         });
 
@@ -468,7 +468,7 @@ Loop::setDelay(std::chrono::milliseconds duration)
 
     (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
 
-    auto scopeGuard = MakeScopeGuard([&context] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         context.ioClock->removeTimer(&context.myIOTimer);
     });
 

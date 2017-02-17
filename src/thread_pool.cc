@@ -37,7 +37,7 @@ ThreadPool::ThreadPool(std::size_t numberOfThreads)
 {
     initialize();
 
-    auto scopeGuard = MakeScopeGuard([this] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         finalize();
     });
 
@@ -83,7 +83,7 @@ ThreadPool::start(std::size_t numberOfThreads)
     threads_.reserve(numberOfThreads);
     threads_.emplace_back(&ThreadPool::worker, this);
 
-    auto scopeGuard = MakeScopeGuard([this] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         stop();
     });
 

@@ -189,7 +189,7 @@ Scheduler::suspendFiber(void *fiberHandle)
         suspendedFiberList_.appendNode((currentFiber_->state = FiberState::Suspended
                                         , currentFiber_));
 
-        auto scopeGuard = MakeScopeGuard([this] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
         });
 
@@ -229,7 +229,7 @@ Scheduler::interruptFiber(void *fiberHandle)
 
         runnableFiberList_.appendNode((currentFiber_->state = FiberState::Runnable, currentFiber_));
 
-        auto scopeGuard = MakeScopeGuard([this] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
         });
 
@@ -252,7 +252,7 @@ Scheduler::yieldToFiber(void *fiberHandle)
     if (fiber->state == FiberState::Runnable) {
         (currentFiber_->state = FiberState::Runnable, currentFiber_)->insertAfter(&idleFiber_);
 
-        auto scopeGuard = MakeScopeGuard([this] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
         });
 
@@ -269,7 +269,7 @@ Scheduler::yieldTo()
     if (!idleFiber_.isOnly()) {
         (currentFiber_->state = FiberState::Runnable, currentFiber_)->insertAfter(&idleFiber_);
 
-        auto scopeGuard = MakeScopeGuard([this] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
         });
 
@@ -288,7 +288,7 @@ Scheduler::run()
         runnableFiberList_.prependNode((currentFiber_->state = FiberState::Runnable
                                         , currentFiber_));
 
-        auto scopeGuard = MakeScopeGuard([this] () -> void {
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
             (currentFiber_->state = FiberState::Running, currentFiber_)->remove();
         });
 

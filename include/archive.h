@@ -42,8 +42,6 @@ public:
     inline Archive &operator<<(const std::string &);
     inline Archive &operator>>(std::string &);
 
-    inline bool isValid() const noexcept;
-
     template <class T>
     inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator<<(T);
 
@@ -91,6 +89,8 @@ public:
 
     template <class T>
     inline std::enable_if_t<std::is_class<T>::value, Archive &> operator>>(T &);
+
+    inline bool isValid() const noexcept;
 
     explicit Archive(Stream *) noexcept;
     Archive(Archive &&) noexcept;

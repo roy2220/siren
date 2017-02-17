@@ -29,9 +29,9 @@ public:
     void write(const void *, std::size_t);
 
 private:
-    Buffer<char> buffer_;
-    std::size_t readerIndex_;
-    std::size_t writerIndex_;
+    Buffer<char> base_;
+    std::size_t dataOffset_;
+    std::size_t bufferOffset_;
 
     void initialize() noexcept;
     void move(Stream *) noexcept;
@@ -51,45 +51,45 @@ private:
 namespace siren {
 
 const void *
-Stream::getData(std::size_t dataOffset) const noexcept
+Stream::getData(std::size_t offset) const noexcept
 {
-    return buffer_ + readerIndex_ + dataOffset;
+    return base_ + dataOffset_ + offset;
 }
 
 
 void *
-Stream::getData(std::size_t dataOffset) noexcept
+Stream::getData(std::size_t offset) noexcept
 {
-    return buffer_ + readerIndex_ + dataOffset;
+    return base_ + dataOffset_ + offset;
 }
 
 
 std::size_t
 Stream::getDataSize() const noexcept
 {
-    return writerIndex_ - readerIndex_;
+    return bufferOffset_ - dataOffset_;
 }
 
 
 void
 Stream::pickData(std::size_t dataSize) noexcept
 {
-    assert(writerIndex_ + dataSize <= buffer_.getLength());
-    writerIndex_ += dataSize;
+    assert(bufferOffset_ + dataSize <= base_.getLength());
+    bufferOffset_ += dataSize;
 }
 
 
 void *
-Stream::getBuffer(std::size_t bufferOffset) noexcept
+Stream::getBuffer(std::size_t offset) noexcept
 {
-    return buffer_ + writerIndex_ + bufferOffset;
+    return base_ + bufferOffset_ + offset;
 }
 
 
 std::size_t
 Stream::getBufferSize() const noexcept
 {
-    return buffer_.getLength() - writerIndex_;
+    return base_.getLength() - bufferOffset_;
 }
 
 } // namespace siren

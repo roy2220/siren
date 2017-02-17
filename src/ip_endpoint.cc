@@ -21,7 +21,7 @@ IPEndpoint::ResolveName(Async *async, const char *hostName, const char *serviceN
         throw GAIError(errorCode);
     }
 
-    auto scopeGuard = MakeScopeGuard([result] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         freeaddrinfo(result);
     });
 

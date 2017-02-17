@@ -100,7 +100,7 @@ Async::initialize()
 {
     loop_->registerFD(threadPool_->getEventFD());
 
-    auto scopeGuard = MakeScopeGuard([this] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         loop_->unregisterFD(threadPool_->getEventFD());
     });
 

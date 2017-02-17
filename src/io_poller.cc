@@ -87,7 +87,7 @@ IOPoller::initialize()
         throw std::system_error(errno, std::system_category(), "epoll_create1() failed");
     }
 
-    auto scopeGuard = MakeScopeGuard([this] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         if (close(epollFD_) < 0 && errno != EINTR) {
             throw std::system_error(errno, std::system_category(), "close() failed");
         }

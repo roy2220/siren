@@ -24,7 +24,7 @@ private:
     const std::size_t blockAlignment_;
     const std::size_t blockSize_;
     const std::size_t firstChunkSize_;
-    std::size_t chunkSize_;
+    std::size_t nextChunkSize_;
     std::vector<void *> chunks_;
     void *lastBlock_;
 

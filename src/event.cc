@@ -76,7 +76,7 @@ Event::waitFor()
     Waiter waiter;
     waiterList_.appendNode(&waiter);
 
-    auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         waiter.remove();
     });
 

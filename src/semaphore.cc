@@ -110,7 +110,7 @@ Semaphore::up()
             Waiter waiter;
             upWaiterList_.appendNode(&waiter);
 
-            auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
                 waiter.remove();
             });
 
@@ -138,7 +138,7 @@ Semaphore::down()
             Waiter waiter;
             downWaiterList_.appendNode(&waiter);
 
-            auto scopeGuard = MakeScopeGuard([&waiter] () -> void {
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
                 waiter.remove();
             });
 

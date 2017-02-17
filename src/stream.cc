@@ -13,7 +13,7 @@ Stream::Stream() noexcept
 
 
 Stream::Stream(Stream &&other) noexcept
-  : buffer_(std::move(other.buffer_))
+  : base_(std::move(other.base_))
 {
     other.move(this);
 }
@@ -23,7 +23,7 @@ Stream &
 Stream::operator=(Stream &&other) noexcept
 {
     if (&other != this) {
-        buffer_ = std::move(other.buffer_);
+        base_ = std::move(other.base_);
         other.move(this);
     }
 
@@ -34,16 +34,16 @@ Stream::operator=(Stream &&other) noexcept
 void
 Stream::initialize() noexcept
 {
-    readerIndex_ = 0;
-    writerIndex_ = 0;
+    dataOffset_ = 0;
+    bufferOffset_ = 0;
 }
 
 
 void
 Stream::move(Stream *other) noexcept
 {
-    other->readerIndex_ = readerIndex_;
-    other->writerIndex_ = writerIndex_;
+    other->dataOffset_ = dataOffset_;
+    other->bufferOffset_ = bufferOffset_;
     initialize();
 }
 
@@ -51,7 +51,7 @@ Stream::move(Stream *other) noexcept
 void
 Stream::reset() noexcept
 {
-    buffer_.reset();
+    base_.reset();
     initialize();
 }
 
@@ -59,13 +59,13 @@ Stream::reset() noexcept
 void
 Stream::dropData(std::size_t dataSize) noexcept
 {
-    assert(readerIndex_ + dataSize <= writerIndex_);
-    readerIndex_ += dataSize;
+    assert(dataOffset_ + dataSize <= bufferOffset_);
+    dataOffset_ += dataSize;
 
-    if (readerIndex_ >= writerIndex_ - readerIndex_) {
-        std::memcpy(buffer_, buffer_ + readerIndex_, writerIndex_ - readerIndex_);
-        writerIndex_ -= readerIndex_;
-        readerIndex_ = 0;
+    if (dataOffset_ >= bufferOffset_ - dataOffset_) {
+        std::memcpy(base_, base_ + dataOffset_, bufferOffset_ - dataOffset_);
+        bufferOffset_ -= dataOffset_;
+        dataOffset_ = 0;
     }
 }
 
@@ -73,13 +73,13 @@ Stream::dropData(std::size_t dataSize) noexcept
 void
 Stream::reserveBuffer(std::size_t bufferSize)
 {
-    if (buffer_.getLength() < writerIndex_ + bufferSize) {
-        if (buffer_.getLength() < writerIndex_ - readerIndex_ + bufferSize) {
-            buffer_.setLength(writerIndex_ + bufferSize);
+    if (base_.getLength() < bufferOffset_ + bufferSize) {
+        if (base_.getLength() < bufferOffset_ - dataOffset_ + bufferSize) {
+            base_.setLength(bufferOffset_ + bufferSize);
         } else {
-            std::memmove(buffer_, buffer_ + readerIndex_, writerIndex_ - readerIndex_);
-            writerIndex_ -= readerIndex_;
-            readerIndex_ = 0;
+            std::memmove(base_, base_ + dataOffset_, bufferOffset_ - dataOffset_);
+            bufferOffset_ -= dataOffset_;
+            dataOffset_ = 0;
         }
     }
 }

@@ -111,7 +111,6 @@ struct FiberInterruption
 
 
 #include <cassert>
-#include <algorithm>
 #include <utility>
 
 #include "helper_macros.h"
@@ -169,12 +168,14 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
-        fiberSize = std::max(fiberSize, std::size_t(MinFiberSize));
+        if (fiberSize < MinFiberSize) {
+            fiberSize = MinFiberSize;
+        }
     }
 
     Fiber *fiber = allocateFiber(fiberSize);
 
-    auto scopeGuard = MakeScopeGuard([this, fiber] () -> void {
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
         freeFiber(fiber);
     });
 

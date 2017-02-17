@@ -17,7 +17,10 @@ public:
     inline explicit ScopeGuard(T &&) noexcept;
     inline ScopeGuard(ScopeGuard &&) noexcept;
     inline ~ScopeGuard();
-    inline ScopeGuard &operator=(ScopeGuard &&) noexcept;
+
+    template <class U = T>
+    inline std::enable_if_t<std::is_nothrow_move_assignable<U>::value, ScopeGuard &>
+        operator=(ScopeGuard &&) noexcept;
 
     inline void dismiss() noexcept;
 
@@ -72,7 +75,8 @@ ScopeGuard<T, true>::~ScopeGuard()
 
 
 template <class T>
-ScopeGuard<T, true> &
+template <class U>
+std::enable_if_t<std::is_nothrow_move_assignable<U>::value, ScopeGuard<T, true> &>
 ScopeGuard<T, true>::operator=(ScopeGuard &&other) noexcept
 {
     if (&other != this) {

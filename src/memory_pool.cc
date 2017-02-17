@@ -58,7 +58,7 @@ MemoryPool::operator=(MemoryPool &&other) noexcept
 void
 MemoryPool::initialize() noexcept
 {
-    chunkSize_ = firstChunkSize_;
+    nextChunkSize_ = firstChunkSize_;
     lastBlock_ = nullptr;
 }
 
@@ -75,7 +75,7 @@ MemoryPool::finalize() noexcept
 void
 MemoryPool::move(MemoryPool *other) noexcept
 {
-    other->chunkSize_ = chunkSize_;
+    other->nextChunkSize_ = nextChunkSize_;
     other->lastBlock_ = lastBlock_;
     initialize();
 }
@@ -93,22 +93,22 @@ MemoryPool::reset() noexcept
 void
 MemoryPool::makeBlocks()
 {
-    void *chunk = std::malloc(chunkSize_);
+    std::size_t chunkSize = nextChunkSize_;
+    void *chunk = std::malloc(chunkSize);
 
     if (chunk == nullptr) {
         throw std::system_error(errno, std::system_category(), "malloc() failed");
     }
 
     chunks_.push_back(chunk);
-    void *block = static_cast<char *>(chunk) + chunkSize_ - blockSize_;
+    nextChunkSize_ = 2 * chunkSize;
+    void *block = static_cast<char *>(chunk) + chunkSize - blockSize_;
 
     do {
         *static_cast<void **>(block) = lastBlock_;
         lastBlock_ = block;
         block = static_cast<char *>(block) - blockSize_;
     } while (block >= chunk);
-
-    chunkSize_ *= 2;
 }
 
 } // namespace siren
