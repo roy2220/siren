@@ -1,7 +1,13 @@
 #pragma once
 
 
+#include <cstddef>
+
+
 namespace siren {
+
+class RCRecord;
+
 
 template <class T>
 class RCPointer final
@@ -21,6 +27,8 @@ public:
     inline void reset() noexcept;
 
 private:
+    typedef RCRecord Record;
+
     T *object_;
 
     inline void initialize(T * = nullptr) noexcept;
@@ -30,15 +38,29 @@ private:
 };
 
 
+class RCRecord
+{
+protected:
+    inline explicit RCRecord() noexcept;
+    inline ~RCRecord();
+
+private:
+    std::size_t value_;
+
+    RCRecord(const RCRecord &) = delete;
+    RCRecord &operator=(const RCRecord &) = delete;
+
+    template <class T>
+    friend class RCPointer;
+};
+
+
 namespace detail {
 
 template <class T>
-void AddObjectRef(T *) noexcept;
+void DestroyObject(T *) noexcept;
 
-template <class T>
-void ReleaseObject(T *) noexcept;
-
-}
+} // namespace detail
 
 } // namespace siren
 
@@ -147,18 +169,14 @@ RCPointer<T>::get() const noexcept
 
 template <class T>
 void
-RCPointer<T>::reset() noexcept
-{
-    finalize();
-    initialize();
-}
-
-
-template <class T>
-void
 RCPointer<T>::initialize(T *object) noexcept
 {
     object_ = object;
+
+    if (object != nullptr) {
+        Record *record = object;
+        ++record->value_;
+    }
 }
 
 
@@ -167,7 +185,11 @@ void
 RCPointer<T>::finalize() noexcept
 {
     if (object_ != nullptr) {
-        detail::ReleaseObject<T>(object_);
+        Record *record = object_;
+
+        if (record->value_-- == 1) {
+            detail::DestroyObject<T>(object_);
+        }
     }
 }
 
@@ -176,11 +198,7 @@ template <class T>
 void
 RCPointer<T>::copy(RCPointer *other) const noexcept
 {
-    other->object_ = object_;
-
-    if (object_ != nullptr) {
-        detail::AddObjectRef<T>(object_);
-    }
+    other->initialize(object_);
 }
 
 
@@ -190,6 +208,27 @@ RCPointer<T>::move(RCPointer *other) noexcept
 {
     other->object_ = object_;
     initialize();
+}
+
+
+template <class T>
+void
+RCPointer<T>::reset() noexcept
+{
+    finalize();
+    initialize();
+}
+
+
+RCRecord::RCRecord() noexcept
+  : value_(0)
+{
+}
+
+
+RCRecord::~RCRecord()
+{
+    assert(value_ == 0);
 }
 
 } // namespace siren
