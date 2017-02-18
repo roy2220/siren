@@ -11,6 +11,7 @@ public:
     inline RCPointer(const RCPointer &) noexcept;
     inline RCPointer(RCPointer &&) noexcept;
     inline ~RCPointer();
+    inline RCPointer &operator=(T *) noexcept;
     inline RCPointer &operator=(const RCPointer &) noexcept;
     inline RCPointer &operator=(RCPointer &&) noexcept;
     inline T &operator*() const noexcept;
@@ -27,6 +28,17 @@ private:
     inline void copy(RCPointer *) const noexcept;
     inline void move(RCPointer *) noexcept;
 };
+
+
+namespace detail {
+
+template <class T>
+void AddObjectRef(T *) noexcept;
+
+template <class T>
+void ReleaseObject(T *) noexcept;
+
+}
 
 } // namespace siren
 
@@ -66,6 +78,19 @@ template <class T>
 RCPointer<T>::~RCPointer()
 {
     finalize();
+}
+
+
+template <class T>
+RCPointer<T> &
+RCPointer<T>::operator=(T *object) noexcept
+{
+    if (object != object_) {
+        finalize();
+        initialize(object);
+    }
+
+    return *this;
 }
 
 
@@ -142,7 +167,7 @@ void
 RCPointer<T>::finalize() noexcept
 {
     if (object_ != nullptr) {
-        ReleaseObject(object_);
+        detail::ReleaseObject<T>(object_);
     }
 }
 
@@ -154,7 +179,7 @@ RCPointer<T>::copy(RCPointer *other) const noexcept
     other->object_ = object_;
 
     if (object_ != nullptr) {
-        AddObjectRef(object_);
+        detail::AddObjectRef<T>(object_);
     }
 }
 

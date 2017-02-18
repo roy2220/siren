@@ -5,10 +5,7 @@
 #include "test.h"
 
 
-namespace {
-
-using namespace siren;
-
+namespace siren {
 
 struct Foo
 {
@@ -17,6 +14,9 @@ struct Foo
 };
 
 
+namespace detail {
+
+template <>
 void
 AddObjectRef(Foo *f) noexcept
 {
@@ -24,6 +24,7 @@ AddObjectRef(Foo *f) noexcept
 }
 
 
+template <>
 void
 ReleaseObject(Foo *f) noexcept
 {
@@ -31,6 +32,15 @@ ReleaseObject(Foo *f) noexcept
         std::free(f);
     }
 }
+
+}
+
+}
+
+
+namespace {
+
+using namespace siren;
 
 
 SIREN_TEST("Test reference-counting pointer")
