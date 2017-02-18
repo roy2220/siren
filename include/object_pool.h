@@ -13,6 +13,10 @@ class ObjectPool final
 {
 public:
     inline explicit ObjectPool(std::size_t = 0) noexcept;
+    inline ~ObjectPool();
+
+    ObjectPool(ObjectPool &&) noexcept = default;
+    ObjectPool &operator=(ObjectPool &&) noexcept = default;
 
     inline void destroyObject(T *) noexcept;
 
@@ -21,6 +25,9 @@ public:
 
 private:
     MemoryPool memoryPool_;
+#ifndef NDEBUG
+    std::size_t objectCount_;
+#endif
 };
 
 } // namespace siren
@@ -42,7 +49,18 @@ namespace siren {
 template <class T>
 ObjectPool<T>::ObjectPool(std::size_t numberOfObjectsToReserve) noexcept
   : memoryPool_(alignof(T), sizeof(T), numberOfObjectsToReserve)
+#ifndef NDEBUG
+        ,
+    objectCount_(0)
+#endif
 {
+}
+
+
+template <class T>
+ObjectPool<T>::~ObjectPool()
+{
+    assert(objectCount_ == 0);
 }
 
 
@@ -59,6 +77,9 @@ ObjectPool<T>::createObject(Args &&...args)
 
     T *object = new (memoryBlock) T(std::forward<Args>(args)...);
     scopeGuard.dismiss();
+#ifndef NDEBUG
+    ++objectCount_;
+#endif
     return object;
 }
 
@@ -67,9 +88,13 @@ template <class T>
 void
 ObjectPool<T>::destroyObject(T *object) noexcept
 {
+    assert(objectCount_ >= 1);
     assert(object != nullptr);
     void *memoryBlock = (object->~T(), object);
     memoryPool_.freeBlock(memoryBlock);
+#ifndef NDEBUG
+    --objectCount_;
+#endif
 }
 
 } // namespace siren
