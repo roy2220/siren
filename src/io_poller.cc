@@ -233,8 +233,7 @@ IOPoller::addWatcher(Watcher *watcher, int fd, Condition condition) noexcept
         context->pendingEventFlags |= IOEventFlags[i];
 
         if (!context->isDirty) {
-            context->isDirty = true;
-            dirtyContextList_.appendNode(context);
+            dirtyContextList_.appendNode((context->isDirty = true, context));
         }
     }
 }

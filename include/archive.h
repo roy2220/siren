@@ -19,7 +19,7 @@
     }
 
 #define SIREN__LIKE_CHAR(T) \
-    (sizeof(T) == sizeof(char) && alignof(T) == alignof(char))
+    (std::is_pod<T>::value && sizeof(T) == sizeof(char) && alignof(T) == alignof(char))
 
 
 namespace siren {
@@ -177,6 +177,7 @@ private:
 #include <cassert>
 #include <limits>
 
+#include "convert.h"
 #include "stream.h"
 #include "unsigned_to_signed.h"
 
@@ -202,15 +203,13 @@ Archive::operator>>(bool &boolean)
 }
 
 
-static_assert(sizeof(float) == sizeof(std::uint32_t) && alignof(float) == alignof(std::uint32_t)
-              , "");
-
-
 Archive &
 Archive::operator<<(float floatingPoint)
 {
     assert(isValid());
-    operator<<(reinterpret_cast<std::uint32_t &>(floatingPoint));
+    std::uint32_t temp;
+    Convert(floatingPoint, &temp);
+    operator<<(temp);
     return *this;
 }
 
@@ -219,21 +218,22 @@ Archive &
 Archive::operator>>(float &floatingPoint)
 {
     assert(isValid());
-    operator>>(reinterpret_cast<std::uint32_t &>(floatingPoint));
+    std::uint32_t temp;
+    operator>>(temp);
+    Convert(temp, &floatingPoint);
     return *this;
 }
-
-
-static_assert(sizeof(double) == sizeof(std::uint64_t) && alignof(double) == alignof(std::uint64_t)
-              , "");
 
 
 Archive &
 Archive::operator<<(double floatingPoint)
 {
     assert(isValid());
-    operator<<(reinterpret_cast<std::uint64_t &>(floatingPoint));
+    std::uint64_t temp;
+    Convert(floatingPoint, &temp);
+    operator<<(temp);
     return *this;
+
 }
 
 
@@ -241,7 +241,9 @@ Archive &
 Archive::operator>>(double &floatingPoint)
 {
     assert(isValid());
-    operator>>(reinterpret_cast<std::uint64_t &>(floatingPoint));
+    std::uint64_t temp;
+    operator>>(temp);
+    Convert(temp, &floatingPoint);
     return *this;
 }
 

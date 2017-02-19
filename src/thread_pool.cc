@@ -151,6 +151,9 @@ ThreadPool::removeTask(Task *task, bool *taskIsCompleted)
         *taskIsCompleted = false;
 
         if (removeWaitingTask(task)) {
+#ifndef NDEBUG
+            task->state_.store(TaskState::Initial, std::memory_order_release);
+#endif
             return;
         } else {
             while (task->state_.load(std::memory_order_acquire) == TaskState::Uncompleted) {

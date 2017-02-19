@@ -326,7 +326,9 @@ Scheduler::runFiber(Fiber *fiber) noexcept
     currentFiber_ = fiber;
 
     if (fiber->context == nullptr) {
-        void (Scheduler::*fiberStart)() = &Scheduler::fiberStart;
+        void (*fiberStartWrapper)(Scheduler *) = [] (Scheduler *self) -> void {
+            self->fiberStart();
+        };
 
 #if defined(__GNUG__)
         __asm__ __volatile__ (
@@ -337,14 +339,14 @@ Scheduler::runFiber(Fiber *fiber) noexcept
             "pushl\t$0\n\t"
             "jmpl\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(fiberStart)
+            : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(fiberStartWrapper)
 #    elif defined(__x86_64__)
             "movq\t$0, %%rbp\n\t"
             "movq\t%0, %%rsp\n\t"
             "pushq\t$0\n\t"
             "jmpq\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(fiberStart)
+            : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(fiberStartWrapper)
 #    else
 #        error architecture not supported
 #    endif

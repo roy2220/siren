@@ -76,11 +76,10 @@ SIREN_TEST("Remove thread pool tasks")
 
     if (taskIsCompleted) {
         SIREN_TEST_ASSERT(done);
+        t.check();
     } else {
         SIREN_TEST_ASSERT(!done);
     }
-
-    t.check();
 }
 
 }

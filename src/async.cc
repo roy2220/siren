@@ -333,9 +333,7 @@ Async::executeTask(const std::function<void ()> &procedure)
     assert(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, procedure);
-    ++taskCount_;
     waitForTask(&task);
-    --taskCount_;
     task.check();
 }
 
@@ -347,9 +345,7 @@ Async::executeTask(std::function<void ()> &&procedure)
     assert(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, std::move(procedure));
-    ++taskCount_;
     waitForTask(&task);
-    --taskCount_;
     task.check();
 }
 
@@ -358,6 +354,11 @@ void
 Async::waitForTask(Task *task)
 {
     Event event = loop_->makeEvent();
+    ++taskCount_;
+
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        --taskCount_;
+    });
 
     try {
         (task->event = &event)->waitFor();
