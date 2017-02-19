@@ -25,9 +25,9 @@ RBTreeNode::setLeftChild(RBTreeNode *node) noexcept
 
 
 void
-RBTreeNode::setLeftChildToNil(RBTreeNode *nil) noexcept
+RBTreeNode::setLeftChildToNull(RBTreeNode *null) noexcept
 {
-    children_[0] = nil;
+    children_[0] = null;
 }
 
 
@@ -39,9 +39,9 @@ RBTreeNode::setRightChild(RBTreeNode *node) noexcept
 
 
 void
-RBTreeNode::setRightChildToNil(RBTreeNode *nil) noexcept
+RBTreeNode::setRightChildToNull(RBTreeNode *null) noexcept
 {
-    children_[1] = nil;
+    children_[1] = null;
 }
 
 
@@ -120,13 +120,13 @@ RBTree::move(RBTree *other) noexcept
         std::function<void (Node *)> patch = [oldNil = &nil_, newNil = &other->nil_
                                               , &patch] (Node *root) -> void {
             if (root->getLeftChild() == oldNil) {
-                root->setLeftChildToNil(newNil);
+                root->setLeftChildToNull(newNil);
             } else {
                 patch(root->getLeftChild());
             }
 
             if (root->getRightChild() == oldNil) {
-                root->setRightChildToNil(newNil);
+                root->setRightChildToNull(newNil);
             } else {
                 patch(root->getRightChild());
             }
@@ -172,8 +172,8 @@ RBTree::insertNode(Node *x) noexcept
         }
     }
 
-    x->setLeftChildToNil(&nil_);
-    x->setRightChildToNil(&nil_);
+    x->setLeftChildToNull(&nil_);
+    x->setRightChildToNull(&nil_);
     (y->*setChild)(x);
     x->color_ = NodeColor::Red;
     fixForNodeInsertion(x);
@@ -357,6 +357,194 @@ RBTree::fixForNodeRemoval(Node *x) noexcept
     }
 
     x->color_ = NodeColor::Black;
+}
+
+
+const RBTreeNode *
+RBTree::findMin() const noexcept
+{
+    const Node *x = getRoot();
+
+    if (x == &nil_) {
+        return &nil_;
+    } else {
+        while (x->getLeftChild() != &nil_) {
+            x = x->getLeftChild();
+        }
+
+        return x;
+    }
+}
+
+
+RBTreeNode *
+RBTree::findMin() noexcept
+{
+    Node *x = getRoot();
+
+    if (x == &nil_) {
+        return &nil_;
+    } else {
+        while (x->getLeftChild() != &nil_) {
+            x = x->getLeftChild();
+        }
+
+        return x;
+    }
+}
+
+
+const RBTreeNode *
+RBTree::findMax() const noexcept
+{
+    const Node *x = getRoot();
+
+    if (x == &nil_) {
+        return &nil_;
+    } else {
+        while (x->getRightChild() != &nil_) {
+            x = x->getRightChild();
+        }
+
+        return x;
+    }
+}
+
+
+RBTreeNode *
+RBTree::findMax() noexcept
+{
+    Node *x = getRoot();
+
+    if (x == &nil_) {
+        return &nil_;
+    } else {
+        while (x->getRightChild() != &nil_) {
+            x = x->getRightChild();
+        }
+
+        return x;
+    }
+}
+
+
+const RBTreeNode *
+RBTree::findNodePrev(const Node *x) const noexcept
+{
+    assert(x != &nil_);
+
+    if (x->getLeftChild() == &nil_) {
+        for (;;) {
+            const Node *y = x;
+            x = x->getParent();
+
+            if (x == &nil_) {
+                return &nil_;
+            } else {
+                if (x->getRightChild() == y) {
+                    return x;
+                }
+            }
+        }
+    } else {
+        x = x->getLeftChild();
+
+        while (x->getRightChild() != &nil_) {
+            x = x->getRightChild();
+        }
+
+        return x;
+    }
+}
+
+
+RBTreeNode *
+RBTree::findNodePrev(Node *x) noexcept
+{
+    assert(x != &nil_);
+
+    if (x->getLeftChild() == &nil_) {
+        for (;;) {
+            Node *y = x;
+            x = x->getParent();
+
+            if (x == &nil_) {
+                return &nil_;
+            } else {
+                if (x->getRightChild() == y) {
+                    return x;
+                }
+            }
+        }
+    } else {
+        x = x->getLeftChild();
+
+        while (x->getRightChild() != &nil_) {
+            x = x->getRightChild();
+        }
+
+        return x;
+    }
+}
+
+
+const RBTreeNode *
+RBTree::findNodeNext(const Node *x) const noexcept
+{
+    assert(x != &nil_);
+
+    if (x->getRightChild() == &nil_) {
+        for (;;) {
+            const Node *y = x;
+            x = x->getParent();
+
+            if (x == &nil_) {
+                return &nil_;
+            } else {
+                if (x->getLeftChild() == y) {
+                    return x;
+                }
+            }
+        }
+    } else {
+        x = x->getRightChild();
+
+        while (x->getLeftChild() != &nil_) {
+            x = x->getLeftChild();
+        }
+
+        return x;
+    }
+}
+
+
+RBTreeNode *
+RBTree::findNodeNext(Node *x) noexcept
+{
+    assert(x != &nil_);
+
+    if (x->getRightChild() == &nil_) {
+        for (;;) {
+            Node *y = x;
+            x = x->getParent();
+
+            if (x == &nil_) {
+                return &nil_;
+            } else {
+                if (x->getLeftChild() == y) {
+                    return x;
+                }
+            }
+        }
+    } else {
+        x = x->getRightChild();
+
+        while (x->getLeftChild() != &nil_) {
+            x = x->getLeftChild();
+        }
+
+        return x;
+    }
 }
 
 } // namespace siren

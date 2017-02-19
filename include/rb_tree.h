@@ -30,9 +30,9 @@ private:
     Color color_;
 
     void setLeftChild(RBTreeNode *) noexcept;
-    void setLeftChildToNil(RBTreeNode *) noexcept;
+    void setLeftChildToNull(RBTreeNode *) noexcept;
     void setRightChild(RBTreeNode *) noexcept;
-    void setRightChildToNil(RBTreeNode *) noexcept;
+    void setRightChildToNull(RBTreeNode *) noexcept;
     void replace(RBTreeNode *) noexcept;
     void rotateLeft() noexcept;
     void rotateRight() noexcept;
@@ -52,10 +52,6 @@ public:
     inline bool isEmpty() const noexcept;
     inline const Node *getRoot() const noexcept;
     inline Node *getRoot() noexcept;
-    inline const Node *getMin() const noexcept;
-    inline Node *getMin() noexcept;
-    inline const Node *getMax() const noexcept;
-    inline Node *getMax() noexcept;
     inline bool isNil(const Node *) const noexcept;
 
     template <class T>
@@ -77,6 +73,14 @@ public:
     void reset() noexcept;
     void insertNode(Node *) noexcept;
     void removeNode(Node *) noexcept;
+    const Node *findMin() const noexcept;
+    Node *findMin() noexcept;
+    const Node *findMax() const noexcept;
+    Node *findMax() noexcept;
+    const Node *findNodePrev(const Node *) const noexcept;
+    Node *findNodePrev(Node *) noexcept;
+    const Node *findNodeNext(const Node *) const noexcept;
+    Node *findNodeNext(Node *) noexcept;
 
 private:
     typedef detail::RBTreeNodeColor NodeColor;
@@ -169,42 +173,6 @@ RBTreeNode *
 RBTree::getRoot() noexcept
 {
     return nil_.getLeftChild();
-}
-
-
-const RBTreeNode *
-RBTree::getMin() const noexcept
-{
-    const Node *x;
-    for (x = getRoot(); x->getLeftChild() != &nil_; x = x->getLeftChild());
-    return x;
-}
-
-
-RBTreeNode *
-RBTree::getMin() noexcept
-{
-    Node *x;
-    for (x = getRoot(); x->getLeftChild() != &nil_; x = x->getLeftChild());
-    return x;
-}
-
-
-const RBTreeNode *
-RBTree::getMax() const noexcept
-{
-    const Node *x;
-    for (x = getRoot(); x->getRightChild() != &nil_; x = x->getRightChild());
-    return x;
-}
-
-
-RBTreeNode *
-RBTree::getMax() noexcept
-{
-    Node *x;
-    for (x = getRoot(); x->getRightChild() != &nil_; x = x->getRightChild());
-    return x;
 }
 
 

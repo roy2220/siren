@@ -46,6 +46,26 @@ SIREN_TEST("Insert/Remove red-black tree nodes")
         pv = v;
     });
 
+    pv = 0;
+
+    for (RBTreeNode *n = rbt.getRoot(); !rbt.isNil(n); n = rbt.findNodeNext(n)) {
+        auto pd = static_cast<Dummy *>(n);
+        unsigned int v = pd->val;
+        SIREN_TEST_ASSERT(v >= pv);
+        SIREN_TEST_ASSERT(pd - d >= 512);
+        pv = v;
+    }
+
+    pv = -1;
+
+    for (RBTreeNode *n = rbt.getRoot(); !rbt.isNil(n); n = rbt.findNodePrev(n)) {
+        auto pd = static_cast<Dummy *>(n);
+        unsigned int v = pd->val;
+        SIREN_TEST_ASSERT(v <= pv);
+        SIREN_TEST_ASSERT(pd - d >= 512);
+        pv = v;
+    }
+
     for (int i = 512; i < 1024; ++i) {
         rbt.removeNode(&d[i]);
     }
@@ -96,7 +116,7 @@ SIREN_TEST("Search red-black tree")
 }
 
 
-SIREN_TEST("Move red-black tree")
+SIREN_TEST("Move red-black trees")
 {
     struct Dummy : RBTreeNode {
         unsigned int val;
