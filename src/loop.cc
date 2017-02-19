@@ -86,7 +86,7 @@ Loop::registerFD(int fd)
         SetBlocking(fd, true);
     });
 
-    ioPoller_.createObject(fd);
+    ioPoller_.createContext(fd);
     scopeGuard.dismiss();
 }
 
@@ -104,7 +104,7 @@ Loop::unregisterFD(int fd)
         SetBlocking(fd, false);
     });
 
-    ioPoller_.destroyObject(fd);
+    ioPoller_.destroyContext(fd);
     scopeGuard.dismiss();
 }
 
@@ -126,7 +126,7 @@ Loop::open(const char *path, int flags, mode_t mode)
                 }
             });
 
-            ioPoller_.createObject(fd);
+            ioPoller_.createContext(fd);
             scopeGuard.dismiss();
             return fd;
         }
@@ -150,13 +150,13 @@ Loop::pipe2(int fds[2], int flags)
             }
         });
 
-        ioPoller_.createObject(fds[0]);
+        ioPoller_.createContext(fds[0]);
 
         auto scopeGuard2 = MakeScopeGuard([&] () -> void {
-            ioPoller_.destroyObject(fds[0]);
+            ioPoller_.destroyContext(fds[0]);
         });
 
-        ioPoller_.createObject(fds[1]);
+        ioPoller_.createContext(fds[1]);
         scopeGuard1.dismiss();
         scopeGuard2.dismiss();
         return 0;
@@ -206,7 +206,7 @@ Loop::socket(int domain, int type, int protocol)
             }
         });
 
-        ioPoller_.createObject(fd);
+        ioPoller_.createContext(fd);
         scopeGuard.dismiss();
         return fd;
     }
@@ -237,7 +237,7 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
                 }
             });
 
-            ioPoller_.createObject(subFD);
+            ioPoller_.createContext(subFD);
             scopeGuard.dismiss();
             return subFD;
         }
@@ -324,7 +324,7 @@ Loop::sendmsg(int fd, const msghdr *message, int flags, int timeout)
 int
 Loop::close(int fd)
 {
-    ioPoller_.destroyObject(fd);
+    ioPoller_.destroyContext(fd);
     return ::close(fd);
 }
 

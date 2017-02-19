@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 
 #include "buffer.h"
+#include "hash_table.h"
 #include "list.h"
 #include "object_pool.h"
 
@@ -19,8 +20,9 @@ enum class IOCondition;
 
 namespace detail {
 
-struct IOObject
-  : ListNode
+struct IOContext
+  : HashTableNode,
+    ListNode
 {
     int fd;
     int eventFlags;
@@ -46,28 +48,33 @@ public:
     ~IOPoller();
     IOPoller &operator=(IOPoller &&) noexcept;
 
-    void createObject(int);
-    void destroyObject(int);
+    void createContext(int);
+    void destroyContext(int);
     void addWatcher(Watcher *, int, Condition) noexcept;
     void removeWatcher(Watcher *) noexcept;
     void getReadyWatchers(Clock *, std::vector<Watcher *> *);
 
 private:
-    typedef detail::IOObject Object;
+    typedef detail::IOContext Context;
 
     int epollFD_;
-    ObjectPool<Object> objectPool_;
-    std::vector<detail::IOObject *> objects_;
-    List dirtyObjectList_;
+    ObjectPool<Context> contextPool_;
+    HashTable contextHashTable_;
+    List dirtyContextList_;
     Buffer<epoll_event> events_;
 
     void initialize();
     void finalize();
     void move(IOPoller *) noexcept;
+    int getFD(const Context *) const noexcept;
+    void setFD(Context *, int);
+    void clearFD(Context *) noexcept;
 #ifndef NDEBUG
-    bool objectExists(int) const noexcept;
+    bool contextExists(int) const noexcept;
 #endif
-    void flushObjects();
+    const Context *findContext(int) const noexcept;
+    Context *findContext(int) noexcept;
+    void flushContexts();
 };
 
 
@@ -82,7 +89,7 @@ protected:
 private:
     typedef IOCondition Condition;
 
-    int objectFD_;
+    int fd_;
     Condition condition_;
 
     IOWatcher(const IOWatcher &) = delete;

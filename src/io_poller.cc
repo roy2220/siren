@@ -3,8 +3,10 @@
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <system_error>
+#include <utility>
 
 #include <unistd.h>
 
@@ -25,16 +27,16 @@ const unsigned int IOEventFlags[2] = {
 
 
 IOPoller::IOPoller()
-  : objectPool_(64)
+  : contextPool_(64)
 {
     initialize();
 }
 
 
 IOPoller::IOPoller(IOPoller &&other) noexcept
-  : objectPool_(std::move(other.objectPool_)),
-    objects_(std::move(other.objects_)),
-    dirtyObjectList_(std::move(other.dirtyObjectList_)),
+  : contextPool_(std::move(other.contextPool_)),
+    contextHashTable_(std::move(other.contextHashTable_)),
+    dirtyContextList_(std::move(other.dirtyContextList_)),
     events_(std::move(other.events_))
 {
     other.move(this);
@@ -52,9 +54,9 @@ IOPoller::operator=(IOPoller &&other) noexcept
 {
     if (&other != this) {
         finalize();
-        objectPool_ = std::move(other.objectPool_);
-        objects_ = std::move(other.objects_);
-        dirtyObjectList_ = std::move(other.dirtyObjectList_);
+        contextPool_ = std::move(other.contextPool_);
+        contextHashTable_ = std::move(other.contextHashTable_);
+        dirtyContextList_ = std::move(other.dirtyContextList_);
         events_ = std::move(other.events_);
         other.move(this);
     }
@@ -91,11 +93,10 @@ IOPoller::finalize()
             throw std::system_error(errno, std::system_category(), "close() failed");
         }
 
-        for (Object *object : objects_) {
-            if (object != nullptr) {
-                objectPool_.destroyObject(object);
-            }
-        }
+        contextHashTable_.traverse([&] (HashTableNode *hashTableNode) -> void {
+            auto context = static_cast<Context *>(hashTableNode);
+            contextPool_.destroyObject(context);
+        });
     }
 }
 
@@ -108,74 +109,132 @@ IOPoller::move(IOPoller *other) noexcept
 }
 
 
+int
+IOPoller::getFD(const Context *context) const noexcept
+{
+    return context->fd;
+}
+
+
+void
+IOPoller::setFD(Context *context, int fd)
+{
+    contextHashTable_.insertNode(context, std::hash<int>()(context->fd = fd));
+}
+
+
+void
+IOPoller::clearFD(Context *context) noexcept
+{
+    contextHashTable_.removeNode(context);
+}
+
+
 #ifndef NDEBUG
 bool
-IOPoller::objectExists(int objectFD) const noexcept
+IOPoller::contextExists(int fd) const noexcept
 {
-    return static_cast<std::size_t>(objectFD) < objects_.size() && objects_[objectFD] != nullptr;
+    return findContext(fd) != nullptr;
 }
 #endif
 
 
 void
-IOPoller::createObject(int objectFD)
+IOPoller::createContext(int fd)
 {
     assert(isValid());
-    assert(objectFD >= 0);
-    assert(!objectExists(objectFD));
+    assert(fd >= 0);
+    assert(!contextExists(fd));
+    auto context = contextPool_.createObject();
 
-    if (static_cast<std::size_t>(objectFD) >= objects_.size()) {
-        objects_.resize(objectFD + 1, nullptr);
-    }
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        contextPool_.destroyObject(context);
+    });
 
-    auto object = objectPool_.createObject();
-    object->eventFlags = 0;
-    object->pendingEventFlags = 0;
-    object->isDirty = false;
-    objects_[object->fd = objectFD] = object;
+    setFD(context, fd);
+    context->eventFlags = 0;
+    context->pendingEventFlags = 0;
+    context->isDirty = false;
+    scopeGuard.dismiss();
 }
 
 
 void
-IOPoller::destroyObject(int objectFD)
+IOPoller::destroyContext(int fd)
 {
     assert(isValid());
-    assert(objectFD >= 0);
-    assert(objectExists(objectFD));
-    Object *object = objects_[objectFD];
+    assert(contextExists(fd));
+    Context *context = findContext(fd);
+    clearFD(context);
 
-    if (object->eventFlags != 0) {
-        if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, objectFD, nullptr) < 0) {
+    if (context->eventFlags != 0) {
+        if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, fd, nullptr) < 0) {
             throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
         }
     }
 
-    if (object->isDirty) {
-        object->remove();
+    if (context->isDirty) {
+        context->remove();
     }
 
-    objects_[objectFD] = nullptr;
-    objectPool_.destroyObject(object);
+    contextPool_.destroyObject(context);
+}
+
+
+const detail::IOContext *
+IOPoller::findContext(int fd) const noexcept
+{
+    const HashTableNode *hashTableNode
+    = contextHashTable_.search(std::hash<int>()(fd)
+                               , [&] (const HashTableNode *hashTableNode) -> bool {
+        auto context = static_cast<const Context *>(hashTableNode);
+        return context->fd == fd;
+    });
+
+    if (hashTableNode == nullptr) {
+        return nullptr;
+    } else {
+        auto context = static_cast<const Context *>(hashTableNode);
+        return context;
+    }
+}
+
+
+detail::IOContext *
+IOPoller::findContext(int fd) noexcept
+{
+    HashTableNode *hashTableNode
+    = contextHashTable_.search(std::hash<int>()(fd), [&] (HashTableNode *hashTableNode) -> bool {
+        auto context = static_cast<Context *>(hashTableNode);
+        return context->fd == fd;
+    });
+
+    if (hashTableNode == nullptr) {
+        return nullptr;
+    } else {
+        auto context = static_cast<Context *>(hashTableNode);
+        return context;
+    }
 }
 
 
 void
-IOPoller::addWatcher(Watcher *watcher, int objectFD, Condition condition) noexcept
+IOPoller::addWatcher(Watcher *watcher, int fd, Condition condition) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
-    assert(objectFD >= 0);
-    assert(objectExists(objectFD));
-    Object *object = objects_[watcher->objectFD_ = objectFD];
+    assert(fd >= 0);
+    assert(contextExists(fd));
+    Context *context = findContext(watcher->fd_ = fd);
     auto i = static_cast<std::size_t>(watcher->condition_ = condition);
-    object->watcherLists[i].appendNode(watcher);
+    context->watcherLists[i].appendNode(watcher);
 
     if (watcher->isOnly()) {
-        object->pendingEventFlags |= IOEventFlags[i];
+        context->pendingEventFlags |= IOEventFlags[i];
 
-        if (!object->isDirty) {
-            object->isDirty = true;
-            dirtyObjectList_.appendNode(object);
+        if (!context->isDirty) {
+            context->isDirty = true;
+            dirtyContextList_.appendNode(context);
         }
     }
 }
@@ -186,35 +245,37 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
-    assert(watcher->objectFD_ >= 0);
-    assert(objectExists(watcher->objectFD_));
-    Object *object = objects_[watcher->objectFD_];
+    assert(contextExists(watcher->fd_));
+    Context *context = findContext(watcher->fd_);
+#ifndef NDEBUG
+    watcher->fd_ = -1;
+#endif
     auto i = static_cast<std::size_t>(watcher->condition_);
     watcher->remove();
 
-    if (object->watcherLists[i].isEmpty()) {
-        object->pendingEventFlags &= ~IOEventFlags[i];
+    if (context->watcherLists[i].isEmpty()) {
+        context->pendingEventFlags &= ~IOEventFlags[i];
 
-        if (!object->isDirty) {
-            dirtyObjectList_.appendNode((object->isDirty = true, object));
+        if (!context->isDirty) {
+            dirtyContextList_.appendNode((context->isDirty = true, context));
         }
     }
 }
 
 
 void
-IOPoller::flushObjects()
+IOPoller::flushContexts()
 {
-    SIREN_LIST_FOREACH_REVERSE(listNode, dirtyObjectList_) {
-        auto object = static_cast<Object *>(listNode);
+    SIREN_LIST_FOREACH_REVERSE(listNode, dirtyContextList_) {
+        auto context = static_cast<Context *>(listNode);
 
-        if (object->eventFlags != object->pendingEventFlags) {
+        if (context->eventFlags != context->pendingEventFlags) {
             int op;
 
-            if (object->eventFlags == 0) {
+            if (context->eventFlags == 0) {
                 op = EPOLL_CTL_ADD;
             } else {
-                if (object->pendingEventFlags == 0) {
+                if (context->pendingEventFlags == 0) {
                     op = EPOLL_CTL_DEL;
                 } else {
                     op = EPOLL_CTL_MOD;
@@ -222,20 +283,20 @@ IOPoller::flushObjects()
             }
 
             epoll_event event;
-            event.events = object->pendingEventFlags | EPOLLET;
-            event.data.ptr = object;
+            event.events = context->pendingEventFlags | EPOLLET;
+            event.data.ptr = context;
 
-            if (epoll_ctl(epollFD_, op, object->fd, &event) < 0) {
+            if (epoll_ctl(epollFD_, op, getFD(context), &event) < 0) {
                 throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
             }
 
-            object->eventFlags = object->pendingEventFlags;
+            context->eventFlags = context->pendingEventFlags;
         }
 
-        object->isDirty = false;
+        context->isDirty = false;
     }
 
-    dirtyObjectList_.reset();
+    dirtyContextList_.reset();
 }
 
 
@@ -245,7 +306,7 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     assert(isValid());
     assert(clock != nullptr);
     assert(watchers != nullptr);
-    flushObjects();
+    flushContexts();
     std::size_t eventCount = 0;
     clock->start();
     int timeout = clock->getDueTime().count();
@@ -278,17 +339,17 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
 
     for (std::size_t i = 0; i < eventCount; ++i) {
         epoll_event *event = &events_[i];
-        auto object = static_cast<Object *>(event->data.ptr);
+        auto context = static_cast<Context *>(event->data.ptr);
 
         if ((event->events & (IOEventFlags[0] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH_REVERSE(listNode, object->watcherLists[0]) {
+            SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherLists[0]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);
             }
         }
 
         if ((event->events & (IOEventFlags[1] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH_REVERSE(listNode, object->watcherLists[1]) {
+            SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherLists[1]) {
                 auto watcher = static_cast<Watcher *>(listNode);
                 watchers->push_back(watcher);
             }

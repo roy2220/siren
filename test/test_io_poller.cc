@@ -34,7 +34,7 @@ SIREN_TEST("Add/Remove io watchers")
     ioClock.addTimer(&ioTimerContext, std::chrono::milliseconds(100));
     IOPoller ioPoller;
     IOWatcherContext ioWatcherContext;
-    ioPoller.createObject(fds[0]);
+    ioPoller.createContext(fds[0]);
     ioPoller.addWatcher(&ioWatcherContext, fds[0], IOCondition::Readable);
     std::vector<IOWatcher *> readyWatchers;
     ioPoller.getReadyWatchers(&ioClock, &readyWatchers);

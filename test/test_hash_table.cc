@@ -43,6 +43,11 @@ SIREN_TEST("Search hash table")
         ht.removeNode(&d[i]);
     }
 
+    ht.traverse([&] (HashTableNode *n) -> void {
+        auto pd = static_cast<Dummy *>(n);
+        SIREN_TEST_ASSERT(pd - d >= 512);
+    });
+
     for (int i = 0; i < 512; ++i) {
         ht.insertNode(&d[i], std::hash<int>()(i));
     }
