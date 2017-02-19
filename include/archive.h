@@ -19,7 +19,7 @@
     }
 
 #define SIREN__LIKE_CHAR(T) \
-    (std::is_pod<T>::value && sizeof(T) == sizeof(char) && alignof(T) == alignof(char))
+    ((sizeof(T) == sizeof(char) && alignof(T) == alignof(char)) && std::is_pod<T>::value)
 
 
 namespace siren {
@@ -177,7 +177,7 @@ private:
 #include <cassert>
 #include <limits>
 
-#include "convert.h"
+#include "convert_pointer.h"
 #include "stream.h"
 #include "unsigned_to_signed.h"
 
@@ -207,9 +207,9 @@ Archive &
 Archive::operator<<(float floatingPoint)
 {
     assert(isValid());
-    std::uint32_t temp;
-    Convert(floatingPoint, &temp);
-    operator<<(temp);
+    std::uint32_t *integer;
+    ConvertPointer(&floatingPoint, &integer);
+    operator<<(*integer);
     return *this;
 }
 
@@ -218,9 +218,9 @@ Archive &
 Archive::operator>>(float &floatingPoint)
 {
     assert(isValid());
-    std::uint32_t temp;
-    operator>>(temp);
-    Convert(temp, &floatingPoint);
+    std::uint32_t *integer;
+    ConvertPointer(&floatingPoint, &integer);
+    operator>>(*integer);
     return *this;
 }
 
@@ -229,9 +229,9 @@ Archive &
 Archive::operator<<(double floatingPoint)
 {
     assert(isValid());
-    std::uint64_t temp;
-    Convert(floatingPoint, &temp);
-    operator<<(temp);
+    std::uint64_t *integer;
+    ConvertPointer(&floatingPoint, &integer);
+    operator<<(*integer);
     return *this;
 
 }
@@ -241,9 +241,9 @@ Archive &
 Archive::operator>>(double &floatingPoint)
 {
     assert(isValid());
-    std::uint64_t temp;
-    operator>>(temp);
-    Convert(temp, &floatingPoint);
+    std::uint64_t *integer;
+    ConvertPointer(&floatingPoint, &integer);
+    operator>>(*integer);
     return *this;
 }
 

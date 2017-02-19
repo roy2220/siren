@@ -11,6 +11,13 @@
 
 namespace siren {
 
+void
+Scheduler::FiberStartWrapper(Scheduler *self) noexcept
+{
+    self->fiberStart();
+}
+
+
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
   : defaultFiberSize_(std::max(SIREN_ALIGN(defaultFiberSize, alignof(std::max_align_t))
                                , std::size_t(MinFiberSize))),
@@ -326,10 +333,6 @@ Scheduler::runFiber(Fiber *fiber) noexcept
     currentFiber_ = fiber;
 
     if (fiber->context == nullptr) {
-        void (*fiberStartWrapper)(Scheduler *) = [] (Scheduler *self) -> void {
-            self->fiberStart();
-        };
-
 #if defined(__GNUG__)
         __asm__ __volatile__ (
 #    if defined(__i386__)
@@ -339,14 +342,14 @@ Scheduler::runFiber(Fiber *fiber) noexcept
             "pushl\t$0\n\t"
             "jmpl\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(fiberStartWrapper)
+            : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(FiberStartWrapper)
 #    elif defined(__x86_64__)
             "movq\t$0, %%rbp\n\t"
             "movq\t%0, %%rsp\n\t"
             "pushq\t$0\n\t"
             "jmpq\t*%2"
             :
-            : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(fiberStartWrapper)
+            : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(FiberStartWrapper)
 #    else
 #        error architecture not supported
 #    endif

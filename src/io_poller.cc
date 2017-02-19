@@ -26,8 +26,8 @@ const unsigned int IOEventFlags[2] = {
 } // namespace
 
 
-IOPoller::IOPoller()
-  : contextPool_(64)
+IOPoller::IOPoller(std::size_t contextTagAlignment, std::size_t contextTagSize)
+  : contextPool_(64, contextTagAlignment, contextTagSize)
 {
     initialize();
 }
@@ -167,6 +167,10 @@ IOPoller::destroyContext(int fd)
     Context *context = findContext(fd);
     clearFD(context);
 
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        setFD(context, fd);
+    });
+
     if (context->eventFlags != 0) {
         if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, fd, nullptr) < 0) {
             throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
@@ -178,6 +182,7 @@ IOPoller::destroyContext(int fd)
     }
 
     contextPool_.destroyObject(context);
+    scopeGuard.dismiss();
 }
 
 
@@ -197,6 +202,24 @@ IOPoller::findContext(int fd) const noexcept
         auto context = static_cast<const Context *>(hashTableNode);
         return context;
     }
+}
+
+
+const void *
+IOPoller::getContextTag(int fd) const noexcept
+{
+    assert(contextExists(fd));
+    const Context *context = findContext(fd);
+    return contextPool_.getObjectTag(context);
+}
+
+
+void *
+IOPoller::getContextTag(int fd) noexcept
+{
+    assert(contextExists(fd));
+    Context *context = findContext(fd);
+    return contextPool_.getObjectTag(context);
 }
 
 

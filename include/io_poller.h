@@ -43,13 +43,15 @@ public:
 
     inline bool isValid() const noexcept;
 
-    explicit IOPoller();
+    explicit IOPoller(std::size_t = 0, std::size_t = 0);
     IOPoller(IOPoller &&) noexcept;
     ~IOPoller();
     IOPoller &operator=(IOPoller &&) noexcept;
 
     void createContext(int);
     void destroyContext(int);
+    const void *getContextTag(int) const noexcept;
+    void *getContextTag(int) noexcept;
     void addWatcher(Watcher *, int, Condition) noexcept;
     void removeWatcher(Watcher *) noexcept;
     void getReadyWatchers(Clock *, std::vector<Watcher *> *);

@@ -81,6 +81,8 @@ private:
     std::size_t activeFiberCount_;
     std::exception_ptr exception_;
 
+    [[noreturn]] static void FiberStartWrapper(Scheduler *) noexcept;
+
     void initialize() noexcept;
     void finalize();
     void move(Scheduler *) noexcept;
