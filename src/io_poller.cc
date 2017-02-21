@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
+#include <cstdio>
+#include <algorithm>
 #include <functional>
 #include <limits>
 #include <system_error>
@@ -68,29 +70,22 @@ IOPoller::operator=(IOPoller &&other) noexcept
 void
 IOPoller::initialize()
 {
+    events_.setLength(64);
     epollFD_ = epoll_create1(0);
 
     if (epollFD_ < 0) {
         throw std::system_error(errno, std::system_category(), "epoll_create1() failed");
     }
-
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        if (close(epollFD_) < 0 && errno != EINTR) {
-            throw std::system_error(errno, std::system_category(), "close() failed");
-        }
-    });
-
-    events_.setLength(64);
-    scopeGuard.dismiss();
 }
 
 
 void
-IOPoller::finalize()
+IOPoller::finalize() noexcept
 {
     if (isValid()) {
         if (close(epollFD_) < 0 && errno != EINTR) {
-            throw std::system_error(errno, std::system_category(), "close() failed");
+            std::perror("close() failed");
+            std::terminate();
         }
 
         contextHashTable_.traverse([&] (HashTableNode *hashTableNode) -> void {
@@ -160,20 +155,17 @@ IOPoller::createContext(int fd)
 
 
 void
-IOPoller::destroyContext(int fd)
+IOPoller::destroyContext(int fd) noexcept
 {
     assert(isValid());
     assert(contextExists(fd));
     Context *context = findContext(fd);
     clearFD(context);
 
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        setFD(context, fd);
-    });
-
     if (context->eventFlags != 0) {
         if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, fd, nullptr) < 0) {
-            throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
+            std::perror("epoll_ctl() failed");
+            std::terminate();
         }
     }
 
@@ -182,7 +174,6 @@ IOPoller::destroyContext(int fd)
     }
 
     contextPool_.destroyObject(context);
-    scopeGuard.dismiss();
 }
 
 
@@ -288,8 +279,15 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
 void
 IOPoller::flushContexts()
 {
-    SIREN_LIST_FOREACH_REVERSE(listNode, dirtyContextList_) {
-        auto context = static_cast<Context *>(listNode);
+    List list = std::move(dirtyContextList_);
+    Context *context;
+
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        dirtyContextList_.prependNodes(list.getHead(), context);
+    });
+
+    SIREN_LIST_FOREACH_REVERSE(listNode, list) {
+        context = static_cast<Context *>(listNode);
 
         if (context->eventFlags != context->pendingEventFlags) {
             int op;
@@ -318,7 +316,7 @@ IOPoller::flushContexts()
         context->isDirty = false;
     }
 
-    dirtyContextList_.reset();
+    scopeGuard.dismiss();
 }
 
 
@@ -331,7 +329,8 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
     flushContexts();
     std::size_t eventCount = 0;
     clock->start();
-    int timeout = clock->getDueTime().count();
+    int timeout = std::min(clock->getDueTime()
+                           , std::chrono::milliseconds(std::numeric_limits<int>::max())).count();
 
     for (;;) {
         int numberOfEvents = epoll_wait(epollFD_, events_ + eventCount
@@ -344,7 +343,9 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
             }
 
             clock->restart();
-            timeout = clock->getDueTime().count();
+            timeout = std::min(clock->getDueTime()
+                               , std::chrono::milliseconds(std::numeric_limits<int>::max()))
+                              .count();
         } else {
             clock->stop();
             eventCount += numberOfEvents;

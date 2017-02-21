@@ -1,9 +1,9 @@
 #include "async.h"
 
 #include <cassert>
-#include <cerrno>
 #include <cstdint>
-#include <system_error>
+#include <cstdio>
+#include <exception>
 #include <utility>
 
 #include <fcntl.h>
@@ -27,17 +27,20 @@ struct AsyncTask
 
 
 void
-Async::EventTrigger(ThreadPool *threadPool, Loop *loop)
+Async::EventTrigger(ThreadPool *threadPool, Loop *loop) noexcept
 {
     std::vector<ThreadPoolTask *> threadPoolTasks;
 
     for (;;) {
-        {
+        try {
             std::uint64_t dummy;
 
             if (loop->read(threadPool->getEventFD(), &dummy, sizeof(dummy)) < 0) {
-                throw std::system_error(errno, std::system_category(), "read() failed");
+                std::perror("read() failed");
+                std::terminate();
             }
+        } catch (FiberInterruption) {
+            return;
         }
 
         threadPool->getCompletedTasks(&threadPoolTasks);
@@ -110,7 +113,7 @@ Async::initialize()
 
 
 void
-Async::finalize()
+Async::finalize() noexcept
 {
     if (isValid()) {
         loop_->interruptFiber(fiberHandle_);
@@ -209,24 +212,21 @@ Async::open(const char *path, int flags, mode_t mode)
 
 
 ssize_t
-Async::pread(int fd, void *buffer, size_t bufferSize, off_t offset)
+Async::read(int fd, void *buffer, size_t bufferSize)
 {
     struct {
         int fd;
         void *buffer;
         size_t bufferSize;
-        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.buffer = buffer;
     context.bufferSize = bufferSize;
-    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::pread(context.fd, context.buffer, context.bufferSize
-                                        , context.offset);
+        context.numberOfBytes = ::read(context.fd, context.buffer, context.bufferSize);
     });
 
     return context.numberOfBytes;
@@ -234,24 +234,21 @@ Async::pread(int fd, void *buffer, size_t bufferSize, off_t offset)
 
 
 ssize_t
-Async::pwrite(int fd, const void *data, size_t dataSize, off_t offset)
+Async::write(int fd, const void *data, size_t dataSize)
 {
     struct {
         int fd;
         const void *data;
         size_t dataSize;
-        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.data = data;
     context.dataSize= dataSize;
-    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::pwrite(context.fd, context.data, context.dataSize
-                                         , context.offset);
+        context.numberOfBytes = ::write(context.fd, context.data, context.dataSize);
     });
 
     return context.numberOfBytes;
@@ -259,24 +256,21 @@ Async::pwrite(int fd, const void *data, size_t dataSize, off_t offset)
 
 
 ssize_t
-Async::preadv(int fd, const iovec *vector, int vectorLength, off_t offset)
+Async::readv(int fd, const iovec *vector, int vectorLength)
 {
     struct {
         int fd;
         const iovec *vector;
         int vectorLength;
-        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.vector = vector;
     context.vectorLength = vectorLength;
-    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::preadv(context.fd, context.vector, context.vectorLength
-                                         , context.offset);
+        context.numberOfBytes = ::readv(context.fd, context.vector, context.vectorLength);
     });
 
     return context.numberOfBytes;
@@ -284,24 +278,21 @@ Async::preadv(int fd, const iovec *vector, int vectorLength, off_t offset)
 
 
 ssize_t
-Async::pwritev(int fd, const iovec *vector, int vectorLength, off_t offset)
+Async::writev(int fd, const iovec *vector, int vectorLength)
 {
     struct {
         int fd;
         const iovec *vector;
         int vectorLength;
-        off_t offset;
         ssize_t numberOfBytes;
     } context;
 
     context.fd = fd;
     context.vector = vector;
     context.vectorLength = vectorLength;
-    context.offset = offset;
 
     executeTask([&context] () -> void {
-        context.numberOfBytes = ::pwritev(context.fd, context.vector, context.vectorLength
-                                          , context.offset);
+        context.numberOfBytes = ::writev(context.fd, context.vector, context.vectorLength);
     });
 
     return context.numberOfBytes;

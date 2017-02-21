@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -16,6 +17,9 @@
 
 
 namespace siren {
+
+namespace detail { struct FileOptions; }
+
 
 class Loop final
 {
@@ -33,7 +37,7 @@ public:
     inline unsigned int sleep(unsigned int);
     inline int usleep(useconds_t);
     inline int pipe(int [2]);
-    inline int accept(int, sockaddr *, socklen_t *, int = -1);
+    inline int accept(int, sockaddr *, socklen_t *);
 
     Loop(Loop &&) noexcept = default;
     Loop &operator=(Loop &&) noexcept = default;
@@ -42,37 +46,49 @@ public:
 
     void run();
     void registerFD(int);
-    void unregisterFD(int);
-    int open(const char *, int, mode_t);
+    void unregisterFD(int) noexcept;
+    int open(const char *, int, mode_t = 0);
+    int fcntl(int, int, int = 0) noexcept;
     int pipe2(int [2], int);
-    ssize_t read(int, void *, size_t, int = -1);
-    ssize_t write(int, const void *, size_t, int = -1);
-    ssize_t readv(int, const iovec *, int, int = -1);
-    ssize_t writev(int, const iovec *, int, int = -1);
+    ssize_t read(int, void *, size_t);
+    ssize_t write(int, const void *, size_t);
+    ssize_t readv(int, const iovec *, int);
+    ssize_t writev(int, const iovec *, int);
     int socket(int, int, int);
-    int accept4(int, sockaddr *, socklen_t *, int, int = -1);
-    int connect(int, const sockaddr *, socklen_t, int = -1);
-    ssize_t recv(int, void *, size_t, int, int = -1);
-    ssize_t send(int, const void *, size_t, int, int = -1);
-    ssize_t recvfrom(int, void *, size_t, int, sockaddr *, socklen_t *, int = -1);
-    ssize_t sendto(int, const void *, size_t, int, const sockaddr *, socklen_t, int = -1);
-    ssize_t recvmsg(int, msghdr *, int, int = -1);
-    ssize_t sendmsg(int, const msghdr *, int, int = -1);
-    int close(int);
+    int getsockopt(int, int, int, void *, socklen_t *) const noexcept;
+    int setsockopt(int, int, int, const void *, socklen_t) noexcept;
+    int accept4(int, sockaddr *, socklen_t *, int);
+    int connect(int, const sockaddr *, socklen_t);
+    ssize_t recv(int, void *, size_t, int);
+    ssize_t send(int, const void *, size_t, int);
+    ssize_t recvfrom(int, void *, size_t, int, sockaddr *, socklen_t *);
+    ssize_t sendto(int, const void *, size_t, int, const sockaddr *, socklen_t);
+    ssize_t recvmsg(int, msghdr *, int);
+    ssize_t sendmsg(int, const msghdr *, int);
+    int close(int) noexcept;
+    int poll(pollfd *, nfds_t, int);
 
 private:
+    typedef detail::FileOptions FileOptions;
+
     IOPoller ioPoller_;
     IOClock ioClock_;
     Scheduler scheduler_;
 
+    const FileOptions *getFileOptions(int) const noexcept;
+    FileOptions *getFileOptions(int) noexcept;
+    void createIOContext(int, bool, bool, long = -1, long = -1);
+    void destroyIOContext(int) noexcept;
+    long getEffectiveReadTimeout(int) const noexcept;
+    long getEffectiveWriteTimeout(int) const noexcept;
     bool waitForFile(int, IOCondition, std::chrono::milliseconds);
     void setDelay(std::chrono::milliseconds);
 
     template <class Func, class ...Args>
-    ssize_t readFile(int, int, Func, Args &&...);
+    ssize_t readFile(int, long, Func, Args &&...);
 
     template <class Func, class ...Args>
-    ssize_t writeFile(int, int, Func, Args &&...);
+    ssize_t writeFile(int, long, Func, Args &&...);
 };
 
 } // namespace siren
@@ -174,9 +190,9 @@ Loop::pipe(int fds[2])
 
 
 int
-Loop::accept(int fd, sockaddr *name, socklen_t *nameSize, int timeout)
+Loop::accept(int fd, sockaddr *name, socklen_t *nameSize)
 {
-    return accept4(fd, name, nameSize, 0, timeout);
+    return accept4(fd, name, nameSize, 0);
 }
 
 } // namespace siren

@@ -26,13 +26,15 @@ public:
     void setNoDelay(bool);
     void setLinger(bool, int);
     void setKeepAlive(bool, int);
+    void setReceiveTimeout(int);
+    void setSendTimeout(int);
     void listen(const IPEndpoint &, int = 511);
-    TCPSocket accept(IPEndpoint * = nullptr, int = -1);
-    void connect(const IPEndpoint &, int = -1);
+    TCPSocket accept(IPEndpoint * = nullptr);
+    void connect(const IPEndpoint &);
     IPEndpoint getLocalEndpoint() const;
     IPEndpoint getRemoteEndpoint() const;
-    std::size_t read(Stream *, int = -1);
-    std::size_t write(Stream *, int = -1);
+    std::size_t read(Stream *);
+    std::size_t write(Stream *);
     void closeRead();
     void closeWrite();
 
@@ -43,7 +45,7 @@ private:
     explicit TCPSocket(Loop *, int) noexcept;
 
     void initialize();
-    void finalize();
+    void finalize() noexcept;
     void move(TCPSocket *) noexcept;
 };
 

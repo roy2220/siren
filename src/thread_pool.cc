@@ -2,6 +2,7 @@
 
 #include <cerrno>
 #include <cstdint>
+#include <cstdio>
 #include <system_error>
 
 #include <sys/eventfd.h>
@@ -69,10 +70,11 @@ ThreadPool::initialize()
 
 
 void
-ThreadPool::finalize()
+ThreadPool::finalize() noexcept
 {
     if (close(eventFD_) < 0 && errno != EINTR) {
-        throw std::system_error(errno, std::system_category(), "close() failed");
+        std::perror("close() failed");
+        std::terminate();
     }
 }
 
@@ -96,9 +98,9 @@ ThreadPool::start(std::size_t numberOfThreads)
 
 
 void
-ThreadPool::stop()
+ThreadPool::stop() noexcept
 {
-    closeWaitingTaskList();
+    noMoreWaitingTasks();
 
     for (std::thread &thread : threads_) {
         thread.join();
@@ -107,7 +109,7 @@ ThreadPool::stop()
 
 
 void
-ThreadPool::worker()
+ThreadPool::worker() noexcept
 {
     for (;;) {
         ThreadPoolTask *task = getWaitingTask();
@@ -129,7 +131,8 @@ ThreadPool::worker()
 
                 if (write(eventFD_, &dummy, sizeof(dummy)) < 0) {
                     if (errno != EINTR) {
-                        throw std::system_error(errno, std::system_category(), "write() failed");
+                        std::perror("write() failed");
+                        std::terminate();
                     }
                 } else {
                     break;
@@ -141,7 +144,7 @@ ThreadPool::worker()
 
 
 void
-ThreadPool::removeTask(Task *task, bool *taskIsCompleted)
+ThreadPool::removeTask(Task *task, bool *taskIsCompleted) noexcept
 {
     assert(task != nullptr);
     assert(taskIsCompleted != nullptr);
@@ -177,7 +180,7 @@ ThreadPool::addWaitingTask(Task *task)
 
 
 bool
-ThreadPool::removeWaitingTask(Task *task)
+ThreadPool::removeWaitingTask(Task *task) noexcept
 {
     std::unique_lock<std::mutex> uniqueLock(mutexes_[0]);
 
@@ -212,7 +215,7 @@ ThreadPool::getWaitingTask()
 
 
 void
-ThreadPool::closeWaitingTaskList()
+ThreadPool::noMoreWaitingTasks()
 {
     std::lock_guard<std::mutex> lockGuard(mutexes_[0]);
     waitingTaskList_.prependNode(&noListNode_);
@@ -229,7 +232,7 @@ ThreadPool::addCompletedTask(Task *task)
 
 
 void
-ThreadPool::removeCompletedTask(Task *task)
+ThreadPool::removeCompletedTask(Task *task) noexcept
 {
     std::unique_lock<std::mutex> uniqueLock(mutexes_[1]);
     task->remove();
@@ -246,10 +249,19 @@ ThreadPool::getCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
         list = std::move(completedTaskList_);
     }
 
+    Task *task;
+
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
+        completedTaskList_.prependNodes(list.getHead(), task);
+    });
+
     SIREN_LIST_FOREACH_REVERSE(ListNode, list) {
-        auto task = static_cast<Task *>(ListNode);
+        task = static_cast<Task *>(ListNode);
         tasks->push_back(task);
     }
+
+    scopeGuard.dismiss();
 }
 
 } // namespace siren

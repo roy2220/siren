@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <cstddef>
 #include <vector>
 
 #include <sys/epoll.h>
@@ -49,7 +50,7 @@ public:
     IOPoller &operator=(IOPoller &&) noexcept;
 
     void createContext(int);
-    void destroyContext(int);
+    void destroyContext(int) noexcept;
     const void *getContextTag(int) const noexcept;
     void *getContextTag(int) noexcept;
     void addWatcher(Watcher *, int, Condition) noexcept;
@@ -66,7 +67,7 @@ private:
     Buffer<epoll_event> events_;
 
     void initialize();
-    void finalize();
+    void finalize() noexcept;
     void move(IOPoller *) noexcept;
     int getFD(const Context *) const noexcept;
     void setFD(Context *, int);

@@ -31,11 +31,11 @@ public:
 
     int getaddrinfo(const char *, const char *, const addrinfo *, addrinfo **);
     int getnameinfo(const sockaddr *, socklen_t, char *, socklen_t, char *, socklen_t, int);
-    int open(const char *, int, mode_t);
-    ssize_t pread(int, void *, size_t, off_t);
-    ssize_t pwrite(int, const void *, size_t, off_t);
-    ssize_t preadv(int, const iovec *, int, off_t);
-    ssize_t pwritev(int, const iovec *, int, off_t);
+    int open(const char *, int, mode_t = 0);
+    ssize_t read(int, void *, size_t);
+    ssize_t write(int, const void *, size_t);
+    ssize_t readv(int, const iovec *, int);
+    ssize_t writev(int, const iovec *, int);
     int close(int);
     void executeTask(const std::function<void ()> &);
     void executeTask(std::function<void ()> &&);
@@ -48,10 +48,10 @@ private:
     void *fiberHandle_;
     std::size_t taskCount_;
 
-    static void EventTrigger(ThreadPool *, Loop *);
+    static void EventTrigger(ThreadPool *, Loop *) noexcept;
 
     void initialize();
-    void finalize();
+    void finalize() noexcept;
     void move(Async *) noexcept;
     void waitForTask(Task *);
 };

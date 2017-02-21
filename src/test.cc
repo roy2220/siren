@@ -10,7 +10,7 @@ namespace siren {
 
 namespace {
 
-std::list<detail::Test *> Tests;
+std::list<detail::Test *> &Tests();
 
 } // namespace
 
@@ -18,7 +18,7 @@ std::list<detail::Test *> Tests;
 std::size_t
 GetNumberOfTests() noexcept
 {
-    return Tests.size();
+    return Tests().size();
 }
 
 
@@ -27,7 +27,7 @@ RunTests() noexcept
 {
     std::size_t passedTestCount = 0;
 
-    for (detail::Test *test : Tests) {
+    for (detail::Test *test : Tests()) {
         try {
             test->run();
             ++passedTestCount;
@@ -45,7 +45,7 @@ namespace detail {
 
 Test::Test()
 {
-    Tests.push_back(this);
+    Tests().push_back(this);
 }
 
 
@@ -65,5 +65,18 @@ TestAssertionFailure::what() const noexcept
 }
 
 } // namespace detail
+
+
+namespace {
+
+std::list<detail::Test *> &
+Tests()
+{
+    static std::list<detail::Test *> tests;
+    return tests;
+}
+
+
+} // namespace
 
 } // namespace siren

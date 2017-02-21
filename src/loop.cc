@@ -1,17 +1,32 @@
 #include "loop.h"
 
 #include <cerrno>
+#include <cstdio>
 #include <functional>
 #include <system_error>
 #include <utility>
 
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "helper_macros.h"
 #include "scope_guard.h"
 
 
 namespace siren {
+
+namespace detail {
+
+struct FileOptions
+{
+    bool isSocket: 1;
+    bool blocking: 1;
+    long readTimeout;
+    long writeTimeout;
+};
+
+}
+
 
 namespace {
 
@@ -30,12 +45,15 @@ struct MyIOTimer
 
 
 bool SetBlocking(int, bool);
+long TimeToTimeout(timeval);
+timeval TimeoutToTime(long);
 
 } // namespace
 
 
 Loop::Loop(std::size_t defaultFiberSize)
-  : scheduler_(defaultFiberSize)
+  : ioPoller_(alignof(FileOptions), sizeof(FileOptions)),
+    scheduler_(defaultFiberSize)
 {
 }
 
@@ -76,36 +94,88 @@ Loop::run()
 void
 Loop::registerFD(int fd)
 {
+    bool isSocket;
+
     {
-        bool ok = SetBlocking(fd, false);
-        SIREN_UNUSED(ok);
-        assert(ok);
+        struct stat status;
+        fstat(fd, &status);
+        isSocket = S_ISSOCK(status.st_mode);
     }
 
+    bool blocking = SetBlocking(fd, false);
+
     auto scopeGuard = MakeScopeGuard([&] () -> void {
-        SetBlocking(fd, true);
+        if (blocking) {
+            SetBlocking(fd, true);
+        }
     });
 
-    ioPoller_.createContext(fd);
+    if (isSocket) {
+        long readTimeout;
+        long writeTimeout;
+
+        {
+            timeval time;
+            socklen_t timeSize = sizeof(time);
+
+            if (::getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &time, &timeSize) < 0) {
+                throw std::system_error(errno, std::system_category(), "getsockopt() failed");
+            }
+
+            readTimeout = TimeToTimeout(time);
+        }
+
+        {
+            timeval time;
+            socklen_t timeSize = sizeof(time);
+
+            if (::getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &time, &timeSize) < 0) {
+                throw std::system_error(errno, std::system_category(), "getsockopt() failed");
+            }
+
+            writeTimeout = TimeToTimeout(time);
+        }
+
+        createIOContext(fd, isSocket, blocking, readTimeout, writeTimeout);
+    } else {
+        createIOContext(fd, isSocket, blocking);
+    }
+
     scopeGuard.dismiss();
 }
 
 
 void
-Loop::unregisterFD(int fd)
+Loop::unregisterFD(int fd) noexcept
 {
-    {
-        bool ok = SetBlocking(fd, true);
-        SIREN_UNUSED(ok);
-        assert(ok);
+    FileOptions *fileOptions = getFileOptions(fd);
+
+    if (fileOptions->blocking) {
+        SetBlocking(fd, true);
     }
 
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        SetBlocking(fd, false);
-    });
+    if (fileOptions->isSocket)
+    {
+        {
+            timeval time = TimeoutToTime(fileOptions->readTimeout);
 
-    ioPoller_.destroyContext(fd);
-    scopeGuard.dismiss();
+            if (::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
+                std::perror("setsockopt() failed");
+                std::terminate();
+            }
+        }
+
+        {
+            timeval time = TimeoutToTime(fileOptions->writeTimeout);
+
+            if (::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &time, sizeof(time)) < 0) {
+                std::perror("setsockopt() failed");
+                std::terminate();
+            }
+        }
+    }
+
+    destroyIOContext(fd);
 }
 
 
@@ -122,14 +192,44 @@ Loop::open(const char *path, int flags, mode_t mode)
         } else {
             auto scopeGuard = MakeScopeGuard([&] () -> void {
                 if (::close(fd) < 0 && errno != EINTR) {
-                    throw std::system_error(errno, std::system_category(), "close() failed");
+                    std::perror("close() failed");
+                    std::terminate();
                 }
             });
 
-            ioPoller_.createContext(fd);
+            bool blocking = (mode & O_NONBLOCK) == 0;
+            createIOContext(fd, false, blocking);
             scopeGuard.dismiss();
             return fd;
         }
+    }
+}
+
+
+
+int
+Loop::fcntl(int fd, int command, int argument) noexcept
+{
+    if (command == F_GETFL) {
+        SIREN_UNUSED(argument);
+        int flags = ::fcntl(fd, F_GETFL);
+
+        if (flags < 0) {
+            return -1;
+        } else {
+            return (flags & ~O_NONBLOCK) | (getFileOptions(fd)->blocking ? 0 : O_NONBLOCK);
+        }
+    } else if (command == F_SETFL){
+        int flags = argument;
+
+        if (::fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+            return -1;
+        } else {
+            getFileOptions(fd)->blocking = (flags & O_NONBLOCK) == 0;
+            return 0;
+        }
+    } else {
+        return ::fcntl(fd, command, argument);
     }
 }
 
@@ -142,21 +242,24 @@ Loop::pipe2(int fds[2], int flags)
     } else {
         auto scopeGuard1 = MakeScopeGuard([&] () -> void {
             if (::close(fds[0]) < 0 && errno != EINTR) {
-                throw std::system_error(errno, std::system_category(), "close() failed");
+                std::perror("close() failed");
+                std::terminate();
             }
 
             if (::close(fds[1]) < 0 && errno != EINTR) {
-                throw std::system_error(errno, std::system_category(), "close() failed");
+                std::perror("close() failed");
+                std::terminate();
             }
         });
 
-        ioPoller_.createContext(fds[0]);
+        bool blocking = (flags & O_NONBLOCK) == 0;
+        createIOContext(fds[0], false, blocking);
 
         auto scopeGuard2 = MakeScopeGuard([&] () -> void {
-            ioPoller_.destroyContext(fds[0]);
+            destroyIOContext(fds[0]);
         });
 
-        ioPoller_.createContext(fds[1]);
+        createIOContext(fds[1], false, blocking);
         scopeGuard1.dismiss();
         scopeGuard2.dismiss();
         return 0;
@@ -165,30 +268,30 @@ Loop::pipe2(int fds[2], int flags)
 
 
 ssize_t
-Loop::read(int fd, void *buffer, size_t bufferSize, int timeout)
+Loop::read(int fd, void *buffer, size_t bufferSize)
 {
-    return readFile(fd, timeout, ::read, buffer, bufferSize);
+    return readFile(fd, getEffectiveReadTimeout(fd), ::read, buffer, bufferSize);
 }
 
 
 ssize_t
-Loop::write(int fd, const void *data, size_t dataSize, int timeout)
+Loop::write(int fd, const void *data, size_t dataSize)
 {
-    return writeFile(fd, timeout, ::write, data, dataSize);
+    return writeFile(fd, getEffectiveWriteTimeout(fd), ::write, data, dataSize);
 }
 
 
 ssize_t
-Loop::readv(int fd, const iovec *vector, int vectorLength, int timeout)
+Loop::readv(int fd, const iovec *vector, int vectorLength)
 {
-    return readFile(fd, timeout, ::readv, vector, vectorLength);
+    return readFile(fd, getEffectiveReadTimeout(fd), ::readv, vector, vectorLength);
 }
 
 
 ssize_t
-Loop::writev(int fd, const iovec *vector, int vectorLength, int timeout)
+Loop::writev(int fd, const iovec *vector, int vectorLength)
 {
-    return writeFile(fd, timeout, ::writev, vector, vectorLength);
+    return writeFile(fd, getEffectiveWriteTimeout(fd), ::writev, vector, vectorLength);
 }
 
 
@@ -202,11 +305,13 @@ Loop::socket(int domain, int type, int protocol)
     } else {
         auto scopeGuard = MakeScopeGuard([&] () -> void {
             if (::close(fd) < 0 && errno != EINTR) {
-                throw std::system_error(errno, std::system_category(), "close() failed");
+                std::perror("close() failed");
+                std::terminate();
             }
         });
 
-        ioPoller_.createContext(fd);
+        bool blocking = (type & SOCK_NONBLOCK) == 0;
+        createIOContext(fd, true, blocking);
         scopeGuard.dismiss();
         return fd;
     }
@@ -214,14 +319,79 @@ Loop::socket(int domain, int type, int protocol)
 
 
 int
-Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeout)
+Loop::getsockopt(int fd, int level, int optionName, void* optionValue
+                 , socklen_t *optionLength) const noexcept
+{
+    if (level == SOL_SOCKET && (optionName == SO_RCVTIMEO || optionName == SO_SNDTIMEO)) {
+        const FileOptions *fileOptions = getFileOptions(fd);
+
+        if (fileOptions->isSocket) {
+            if (optionLength == nullptr || *optionLength < sizeof(timeval)) {
+                errno = EINVAL;
+                return -1;
+            } else {
+                auto time = static_cast<timeval *>(optionValue);
+
+                if (optionName == SO_RCVTIMEO) {
+                    *time = TimeoutToTime(fileOptions->readTimeout);
+                } else {
+                    *time = TimeoutToTime(fileOptions->writeTimeout);
+                }
+
+                return 0;
+            }
+        } else {
+            errno = ENOTSOCK;
+            return -1;
+        }
+    } else {
+        return ::getsockopt(fd, level, optionName, optionValue, optionLength);
+    }
+}
+
+
+int
+Loop::setsockopt(int fd, int level, int optionName, const void *optionValue
+                 , socklen_t optionLength) noexcept
+{
+    if (level == SOL_SOCKET && (optionName == SO_RCVTIMEO || optionName == SO_SNDTIMEO)) {
+        FileOptions *fileOptions = getFileOptions(fd);
+
+        if (fileOptions->isSocket) {
+            if (optionLength < sizeof(timeval)) {
+                errno = EINVAL;
+                return -1;
+            } else {
+                auto time = static_cast<const timeval *>(optionValue);
+
+                if (optionName == SO_RCVTIMEO) {
+                    fileOptions->readTimeout = TimeToTimeout(*time);
+                } else {
+                    fileOptions->writeTimeout = TimeToTimeout(*time);
+                }
+
+                return 0;
+            }
+        } else {
+            errno = ENOTSOCK;
+            return -1;
+        }
+    } else {
+        return ::setsockopt(fd, level, optionName, optionValue, optionLength);
+    }
+}
+
+
+int
+Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
 {
     for (;;) {
         int subFD = ::accept4(fd, name, nameSize, flags | SOCK_NONBLOCK);
 
         if (subFD < 0) {
             if (errno == EAGAIN) {
-                if (!waitForFile(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
+                if (!waitForFile(fd, IOCondition::Readable
+                                 , std::chrono::milliseconds(getEffectiveReadTimeout(fd)))) {
                     errno = EAGAIN;
                     return -1;
                 }
@@ -233,11 +403,13 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
         } else {
             auto scopeGuard = MakeScopeGuard([&] () -> void {
                 if (::close(subFD) < 0 && errno != EINTR) {
-                    throw std::system_error(errno, std::system_category(), "close() failed");
+                    std::perror("close() failed");
+                    std::terminate();
                 }
             });
 
-            ioPoller_.createContext(subFD);
+            bool blocking = (flags & SOCK_NONBLOCK) == 0;
+            createIOContext(subFD, true, blocking);
             scopeGuard.dismiss();
             return subFD;
         }
@@ -246,11 +418,12 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags, int timeou
 
 
 int
-Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
+Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
 {
     if (::connect(fd, name, nameSize) < 0) {
         if (errno == EINTR || errno == EINPROGRESS) {
-            if (waitForFile(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
+            if (waitForFile(fd, IOCondition::Writable
+                            , std::chrono::milliseconds(getEffectiveWriteTimeout(fd)))) {
                 int errorNumber;
                 socklen_t errorNumberSize = sizeof(errorNumber);
 
@@ -265,7 +438,7 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
                     return -1;
                 }
             } else {
-                errno = EAGAIN;
+                errno = EINPROGRESS;
                 return -1;
             }
         } else {
@@ -278,60 +451,99 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize, int timeout)
 
 
 ssize_t
-Loop::recv(int fd, void *buffer, size_t bufferSize, int flags, int timeout)
+Loop::recv(int fd, void *buffer, size_t bufferSize, int flags)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
     return readFile(fd, timeout, ::recv, buffer, bufferSize, flags);
 }
 
 
 ssize_t
-Loop::send(int fd, const void *data, size_t dataSize, int flags, int timeout)
+Loop::send(int fd, const void *data, size_t dataSize, int flags)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
     return writeFile(fd, timeout, ::send, data, dataSize, flags);
 }
 
 
 ssize_t
 Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *name
-               , socklen_t *nameSize, int timeout)
+               , socklen_t *nameSize)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
     return readFile(fd, timeout, ::recvfrom, buffer, bufferSize, flags, name, nameSize);
 }
 
 
 ssize_t
 Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockaddr *name
-             , socklen_t nameSize, int timeout)
+             , socklen_t nameSize)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
     return writeFile(fd, timeout, ::sendto, data, dataSize, flags, name, nameSize);
 }
 
 
 ssize_t
-Loop::recvmsg(int fd, msghdr *message, int flags, int timeout)
+Loop::recvmsg(int fd, msghdr *message, int flags)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
     return readFile(fd, timeout, ::recvmsg, message, flags);
 }
 
 
 ssize_t
-Loop::sendmsg(int fd, const msghdr *message, int flags, int timeout)
+Loop::sendmsg(int fd, const msghdr *message, int flags)
 {
+    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
     return writeFile(fd, timeout, ::sendmsg, message, flags);
 }
 
 
 int
-Loop::close(int fd)
+Loop::close(int fd) noexcept
 {
-    ioPoller_.destroyContext(fd);
+    destroyIOContext(fd);
     return ::close(fd);
 }
 
 
+int
+Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
+{
+    if (numberOfPollFDs == 0) {
+        setDelay(std::chrono::milliseconds(timeout));
+        return 0;
+    } else if (numberOfPollFDs == 1) {
+        if (pollFDs == nullptr) {
+            errno = EFAULT;
+            return -1;
+        } else {
+            if (pollFDs[0].events == POLLIN || pollFDs[0].events == POLLOUT) {
+                IOCondition ioCondition = pollFDs[0].events == POLLIN ? IOCondition::Readable
+                                                                      : IOCondition::Writable;
+                if (waitForFile(pollFDs[0].fd, ioCondition, std::chrono::milliseconds(timeout))) {
+                    pollFDs[0].revents = pollFDs[0].events;
+                    return 1;
+                } else {
+                    return 0;
+                }
+            } else {
+                errno = ENOSYS;
+                return -1;
+            }
+        }
+    } else {
+        errno = ENOSYS;
+        return -1;
+    }
+}
+
+
+
 template <class Func, class ...Args>
 ssize_t
-Loop::readFile(int fd, int timeout, Func func, Args &&...args)
+Loop::readFile(int fd, long timeout, Func func, Args &&...args)
 {
     for (;;) {
         ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
@@ -356,7 +568,7 @@ Loop::readFile(int fd, int timeout, Func func, Args &&...args)
 
 template <class Func, class ...Args>
 ssize_t
-Loop::writeFile(int fd, int timeout, Func func, Args &&...args)
+Loop::writeFile(int fd, long timeout, Func func, Args &&...args)
 {
     for (;;) {
         ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
@@ -376,6 +588,55 @@ Loop::writeFile(int fd, int timeout, Func func, Args &&...args)
             return numberOfBytes;
         }
     }
+}
+
+
+const detail::FileOptions *
+Loop::getFileOptions(int fd) const noexcept
+{
+    return static_cast<const FileOptions *>(ioPoller_.getContextTag(fd));
+}
+
+
+detail::FileOptions *
+Loop::getFileOptions(int fd) noexcept
+{
+    return static_cast<FileOptions *>(ioPoller_.getContextTag(fd));
+}
+
+
+void
+Loop::createIOContext(int fd, bool isSocket, bool blocking, long readTimeout, long writeTimeout)
+{
+    ioPoller_.createContext(fd);
+    FileOptions *fileOptions = getFileOptions(fd);
+    fileOptions->isSocket = isSocket;
+    fileOptions->blocking = blocking;
+    fileOptions->readTimeout = readTimeout;
+    fileOptions->writeTimeout = writeTimeout;
+}
+
+
+void
+Loop::destroyIOContext(int fd) noexcept
+{
+    ioPoller_.destroyContext(fd);
+}
+
+
+long
+Loop::getEffectiveReadTimeout(int fd) const noexcept
+{
+    const FileOptions *fileOptions = getFileOptions(fd);
+    return fileOptions->blocking ? fileOptions->readTimeout : 0;
+}
+
+
+long
+Loop::getEffectiveWriteTimeout(int fd) const noexcept
+{
+    const FileOptions *fileOptions = getFileOptions(fd);
+    return fileOptions->blocking ? fileOptions->writeTimeout : 0;
 }
 
 
@@ -455,26 +716,30 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 void
 Loop::setDelay(std::chrono::milliseconds duration)
 {
-    struct {
-        MyIOTimer myIOTimer;
-        IOClock *ioClock;
-        void *fiberHandle;
-        Scheduler *scheduler;
-    } context;
+    if (duration.count() < 0) {
+        scheduler_.suspendFiber(scheduler_.getCurrentFiber());
+    } else {
+        struct {
+            MyIOTimer myIOTimer;
+            IOClock *ioClock;
+            void *fiberHandle;
+            Scheduler *scheduler;
+        } context;
 
-    context.myIOTimer.callback = [&context] () -> void {
-        context.scheduler->resumeFiber(context.fiberHandle);
-    };
+        context.myIOTimer.callback = [&context] () -> void {
+            context.scheduler->resumeFiber(context.fiberHandle);
+        };
 
-    (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
+        (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
 
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        context.ioClock->removeTimer(&context.myIOTimer);
-    });
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
+            context.ioClock->removeTimer(&context.myIOTimer);
+        });
 
-    (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
-                                                    = scheduler_.getCurrentFiber());
-    scopeGuard.dismiss();
+        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
+                                                        = scheduler_.getCurrentFiber());
+        scopeGuard.dismiss();
+    }
 }
 
 
@@ -497,7 +762,7 @@ SetBlocking(int fd, bool blocking)
         }
     } else {
         if (blocking) {
-            return false;
+            return true;
         } else {
             flags |= O_NONBLOCK;
         }
@@ -507,7 +772,39 @@ SetBlocking(int fd, bool blocking)
         throw std::system_error(errno, std::system_category(), "fcntl() failed");
     }
 
-    return true;
+    return !blocking;
+}
+
+
+long
+TimeToTimeout(timeval time)
+{
+    long timeout;
+
+    if (time.tv_sec == 0 && time.tv_usec == 0) {
+        timeout = -1;
+    } else {
+        timeout = time.tv_sec * 1000 + time.tv_usec / 1000;
+    }
+
+    return timeout;
+}
+
+
+timeval
+TimeoutToTime(long timeout)
+{
+    timeval time;
+
+    if (timeout < 0) {
+        time.tv_sec = 0;
+        time.tv_usec = 0;
+    } else {
+        time.tv_sec = timeout / 1000;
+        time.tv_usec = (timeout % 1000) * 1000;
+    }
+
+    return time;
 }
 
 } // namespace

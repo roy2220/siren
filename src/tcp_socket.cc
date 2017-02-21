@@ -70,10 +70,11 @@ TCPSocket::initialize()
 
 
 void
-TCPSocket::finalize()
+TCPSocket::finalize() noexcept
 {
     if (loop_->close(fd_) < 0 && errno != EINTR) {
-        throw std::system_error(errno, std::system_category(), "close() failed");
+        std::perror("close() failed");
+        std::terminate();
     }
 }
 
@@ -153,6 +154,34 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
 
 
 void
+TCPSocket::setReceiveTimeout(int receiveTimeout)
+{
+    assert(receiveTimeout >= 0);
+    timeval time;
+    time.tv_sec = receiveTimeout / 1000;
+    time.tv_usec = (receiveTimeout % 1000) * 1000;
+
+    if (loop_->setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
+        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+    }
+}
+
+
+void
+TCPSocket::setSendTimeout(int sendTimeout)
+{
+    assert(sendTimeout >= 0);
+    timeval time;
+    time.tv_sec = sendTimeout / 1000;
+    time.tv_usec = (sendTimeout % 1000) * 1000;
+
+    if (loop_->setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &time, sizeof(time)) < 0) {
+        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+    }
+}
+
+
+void
 TCPSocket::listen(const IPEndpoint &ipEndpoint, int backlog)
 {
     assert(isValid());
@@ -172,12 +201,12 @@ TCPSocket::listen(const IPEndpoint &ipEndpoint, int backlog)
 
 
 TCPSocket
-TCPSocket::accept(IPEndpoint *ipEndpoint, int timeout)
+TCPSocket::accept(IPEndpoint *ipEndpoint)
 {
     assert(isValid());
     sockaddr_in name;
     socklen_t nameSize = sizeof(name);
-    int subFD = loop_->accept(fd_, reinterpret_cast<sockaddr *>(&name), &nameSize, timeout);
+    int subFD = loop_->accept(fd_, reinterpret_cast<sockaddr *>(&name), &nameSize);
 
     if (subFD < 0) {
         throw std::system_error(errno, std::system_category(), "accept() failed");
@@ -192,7 +221,7 @@ TCPSocket::accept(IPEndpoint *ipEndpoint, int timeout)
 
 
 void
-TCPSocket::connect(const IPEndpoint &ipEndpoint, int timeout)
+TCPSocket::connect(const IPEndpoint &ipEndpoint)
 {
     assert(isValid());
     sockaddr_in name;
@@ -200,7 +229,7 @@ TCPSocket::connect(const IPEndpoint &ipEndpoint, int timeout)
     name.sin_addr.s_addr = htonl(ipEndpoint.address);
     name.sin_port = htons(ipEndpoint.portNumber);
 
-    if (loop_->connect(fd_, reinterpret_cast<sockaddr *>(&name), sizeof(name), timeout) < 0) {
+    if (loop_->connect(fd_, reinterpret_cast<sockaddr *>(&name), sizeof(name)) < 0) {
         throw std::system_error(errno, std::system_category(), "connect() failed");
     }
 }
@@ -237,13 +266,13 @@ TCPSocket::getRemoteEndpoint() const
 
 
 std::size_t
-TCPSocket::read(Stream *stream, int timeout)
+TCPSocket::read(Stream *stream)
 {
     assert(isValid());
     assert(stream != nullptr);
     void *buffer = stream->getBuffer();
     std::size_t bufferSize = stream->getBufferSize();
-    ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0, timeout);
+    ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0);
 
     if (numberOfBytes < 0) {
         throw std::system_error(errno, std::system_category(), "read() failed");
@@ -255,13 +284,13 @@ TCPSocket::read(Stream *stream, int timeout)
 
 
 std::size_t
-TCPSocket::write(Stream *stream, int timeout)
+TCPSocket::write(Stream *stream)
 {
     assert(isValid());
     assert(stream != nullptr);
     const void *data = stream->getData();
     std::size_t dataSize = stream->getDataSize();
-    ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL, timeout);
+    ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL);
 
     if (numberOfBytes < 0) {
         throw std::system_error(errno, std::system_category(), "send() failed");

@@ -57,7 +57,7 @@ public:
     explicit ThreadPool(std::size_t = 0);
     ~ThreadPool();
 
-    void removeTask(Task *, bool *);
+    void removeTask(Task *, bool *) noexcept;
     void getCompletedTasks(std::vector<Task *> *);
 
 private:
@@ -72,16 +72,16 @@ private:
     std::vector<std::thread> threads_;
 
     void initialize();
-    void finalize();
+    void finalize() noexcept;
     void start(std::size_t);
-    void stop();
-    void worker();
+    void stop() noexcept;
+    void worker() noexcept;
     void addWaitingTask(Task *);
-    bool removeWaitingTask(Task *);
+    bool removeWaitingTask(Task *) noexcept;
     Task *getWaitingTask();
-    void closeWaitingTaskList();
+    void noMoreWaitingTasks();
     void addCompletedTask(Task *);
-    void removeCompletedTask(Task *);
+    void removeCompletedTask(Task *) noexcept;
 
     ThreadPool(const ThreadPool &) = delete;
     ThreadPool &operator=(const ThreadPool &) = delete;
