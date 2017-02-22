@@ -319,20 +319,20 @@ Loop::socket(int domain, int type, int protocol)
 
 
 int
-Loop::getsockopt(int fd, int level, int optionName, void* optionValue
-                 , socklen_t *optionLength) const noexcept
+Loop::getsockopt(int fd, int level, int optionType, void *optionValue
+                 , socklen_t *optionValueSize) const noexcept
 {
-    if (level == SOL_SOCKET && (optionName == SO_RCVTIMEO || optionName == SO_SNDTIMEO)) {
+    if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         const FileOptions *fileOptions = getFileOptions(fd);
 
         if (fileOptions->isSocket) {
-            if (optionLength == nullptr || *optionLength < sizeof(timeval)) {
+            if (optionValueSize == nullptr || *optionValueSize < sizeof(timeval)) {
                 errno = EINVAL;
                 return -1;
             } else {
                 auto time = static_cast<timeval *>(optionValue);
 
-                if (optionName == SO_RCVTIMEO) {
+                if (optionType == SO_RCVTIMEO) {
                     *time = TimeoutToTime(fileOptions->readTimeout);
                 } else {
                     *time = TimeoutToTime(fileOptions->writeTimeout);
@@ -345,26 +345,26 @@ Loop::getsockopt(int fd, int level, int optionName, void* optionValue
             return -1;
         }
     } else {
-        return ::getsockopt(fd, level, optionName, optionValue, optionLength);
+        return ::getsockopt(fd, level, optionType, optionValue, optionValueSize);
     }
 }
 
 
 int
-Loop::setsockopt(int fd, int level, int optionName, const void *optionValue
-                 , socklen_t optionLength) noexcept
+Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
+                 , socklen_t optionValueSize) noexcept
 {
-    if (level == SOL_SOCKET && (optionName == SO_RCVTIMEO || optionName == SO_SNDTIMEO)) {
+    if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         FileOptions *fileOptions = getFileOptions(fd);
 
         if (fileOptions->isSocket) {
-            if (optionLength < sizeof(timeval)) {
+            if (optionValueSize < sizeof(timeval)) {
                 errno = EINVAL;
                 return -1;
             } else {
                 auto time = static_cast<const timeval *>(optionValue);
 
-                if (optionName == SO_RCVTIMEO) {
+                if (optionType == SO_RCVTIMEO) {
                     fileOptions->readTimeout = TimeToTimeout(*time);
                 } else {
                     fileOptions->writeTimeout = TimeToTimeout(*time);
@@ -377,7 +377,7 @@ Loop::setsockopt(int fd, int level, int optionName, const void *optionValue
             return -1;
         }
     } else {
-        return ::setsockopt(fd, level, optionName, optionValue, optionLength);
+        return ::setsockopt(fd, level, optionType, optionValue, optionValueSize);
     }
 }
 
@@ -481,22 +481,6 @@ Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockadd
 {
     long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
     return writeFile(fd, timeout, ::sendto, data, dataSize, flags, name, nameSize);
-}
-
-
-ssize_t
-Loop::recvmsg(int fd, msghdr *message, int flags)
-{
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
-    return readFile(fd, timeout, ::recvmsg, message, flags);
-}
-
-
-ssize_t
-Loop::sendmsg(int fd, const msghdr *message, int flags)
-{
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
-    return writeFile(fd, timeout, ::sendmsg, message, flags);
 }
 
 

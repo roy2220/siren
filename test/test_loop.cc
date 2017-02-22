@@ -7,6 +7,8 @@
 #include "loop.h"
 #include "test.h"
 
+#include "c_library.h"
+
 
 namespace {
 
@@ -15,6 +17,7 @@ using namespace siren;
 
 SIREN_TEST("Read/Write loop pipe")
 {
+    siren_fcntl(0, 0, 0);
     int fds[2];
     Loop loop(16 * 1024);
     loop.pipe(fds);

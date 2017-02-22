@@ -34,7 +34,6 @@ public:
     inline Semaphore makeSemaphore(std::intmax_t = 0, std::intmax_t = 0
                                    , std::intmax_t = std::numeric_limits<std::intmax_t>::max())
         noexcept;
-    inline unsigned int sleep(unsigned int);
     inline int usleep(useconds_t);
     inline int pipe(int [2]);
     inline int accept(int, sockaddr *, socklen_t *);
@@ -63,8 +62,6 @@ public:
     ssize_t send(int, const void *, size_t, int);
     ssize_t recvfrom(int, void *, size_t, int, sockaddr *, socklen_t *);
     ssize_t sendto(int, const void *, size_t, int, const sockaddr *, socklen_t);
-    ssize_t recvmsg(int, msghdr *, int);
-    ssize_t sendmsg(int, const msghdr *, int);
     int close(int) noexcept;
     int poll(pollfd *, nfds_t, int);
 
@@ -163,14 +160,6 @@ Loop::makeSemaphore(std::intmax_t initialValue, std::intmax_t minValue, std::int
     noexcept
 {
     return Semaphore(&scheduler_, initialValue, minValue, maxValue);
-}
-
-
-unsigned int
-Loop::sleep(unsigned int duration)
-{
-    setDelay(std::chrono::milliseconds(duration) * 1000);
-    return 0;
 }
 
 
