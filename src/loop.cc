@@ -15,6 +15,19 @@
 
 namespace siren {
 
+#ifndef NDEBUG
+#  define CHECK_FD(FD) assert(ioContextExists((FD)))
+#else
+#  define CHECK_FD(FD)                \
+    do {                              \
+        if (!ioContextExists((FD))) { \
+            errno = EBADF;            \
+            return -1;                \
+        }                             \
+    } while (false)
+#endif
+
+
 namespace detail {
 
 struct FileOptions
@@ -25,7 +38,7 @@ struct FileOptions
     long writeTimeout;
 };
 
-}
+} // namespace detail 
 
 
 namespace {
@@ -68,7 +81,7 @@ Loop::run()
         scheduler_.run();
 
         if (scheduler_.getNumberOfForegroundFibers() == 0) {
-            break;
+            return;
         } else {
             ioPoller_.getReadyWatchers(&ioClock_, &ioWatchers);
 
@@ -210,6 +223,8 @@ Loop::open(const char *path, int flags, mode_t mode)
 int
 Loop::fcntl(int fd, int command, int argument) noexcept
 {
+    CHECK_FD(fd);
+
     if (command == F_GETFL) {
         SIREN_UNUSED(argument);
         int flags = ::fcntl(fd, F_GETFL);
@@ -270,6 +285,7 @@ Loop::pipe2(int fds[2], int flags)
 ssize_t
 Loop::read(int fd, void *buffer, size_t bufferSize)
 {
+    CHECK_FD(fd);
     return readFile(fd, getEffectiveReadTimeout(fd), ::read, buffer, bufferSize);
 }
 
@@ -277,6 +293,7 @@ Loop::read(int fd, void *buffer, size_t bufferSize)
 ssize_t
 Loop::write(int fd, const void *data, size_t dataSize)
 {
+    CHECK_FD(fd);
     return writeFile(fd, getEffectiveWriteTimeout(fd), ::write, data, dataSize);
 }
 
@@ -284,6 +301,7 @@ Loop::write(int fd, const void *data, size_t dataSize)
 ssize_t
 Loop::readv(int fd, const iovec *vector, int vectorLength)
 {
+    CHECK_FD(fd);
     return readFile(fd, getEffectiveReadTimeout(fd), ::readv, vector, vectorLength);
 }
 
@@ -291,6 +309,7 @@ Loop::readv(int fd, const iovec *vector, int vectorLength)
 ssize_t
 Loop::writev(int fd, const iovec *vector, int vectorLength)
 {
+    CHECK_FD(fd);
     return writeFile(fd, getEffectiveWriteTimeout(fd), ::writev, vector, vectorLength);
 }
 
@@ -322,6 +341,8 @@ int
 Loop::getsockopt(int fd, int level, int optionType, void *optionValue
                  , socklen_t *optionValueSize) const noexcept
 {
+    CHECK_FD(fd);
+
     if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         const FileOptions *fileOptions = getFileOptions(fd);
 
@@ -354,6 +375,8 @@ int
 Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
                  , socklen_t optionValueSize) noexcept
 {
+    CHECK_FD(fd);
+
     if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         FileOptions *fileOptions = getFileOptions(fd);
 
@@ -385,12 +408,14 @@ Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
 int
 Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
 {
+    CHECK_FD(fd);
+
     for (;;) {
         int subFD = ::accept4(fd, name, nameSize, flags | SOCK_NONBLOCK);
 
         if (subFD < 0) {
             if (errno == EAGAIN) {
-                if (!waitForFile(fd, IOCondition::Readable
+                if (!waitForFile(fd, IOCondition::In, nullptr
                                  , std::chrono::milliseconds(getEffectiveReadTimeout(fd)))) {
                     errno = EAGAIN;
                     return -1;
@@ -420,9 +445,11 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
 int
 Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
 {
+    CHECK_FD(fd);
+
     if (::connect(fd, name, nameSize) < 0) {
         if (errno == EINTR || errno == EINPROGRESS) {
-            if (waitForFile(fd, IOCondition::Writable
+            if (waitForFile(fd, IOCondition::Out, nullptr
                             , std::chrono::milliseconds(getEffectiveWriteTimeout(fd)))) {
                 int errorNumber;
                 socklen_t errorNumberSize = sizeof(errorNumber);
@@ -453,15 +480,56 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
 ssize_t
 Loop::recv(int fd, void *buffer, size_t bufferSize, int flags)
 {
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
-    return readFile(fd, timeout, ::recv, buffer, bufferSize, flags);
+    CHECK_FD(fd);
+    long timeout;
+
+    if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
+        flags &= ~MSG_DONTWAIT;
+        timeout = 0;
+    } else {
+        timeout = getEffectiveReadTimeout(fd);
+    }
+
+    if ((flags & MSG_WAITALL) == MSG_WAITALL) {
+        flags &= ~MSG_WAITALL;
+        size_t byteCount = 0;
+
+        for (;;) {
+            ssize_t numberOfBytes = readFile(fd, timeout, ::recv
+                                             , static_cast<char *>(buffer) + byteCount
+                                             , bufferSize - byteCount, flags);
+
+            if (numberOfBytes < 0) {
+                return byteCount == 0 ? -1 : static_cast<ssize_t>(byteCount);
+            } else if (numberOfBytes == 0) {
+                return byteCount;
+            } else {
+                byteCount += numberOfBytes;
+
+                if (byteCount == bufferSize) {
+                    return byteCount;
+                }
+            }
+        }
+    } else {
+        return readFile(fd, timeout, ::recv, buffer, bufferSize, flags);
+    }
 }
 
 
 ssize_t
 Loop::send(int fd, const void *data, size_t dataSize, int flags)
 {
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
+    CHECK_FD(fd);
+    long timeout;
+
+    if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
+        flags &= ~MSG_DONTWAIT;
+        timeout = 0;
+    } else {
+        timeout = getEffectiveWriteTimeout(fd);
+    }
+
     return writeFile(fd, timeout, ::send, data, dataSize, flags);
 }
 
@@ -470,8 +538,40 @@ ssize_t
 Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *name
                , socklen_t *nameSize)
 {
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveReadTimeout(fd);
-    return readFile(fd, timeout, ::recvfrom, buffer, bufferSize, flags, name, nameSize);
+    CHECK_FD(fd);
+    long timeout;
+
+    if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
+        flags &= ~MSG_DONTWAIT;
+        timeout = 0;
+    } else {
+        timeout = getEffectiveReadTimeout(fd);
+    }
+
+    if ((flags & MSG_WAITALL) == MSG_WAITALL) {
+        flags &= ~MSG_WAITALL;
+        size_t byteCount = 0;
+
+        for (;;) {
+            ssize_t numberOfBytes = readFile(fd, timeout, ::recvfrom
+                                             , static_cast<char *>(buffer) + byteCount
+                                             , bufferSize - byteCount, flags, name, nameSize);
+
+            if (numberOfBytes < 0) {
+                return byteCount == 0 ? -1 : static_cast<ssize_t>(byteCount);
+            } else if (numberOfBytes == 0) {
+                return byteCount;
+            } else {
+                byteCount += numberOfBytes;
+
+                if (byteCount == bufferSize) {
+                    return byteCount;
+                }
+            }
+        }
+    } else {
+        return readFile(fd, timeout, ::recvfrom, buffer, bufferSize, flags, name, nameSize);
+    }
 }
 
 
@@ -479,7 +579,16 @@ ssize_t
 Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockaddr *name
              , socklen_t nameSize)
 {
-    long timeout = (flags & MSG_DONTWAIT) == MSG_DONTWAIT ? 0 : getEffectiveWriteTimeout(fd);
+    CHECK_FD(fd);
+    long timeout;
+
+    if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
+        flags &= ~MSG_DONTWAIT;
+        timeout = 0;
+    } else {
+        timeout = getEffectiveWriteTimeout(fd);
+    }
+
     return writeFile(fd, timeout, ::sendto, data, dataSize, flags, name, nameSize);
 }
 
@@ -487,6 +596,7 @@ Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockadd
 int
 Loop::close(int fd) noexcept
 {
+    CHECK_FD(fd);
     destroyIOContext(fd);
     return ::close(fd);
 }
@@ -503,18 +613,68 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
             errno = EFAULT;
             return -1;
         } else {
-            if (pollFDs[0].events == POLLIN || pollFDs[0].events == POLLOUT) {
-                IOCondition ioCondition = pollFDs[0].events == POLLIN ? IOCondition::Readable
-                                                                      : IOCondition::Writable;
-                if (waitForFile(pollFDs[0].fd, ioCondition, std::chrono::milliseconds(timeout))) {
-                    pollFDs[0].revents = pollFDs[0].events;
+            pollfd *pollFD = &pollFDs[0];
+
+            if (ioContextExists(pollFD->fd)) {
+                IOCondition ioConditions = IOCondition::No;
+
+                if ((pollFD->events & POLLIN) == POLLIN) {
+                    ioConditions |= IOCondition::In;
+                }
+
+                if ((pollFD->events & POLLOUT) == POLLOUT) {
+                    ioConditions |= IOCondition::Out;
+                }
+
+                if ((pollFD->events & POLLRDHUP) == POLLRDHUP) {
+                    ioConditions |= IOCondition::RdHup;
+                }
+
+                if ((pollFD->events & POLLPRI) == POLLPRI) {
+                    ioConditions |= IOCondition::Pri;
+                }
+
+                IOCondition readyIOConditions;
+
+                if (waitForFile(pollFD->fd, ioConditions, &readyIOConditions
+                                , std::chrono::milliseconds(timeout))) {
+                    pollFD->revents = 0;
+
+                    if ((readyIOConditions & IOCondition::In) == IOCondition::In) {
+                        pollFD->revents |= POLLIN;
+                    }
+
+                    if ((readyIOConditions & IOCondition::Out) == IOCondition::Out) {
+                        pollFD->revents |= POLLOUT;
+                    }
+
+                    if ((readyIOConditions & IOCondition::RdHup) == IOCondition::RdHup) {
+                        pollFD->revents |= POLLRDHUP;
+                    }
+
+                    if ((readyIOConditions & IOCondition::Pri) == IOCondition::Pri) {
+                        pollFD->revents |= POLLPRI;
+                    }
+
+                    if ((readyIOConditions & IOCondition::Err) == IOCondition::Err) {
+                        pollFD->revents |= POLLERR;
+                    }
+
+                    if ((readyIOConditions & IOCondition::Hup) == IOCondition::Hup) {
+                        pollFD->revents |= POLLHUP;
+                    }
+
                     return 1;
                 } else {
                     return 0;
                 }
             } else {
-                errno = ENOSYS;
-                return -1;
+#ifndef NDEBUG
+                assert(false);
+#else
+                pollFD->revents = POLLNVAL;
+                return 1;
+#endif
             }
         }
     } else {
@@ -534,7 +694,8 @@ Loop::readFile(int fd, long timeout, Func func, Args &&...args)
 
         if (numberOfBytes < 0) {
             if (errno == EAGAIN) {
-                if (!waitForFile(fd, IOCondition::Readable, std::chrono::milliseconds(timeout))) {
+                if (!waitForFile(fd, IOCondition::In, nullptr
+                                 , std::chrono::milliseconds(timeout))) {
                     errno = EAGAIN;
                     return -1;
                 }
@@ -559,7 +720,8 @@ Loop::writeFile(int fd, long timeout, Func func, Args &&...args)
 
         if (numberOfBytes < 0) {
             if (errno == EAGAIN) {
-                if (!waitForFile(fd, IOCondition::Writable, std::chrono::milliseconds(timeout))) {
+                if (!waitForFile(fd, IOCondition::Out, nullptr
+                                 , std::chrono::milliseconds(timeout))) {
                     errno = EAGAIN;
                     return -1;
                 }
@@ -608,6 +770,13 @@ Loop::destroyIOContext(int fd) noexcept
 }
 
 
+bool
+Loop::ioContextExists(int fd) const
+{
+    return ioPoller_.contextExists(fd);
+}
+
+
 long
 Loop::getEffectiveReadTimeout(int fd) const noexcept
 {
@@ -625,7 +794,8 @@ Loop::getEffectiveWriteTimeout(int fd) const noexcept
 
 
 bool
-Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds timeout)
+Loop::waitForFile(int fd, IOCondition ioConditions, IOCondition *readyIOConditions
+                  , std::chrono::milliseconds timeout)
 {
     if (timeout.count() < 0) {
         struct {
@@ -640,7 +810,7 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
             context.scheduler->resumeFiber(context.fiberHandle);
         };
 
-        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioCondition);
+        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioConditions);
 
         auto scopeGuard = MakeScopeGuard([&] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
@@ -648,6 +818,11 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 
         (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
                                                         = scheduler_.getCurrentFiber());
+
+        if (readyIOConditions != nullptr) {
+            *readyIOConditions = context.myIOWatcher.getReadyConditions();
+        }
+
         scopeGuard.dismiss();
         return true;
     } else if (timeout.count() == 0) {
@@ -670,7 +845,7 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
             context.ok = true;
         };
 
-        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioCondition);
+        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioConditions);
 
         auto scopeGuard1 = MakeScopeGuard([&] () -> void {
             context.ioPoller->removeWatcher(&context.myIOWatcher);
@@ -690,6 +865,11 @@ Loop::waitForFile(int fd, IOCondition ioCondition, std::chrono::milliseconds tim
 
         (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
                                                         = scheduler_.getCurrentFiber());
+
+        if (context.ok && readyIOConditions != nullptr) {
+            *readyIOConditions = context.myIOWatcher.getReadyConditions();
+        }
+
         scopeGuard1.dismiss();
         scopeGuard2.dismiss();
         return context.ok;

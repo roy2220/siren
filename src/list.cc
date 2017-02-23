@@ -11,8 +11,8 @@ List::sort(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
 
 
 void
-List::SortNodes(Node **firstNode, Node **lastNode, bool (*nodeOrderer)(const Node *, const Node *))
-    noexcept
+List::SortNodes(Node **firstNode, Node **lastNode, bool (*nodeOrderer)(const Node *
+                                                                       , const Node *)) noexcept
 {
     Node *x = *firstNode;
     Node *y = *lastNode;

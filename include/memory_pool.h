@@ -23,15 +23,20 @@ public:
 private:
     const std::size_t blockAlignment_;
     const std::size_t blockSize_;
-    const std::size_t firstChunkSize_;
-    std::size_t nextChunkSize_;
+    const std::size_t minChunkSize_;
     std::vector<void *> chunks_;
-    void *lastBlock_;
+    std::size_t newChunkSize_;
+    void *lastNewBlock_;
+    void *firstNewBlock_;
+    void *lastFreeBlock_;
+
+    inline void *GetBlockNext(void *) noexcept;
+    inline void SetBlockNext(void *, void *) noexcept;
 
     void initialize() noexcept;
     void finalize() noexcept;
     void move(MemoryPool *) noexcept;
-    void makeBlocks();
+    void *makeBlock();
 };
 
 } // namespace siren
@@ -43,20 +48,37 @@ private:
 
 
 #include <cassert>
+#include <cstring>
 
 
 namespace siren {
 
 void *
+MemoryPool::GetBlockNext(void *block) noexcept
+{
+    void *blockNext;
+    std::memcpy(&blockNext, block, sizeof(blockNext));
+    return blockNext;
+}
+
+
+void
+MemoryPool::SetBlockNext(void *block, void *blockNext) noexcept
+{
+    std::memcpy(block, &blockNext, sizeof(blockNext));
+}
+
+
+void *
 MemoryPool::allocateBlock()
 {
-    if (lastBlock_ == nullptr) {
-        makeBlocks();
+    if (lastFreeBlock_ == nullptr) {
+        return makeBlock();
+    } else {
+        void *block = lastFreeBlock_;
+        lastFreeBlock_ = GetBlockNext(block);
+        return block;
     }
-
-    void *block = lastBlock_;
-    lastBlock_ = *static_cast<void **>(block);
-    return block;
 }
 
 
@@ -64,8 +86,8 @@ void
 MemoryPool::freeBlock(void *block) noexcept
 {
     assert(block != nullptr);
-    *static_cast<void **>(block) = lastBlock_;
-    lastBlock_ = block;
+    SetBlockNext(block, lastFreeBlock_);
+    lastFreeBlock_ = block;
 }
 
 } // namespace siren

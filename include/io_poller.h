@@ -2,11 +2,13 @@
 
 
 #include <cstddef>
+#include <array>
 #include <vector>
 
 #include <sys/epoll.h>
 
 #include "buffer.h"
+#include "enum_class_as_flag.h"
 #include "hash_table.h"
 #include "list.h"
 #include "object_pool.h"
@@ -25,11 +27,16 @@ struct IOContext
   : HashTableNode,
     ListNode
 {
+    typedef IOCondition Condition;
+
+    static std::array<IOCondition, 4> Conditions;
+
     int fd;
-    int eventFlags;
-    int pendingEventFlags;
+    Condition conditions;
+    Condition pendingConditions;
     bool isDirty;
-    List watcherLists[2];
+    List watcherList;
+    std::array<std::size_t, Conditions.size()> watcherCounts;
 };
 
 } // namespace detail
@@ -43,6 +50,7 @@ public:
     typedef IOClock Clock;
 
     inline bool isValid() const noexcept;
+    inline bool contextExists(int) const noexcept;
 
     explicit IOPoller(std::size_t = 0, std::size_t = 0);
     IOPoller(IOPoller &&) noexcept;
@@ -72,9 +80,6 @@ private:
     int getFD(const Context *) const noexcept;
     void setFD(Context *, int);
     void clearFD(Context *) noexcept;
-#ifndef NDEBUG
-    bool contextExists(int) const noexcept;
-#endif
     const Context *findContext(int) const noexcept;
     Context *findContext(int) noexcept;
     void flushContexts();
@@ -84,16 +89,22 @@ private:
 class IOWatcher
   : private ListNode
 {
+public:
+    typedef IOCondition Condition;
+
+    inline Condition getReadyConditions() const noexcept;
+
 protected:
     inline explicit IOWatcher() noexcept;
 
     ~IOWatcher() = default;
 
 private:
-    typedef IOCondition Condition;
+    typedef detail::IOContext Context;
 
-    int fd_;
-    Condition condition_;
+    Context *context_;
+    Condition conditions_;
+    Condition readyConditions_;
 
     IOWatcher(const IOWatcher &) = delete;
     IOWatcher &operator=(const IOWatcher &) = delete;
@@ -104,9 +115,17 @@ private:
 
 enum class IOCondition
 {
-    Readable = 0,
-    Writable,
+    No = 0,
+    In = EPOLLIN,
+    Out = EPOLLOUT,
+    RdHup = EPOLLRDHUP,
+    Pri = EPOLLPRI,
+    Err = EPOLLERR,
+    Hup = EPOLLHUP,
 };
+
+
+SIREN_ENUM_CLASS_AS_FLAG(IOCondition)
 
 } // namespace siren
 
@@ -125,8 +144,25 @@ IOPoller::isValid() const noexcept
 }
 
 
-IOWatcher::IOWatcher() noexcept
+bool
+IOPoller::contextExists(int fd) const noexcept
 {
+    return findContext(fd) != nullptr;
+}
+
+
+IOWatcher::IOWatcher() noexcept
+#ifndef NDEBUG
+  : context_(nullptr)
+#endif
+{
+}
+
+
+IOCondition
+IOWatcher::getReadyConditions() const noexcept
+{
+    return readyConditions_;
 }
 
 } // namespace siren

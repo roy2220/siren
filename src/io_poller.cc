@@ -18,14 +18,12 @@
 
 namespace siren {
 
-namespace {
-
-const unsigned int IOEventFlags[2] = {
-    EPOLLIN,
-    EPOLLOUT
-};
-
-} // namespace
+std::array<IOCondition, 4> detail::IOContext::Conditions = {{
+    Condition::In,
+    Condition::Out,
+    Condition::RdHup,
+    Condition::Pri,
+}};
 
 
 IOPoller::IOPoller(std::size_t contextTagAlignment, std::size_t contextTagSize)
@@ -125,15 +123,6 @@ IOPoller::clearFD(Context *context) noexcept
 }
 
 
-#ifndef NDEBUG
-bool
-IOPoller::contextExists(int fd) const noexcept
-{
-    return findContext(fd) != nullptr;
-}
-#endif
-
-
 void
 IOPoller::createContext(int fd)
 {
@@ -147,9 +136,10 @@ IOPoller::createContext(int fd)
     });
 
     setFD(context, fd);
-    context->eventFlags = 0;
-    context->pendingEventFlags = 0;
+    context->conditions = Condition::No;
+    context->pendingConditions = Condition::No;
     context->isDirty = false;
+    context->watcherCounts.fill(0);
     scopeGuard.dismiss();
 }
 
@@ -162,7 +152,7 @@ IOPoller::destroyContext(int fd) noexcept
     Context *context = findContext(fd);
     clearFD(context);
 
-    if (context->eventFlags != 0) {
+    if (context->conditions != Condition::No) {
         if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, fd, nullptr) < 0) {
             std::perror("epoll_ctl() failed");
             std::terminate();
@@ -174,25 +164,6 @@ IOPoller::destroyContext(int fd) noexcept
     }
 
     contextPool_.destroyObject(context);
-}
-
-
-const detail::IOContext *
-IOPoller::findContext(int fd) const noexcept
-{
-    const HashTableNode *hashTableNode
-    = contextHashTable_.search(std::hash<int>()(fd)
-                               , [&] (const HashTableNode *hashTableNode) -> bool {
-        auto context = static_cast<const Context *>(hashTableNode);
-        return context->fd == fd;
-    });
-
-    if (hashTableNode == nullptr) {
-        return nullptr;
-    } else {
-        auto context = static_cast<const Context *>(hashTableNode);
-        return context;
-    }
 }
 
 
@@ -214,14 +185,38 @@ IOPoller::getContextTag(int fd) noexcept
 }
 
 
+const detail::IOContext *
+IOPoller::findContext(int fd) const noexcept
+{
+    const HashTableNode *hashTableNode = contextHashTable_.search(
+        std::hash<int>()(fd),
+
+        [&] (const HashTableNode *hashTableNode) -> bool {
+            auto context = static_cast<const Context *>(hashTableNode);
+            return context->fd == fd;
+        }
+    );
+
+    if (hashTableNode == nullptr) {
+        return nullptr;
+    } else {
+        auto context = static_cast<const Context *>(hashTableNode);
+        return context;
+    }
+}
+
+
 detail::IOContext *
 IOPoller::findContext(int fd) noexcept
 {
-    HashTableNode *hashTableNode
-    = contextHashTable_.search(std::hash<int>()(fd), [&] (HashTableNode *hashTableNode) -> bool {
-        auto context = static_cast<Context *>(hashTableNode);
-        return context->fd == fd;
-    });
+    HashTableNode *hashTableNode = contextHashTable_.search(
+        std::hash<int>()(fd),
+
+        [&] (HashTableNode *hashTableNode) -> bool {
+            auto context = static_cast<Context *>(hashTableNode);
+            return context->fd == fd;
+        }
+    );
 
     if (hashTableNode == nullptr) {
         return nullptr;
@@ -233,22 +228,31 @@ IOPoller::findContext(int fd) noexcept
 
 
 void
-IOPoller::addWatcher(Watcher *watcher, int fd, Condition condition) noexcept
+IOPoller::addWatcher(Watcher *watcher, int fd, Condition conditions) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
+    assert(watcher->context_ == nullptr);
     assert(fd >= 0);
     assert(contextExists(fd));
-    Context *context = findContext(watcher->fd_ = fd);
-    auto i = static_cast<std::size_t>(watcher->condition_ = condition);
-    context->watcherLists[i].appendNode(watcher);
+    Context *context = findContext(fd);
+    (watcher->context_ = context)->watcherList.appendNode(watcher);
+    watcher->conditions_ = conditions | Condition::Err | Condition::Hup;
+    bool contextIsModified = false;
 
-    if (watcher->isOnly()) {
-        context->pendingEventFlags |= IOEventFlags[i];
+    for (std::size_t i = 0; i < Context::Conditions.size(); ++i) {
+        Condition condition = Context::Conditions[i];
 
-        if (!context->isDirty) {
-            dirtyContextList_.appendNode((context->isDirty = true, context));
+        if ((conditions & condition) == condition) {
+            if (context->watcherCounts[i]++ == 0) {
+                context->pendingConditions |= condition;
+                contextIsModified = true;
+            }
         }
+    }
+
+    if (contextIsModified && !context->isDirty) {
+        dirtyContextList_.appendNode((context->isDirty = true, context));
     }
 }
 
@@ -258,20 +262,27 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
 {
     assert(isValid());
     assert(watcher != nullptr);
-    assert(contextExists(watcher->fd_));
-    Context *context = findContext(watcher->fd_);
+    assert(watcher->context_ != nullptr);
+    Context *context = watcher->context_;
 #ifndef NDEBUG
-    watcher->fd_ = -1;
+    watcher->context_ = nullptr;
 #endif
-    auto i = static_cast<std::size_t>(watcher->condition_);
     watcher->remove();
+    bool contextIsModified = false;
 
-    if (context->watcherLists[i].isEmpty()) {
-        context->pendingEventFlags &= ~IOEventFlags[i];
+    for (std::size_t i = 0; i < Context::Conditions.size(); ++i) {
+        Condition condition = Context::Conditions[i];
 
-        if (!context->isDirty) {
-            dirtyContextList_.appendNode((context->isDirty = true, context));
+        if ((watcher->conditions_ & condition) == condition) {
+            if (--context->watcherCounts[i] == 0) {
+                context->pendingConditions &= ~condition;
+                contextIsModified = true;
+            }
         }
+    }
+
+    if (contextIsModified && !context->isDirty) {
+        dirtyContextList_.appendNode((context->isDirty = true, context));
     }
 }
 
@@ -289,13 +300,13 @@ IOPoller::flushContexts()
     SIREN_LIST_FOREACH_REVERSE(listNode, list) {
         context = static_cast<Context *>(listNode);
 
-        if (context->eventFlags != context->pendingEventFlags) {
+        if (context->conditions != context->pendingConditions) {
             int op;
 
-            if (context->eventFlags == 0) {
+            if (context->conditions == Condition::No) {
                 op = EPOLL_CTL_ADD;
             } else {
-                if (context->pendingEventFlags == 0) {
+                if (context->pendingConditions == Condition::No) {
                     op = EPOLL_CTL_DEL;
                 } else {
                     op = EPOLL_CTL_MOD;
@@ -303,14 +314,14 @@ IOPoller::flushContexts()
             }
 
             epoll_event event;
-            event.events = context->pendingEventFlags | EPOLLET;
+            event.events = static_cast<int>(context->pendingConditions) | EPOLLET;
             event.data.ptr = context;
 
             if (epoll_ctl(epollFD_, op, getFD(context), &event) < 0) {
                 throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
             }
 
-            context->eventFlags = context->pendingEventFlags;
+            context->conditions = context->pendingConditions;
         }
 
         context->isDirty = false;
@@ -345,7 +356,7 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
             clock->restart();
             timeout = std::min(clock->getDueTime()
                                , std::chrono::milliseconds(std::numeric_limits<int>::max()))
-                              .count();
+                      .count();
         } else {
             clock->stop();
             eventCount += numberOfEvents;
@@ -364,16 +375,14 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
         epoll_event *event = &events_[i];
         auto context = static_cast<Context *>(event->data.ptr);
 
-        if ((event->events & (IOEventFlags[0] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherLists[0]) {
-                auto watcher = static_cast<Watcher *>(listNode);
-                watchers->push_back(watcher);
-            }
-        }
+        SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherList) {
+            auto watcher = static_cast<Watcher *>(listNode);
+            Condition readyConditions
+                      = static_cast<Condition>(event->events
+                                               & static_cast<int>(watcher->conditions_));
 
-        if ((event->events & (IOEventFlags[1] | EPOLLERR | EPOLLHUP)) != 0) {
-            SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherLists[1]) {
-                auto watcher = static_cast<Watcher *>(listNode);
+            if (readyConditions != Condition::No) {
+                watcher->readyConditions_ = readyConditions;
                 watchers->push_back(watcher);
             }
         }

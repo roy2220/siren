@@ -26,8 +26,8 @@ public:
     void setNoDelay(bool);
     void setLinger(bool, int);
     void setKeepAlive(bool, int);
-    void setReceiveTimeout(int);
-    void setSendTimeout(int);
+    void setReceiveTimeout(long);
+    void setSendTimeout(long);
     void listen(const IPEndpoint &, int = 511);
     TCPSocket accept(IPEndpoint * = nullptr);
     void connect(const IPEndpoint &);

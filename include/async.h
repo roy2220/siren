@@ -36,6 +36,7 @@ public:
     ssize_t write(int, const void *, size_t);
     ssize_t readv(int, const iovec *, int);
     ssize_t writev(int, const iovec *, int);
+    off_t lseek(int, off_t, int);
     int close(int);
     void executeTask(const std::function<void ()> &);
     void executeTask(std::function<void ()> &&);

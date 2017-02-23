@@ -78,7 +78,7 @@ endif
 
 $(BUILDDIR)/siren-test: $(testobjs)
 	@mkdir -p $(@D)
-	$(CXX) -o $@ $^ -pthread
+	$(CXX) -o $@ $^ -lpthread
 
 
 ifneq ($(filter test,$(MAKECMDGOALS)),)

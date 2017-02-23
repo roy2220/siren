@@ -38,14 +38,15 @@ SIREN_TEST("Allocate/Free memory blocks")
 
 SIREN_TEST("Check memory block pointer alignments")
 {
-    for (std::size_t n = 1; n < alignof(std::max_align_t); ++n) {
-        MemoryPool mp(n, n);
+    for (std::size_t i = alignof(std::max_align_t) - 1, n = 1; n <= alignof(std::max_align_t)
+         ; i += 2, n *= 2) {
+        MemoryPool mp(n, sizeof(void *) + i);
         void *ps[32];
 
         for (int i = 0; i < 32; ++i) {
             auto p = static_cast<char *>(mp.allocateBlock());
             SIREN_TEST_ASSERT(p != nullptr);
-            SIREN_TEST_ASSERT(reinterpret_cast<std::uintptr_t>(p) % alignof(void *) == 0);
+            SIREN_TEST_ASSERT(reinterpret_cast<std::uintptr_t>(p) % n == 0);
             ps[i] = p;
         }
 

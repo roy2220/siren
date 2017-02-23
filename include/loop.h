@@ -76,9 +76,10 @@ private:
     FileOptions *getFileOptions(int) noexcept;
     void createIOContext(int, bool, bool, long = -1, long = -1);
     void destroyIOContext(int) noexcept;
+    bool ioContextExists(int) const;
     long getEffectiveReadTimeout(int) const noexcept;
     long getEffectiveWriteTimeout(int) const noexcept;
-    bool waitForFile(int, IOCondition, std::chrono::milliseconds);
+    bool waitForFile(int, IOCondition, IOCondition *, std::chrono::milliseconds);
     void setDelay(std::chrono::milliseconds);
 
     template <class Func, class ...Args>
@@ -156,8 +157,8 @@ Loop::makeMutex() noexcept
 
 
 Semaphore
-Loop::makeSemaphore(std::intmax_t initialValue, std::intmax_t minValue, std::intmax_t maxValue)
-    noexcept
+Loop::makeSemaphore(std::intmax_t initialValue, std::intmax_t minValue
+                    , std::intmax_t maxValue) noexcept
 {
     return Semaphore(&scheduler_, initialValue, minValue, maxValue);
 }
@@ -166,7 +167,7 @@ Loop::makeSemaphore(std::intmax_t initialValue, std::intmax_t minValue, std::int
 int
 Loop::usleep(useconds_t duration)
 {
-    setDelay(std::chrono::milliseconds(duration) / 1000);
+    setDelay(std::chrono::milliseconds(duration / 1000));
     return 0;
 }
 

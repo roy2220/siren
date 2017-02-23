@@ -154,7 +154,7 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
 
 
 void
-TCPSocket::setReceiveTimeout(int receiveTimeout)
+TCPSocket::setReceiveTimeout(long receiveTimeout)
 {
     assert(receiveTimeout >= 0);
     timeval time;
@@ -168,7 +168,7 @@ TCPSocket::setReceiveTimeout(int receiveTimeout)
 
 
 void
-TCPSocket::setSendTimeout(int sendTimeout)
+TCPSocket::setSendTimeout(long sendTimeout)
 {
     assert(sendTimeout >= 0);
     timeval time;

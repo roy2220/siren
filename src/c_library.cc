@@ -160,6 +160,18 @@ siren_fs_writev(int arg1, const struct iovec *arg2, int arg3) noexcept
 }
 
 
+off_t
+siren_lseek(int arg1, off_t arg2, int arg3) noexcept
+{
+    try {
+        return siren_async->lseek(arg1, arg2, arg3);
+    } catch (siren::FiberInterruption) {
+        errno = ECANCELED;
+        return -1;
+    }
+}
+
+
 int
 siren_close(int arg1) noexcept
 {
@@ -306,7 +318,7 @@ siren_getaddrinfo(const char *arg1, const char *arg2, const struct addrinfo *arg
         return siren_async->getaddrinfo(arg1, arg2, arg3, arg4);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
-        return -1;
+        return EAI_SYSTEM;
     }
 }
 
@@ -319,7 +331,7 @@ siren_getnameinfo(const struct sockaddr *arg1, socklen_t arg2, char *arg3, sockl
         return siren_async->getnameinfo(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
-        return -1;
+        return EAI_SYSTEM;
     }
 }
 
