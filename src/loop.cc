@@ -9,14 +9,15 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "helper_macros.h"
+#include "config.h"
+#include "macros.h"
 #include "scope_guard.h"
 
 
 namespace siren {
 
-#ifndef NDEBUG
-#  define CHECK_FD(FD) assert(ioContextExists((FD)))
+#ifdef SIREN_WITH_DEBUG
+#  define CHECK_FD(FD) SIREN_ASSERT(ioContextExists((FD)))
 #else
 #  define CHECK_FD(FD)                \
     do {                              \
@@ -38,7 +39,7 @@ struct FileOptions
     long writeTimeout;
 };
 
-} // namespace detail 
+} // namespace detail
 
 
 namespace {
@@ -669,8 +670,8 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
                     return 0;
                 }
             } else {
-#ifndef NDEBUG
-                assert(false);
+#ifdef SIREN_WITH_DEBUG
+                SIREN_ASSERT(false);
 #else
                 pollFD->revents = POLLNVAL;
                 return 1;

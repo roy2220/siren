@@ -75,7 +75,7 @@ RBTreeNode::rotateRight() noexcept
 RBTree::RBTree(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
   : nodeOrderer_(nodeOrderer)
 {
-    assert(nodeOrderer != nullptr);
+    SIREN_ASSERT(nodeOrderer != nullptr);
     nil_.color_ = NodeColor::Black;
     initialize();
 }
@@ -93,7 +93,7 @@ RBTree &
 RBTree::operator=(RBTree &&other) noexcept
 {
     if (&other != this) {
-        assert(nodeOrderer_ == other.nodeOrderer_);
+        SIREN_ASSERT(nodeOrderer_ == other.nodeOrderer_);
         other.move(this);
     }
 
@@ -154,8 +154,8 @@ RBTree::setRoot(Node *node) noexcept
 void
 RBTree::insertNode(Node *x) noexcept
 {
-    assert(x != nullptr);
-    assert(x != &nil_);
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
     Node *y = &nil_;
     Node *z = nil_.getLeftChild();
     void (Node::*setChild)(Node *) = &Node::setLeftChild;
@@ -183,9 +183,9 @@ RBTree::insertNode(Node *x) noexcept
 void
 RBTree::removeNode(Node *x) noexcept
 {
-    assert(!isEmpty());
-    assert(x != nullptr);
-    assert(x != &nil_);
+    SIREN_ASSERT(!isEmpty());
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
     Node *y;
     Node *z;
 
@@ -431,7 +431,8 @@ RBTree::findMax() noexcept
 const RBTreeNode *
 RBTree::findNodePrev(const Node *x) const noexcept
 {
-    assert(x != &nil_);
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
 
     if (x->getLeftChild() == &nil_) {
         for (;;) {
@@ -461,7 +462,8 @@ RBTree::findNodePrev(const Node *x) const noexcept
 RBTreeNode *
 RBTree::findNodePrev(Node *x) noexcept
 {
-    assert(x != &nil_);
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
 
     if (x->getLeftChild() == &nil_) {
         for (;;) {
@@ -491,7 +493,8 @@ RBTree::findNodePrev(Node *x) noexcept
 const RBTreeNode *
 RBTree::findNodeNext(const Node *x) const noexcept
 {
-    assert(x != &nil_);
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
 
     if (x->getRightChild() == &nil_) {
         for (;;) {
@@ -521,7 +524,8 @@ RBTree::findNodeNext(const Node *x) const noexcept
 RBTreeNode *
 RBTree::findNodeNext(Node *x) noexcept
 {
-    assert(x != &nil_);
+    SIREN_ASSERT(x != nullptr);
+    SIREN_ASSERT(x != &nil_);
 
     if (x->getRightChild() == &nil_) {
         for (;;) {

@@ -1,7 +1,7 @@
 #include "event.h"
 
-#include <cassert>
-
+#include "assert.h"
+#include "config.h"
 #include "scheduler.h"
 #include "scope_guard.h"
 
@@ -22,20 +22,20 @@ struct EventWaiter
 Event::Event(Scheduler *scheduler) noexcept
   : scheduler_(scheduler)
 {
-    assert(scheduler != nullptr);
+    SIREN_ASSERT(scheduler != nullptr);
 }
 
 
 Event::Event(Event &&other) noexcept
   : scheduler_(other.scheduler_)
 {
-    assert(!other.isWaited());
+    SIREN_ASSERT(!other.isWaited());
 }
 
 
 Event::~Event()
 {
-    assert(!isWaited());
+    SIREN_ASSERT(!isWaited());
 }
 
 
@@ -43,15 +43,15 @@ Event &
 Event::operator=(Event &&other) noexcept
 {
     if (&other != this) {
-        assert(!isWaited());
-        assert(!other.isWaited());
+        SIREN_ASSERT(!isWaited());
+        SIREN_ASSERT(!other.isWaited());
     }
 
     return *this;
 }
 
 
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
 bool
 Event::isWaited() const noexcept
 {

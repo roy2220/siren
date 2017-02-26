@@ -59,7 +59,7 @@ Stream::reset() noexcept
 void
 Stream::dropData(std::size_t dataSize) noexcept
 {
-    assert(dataOffset_ + dataSize <= bufferOffset_);
+    SIREN_ASSERT(dataOffset_ + dataSize <= bufferOffset_);
     dataOffset_ += dataSize;
 
     if (dataOffset_ >= bufferOffset_ - dataOffset_) {
@@ -88,7 +88,7 @@ Stream::reserveBuffer(std::size_t bufferSize)
 void
 Stream::read(void *buffer, std::size_t bufferSize) noexcept
 {
-    assert(bufferSize <= getDataSize());
+    SIREN_ASSERT(bufferSize <= getDataSize());
     std::memcpy(buffer, getData(), bufferSize);
     dropData(bufferSize);
 }

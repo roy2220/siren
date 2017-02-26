@@ -1,6 +1,5 @@
 #include "async.h"
 
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <exception>
@@ -8,6 +7,7 @@
 
 #include <fcntl.h>
 
+#include "assert.h"
 #include "event.h"
 #include "loop.h"
 #include "scope_guard.h"
@@ -60,7 +60,7 @@ Async::Async(Loop *loop, std::size_t numberOfThreads)
     loop_(loop),
     taskCount_(0)
 {
-    assert(loop != nullptr);
+    SIREN_ASSERT(loop != nullptr);
     initialize();
 }
 
@@ -70,14 +70,14 @@ Async::Async(Async &&other) noexcept
     loop_(other.loop_),
     taskCount_(0)
 {
-    assert(other.taskCount_ == 0);
+    SIREN_ASSERT(other.taskCount_ == 0);
     other.move(this);
 }
 
 
 Async::~Async()
 {
-    assert(taskCount_ == 0);
+    SIREN_ASSERT(taskCount_ == 0);
     finalize();
 }
 
@@ -86,8 +86,8 @@ Async &
 Async::operator=(Async &&other) noexcept
 {
     if (&other != this) {
-        assert(taskCount_ == 0);
-        assert(other.taskCount_ == 0);
+        SIREN_ASSERT(taskCount_ == 0);
+        SIREN_ASSERT(other.taskCount_ == 0);
         finalize();
         threadPool_ = std::move(other.threadPool_);
         loop_ = other.loop_;
@@ -300,9 +300,9 @@ off_t
 Async::lseek(int arg1, off_t arg2, int arg3)
 {
     struct {
-	int arg1;
-	off_t arg2;
-	int arg3;
+        int arg1;
+        off_t arg2;
+        int arg3;
         off_t ret;
     } context;
 
@@ -339,8 +339,8 @@ Async::close(int arg1)
 void
 Async::executeTask(const std::function<void ()> &procedure)
 {
-    assert(isValid());
-    assert(procedure != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, procedure);
     waitForTask(&task);
@@ -351,8 +351,8 @@ Async::executeTask(const std::function<void ()> &procedure)
 void
 Async::executeTask(std::function<void ()> &&procedure)
 {
-    assert(isValid());
-    assert(procedure != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(procedure != nullptr);
     Task task;
     threadPool_->addTask(&task, std::move(procedure));
     waitForTask(&task);

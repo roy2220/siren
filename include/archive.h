@@ -174,9 +174,9 @@ private:
  */
 
 
-#include <cassert>
 #include <limits>
 
+#include "assert.h"
 #include "convert_pointer.h"
 #include "stream.h"
 #include "unsigned_to_signed.h"
@@ -187,7 +187,7 @@ namespace siren {
 Archive &
 Archive::operator<<(bool boolean)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     operator<<(static_cast<unsigned char>(boolean));
     return *this;
 }
@@ -196,7 +196,7 @@ Archive::operator<<(bool boolean)
 Archive &
 Archive::operator>>(bool &boolean)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     unsigned char temp;
     boolean = (operator>>(temp), temp);
     return *this;
@@ -206,7 +206,7 @@ Archive::operator>>(bool &boolean)
 Archive &
 Archive::operator<<(float floatingPoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uint32_t *integer;
     ConvertPointer(&floatingPoint, &integer);
     operator<<(*integer);
@@ -217,7 +217,7 @@ Archive::operator<<(float floatingPoint)
 Archive &
 Archive::operator>>(float &floatingPoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uint32_t *integer;
     ConvertPointer(&floatingPoint, &integer);
     operator>>(*integer);
@@ -228,7 +228,7 @@ Archive::operator>>(float &floatingPoint)
 Archive &
 Archive::operator<<(double floatingPoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uint64_t *integer;
     ConvertPointer(&floatingPoint, &integer);
     operator<<(*integer);
@@ -240,7 +240,7 @@ Archive::operator<<(double floatingPoint)
 Archive &
 Archive::operator>>(double &floatingPoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uint64_t *integer;
     ConvertPointer(&floatingPoint, &integer);
     operator>>(*integer);
@@ -251,7 +251,7 @@ Archive::operator>>(double &floatingPoint)
 Archive &
 Archive::operator<<(const std::string &string)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeVariableLengthInteger(string.size());
     serializeBytes(&string.front(), string.size());
     return *this;
@@ -261,7 +261,7 @@ Archive::operator<<(const std::string &string)
 Archive &
 Archive::operator>>(std::string &string)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uintmax_t temp;
     string.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&string.front(), string.size());
@@ -273,7 +273,7 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator<<(T integer)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeInteger(integer);
     return *this;
 }
@@ -283,7 +283,7 @@ template <class T>
 std::enable_if_t<std::is_unsigned<T>::value, Archive &>
 Archive::operator>>(T &integer)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     deserializeInteger(&integer);
     return *this;
 }
@@ -295,7 +295,7 @@ Archive::operator<<(T integer)
 {
     typedef std::make_unsigned_t<T> U;
 
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeInteger<U>(integer);
     return *this;
 }
@@ -307,7 +307,7 @@ Archive::operator>>(T &integer)
 {
     typedef std::make_unsigned_t<T> U;
 
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     U temp;
     integer = UnsignedToSigned((deserializeInteger(&temp), temp));
     return *this;
@@ -320,7 +320,7 @@ Archive::operator<<(T enumerator)
 {
     typedef std::underlying_type_t<T> U;
 
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     operator<<(static_cast<U>(enumerator));
     return *this;
 }
@@ -332,7 +332,7 @@ Archive::operator>>(T &enumerator)
 {
     typedef std::underlying_type_t<T> U;
 
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     U temp;
     enumerator = static_cast<T>(operator>>(temp), temp);
     return *this;
@@ -343,7 +343,7 @@ template <class T, std::size_t N>
 std::enable_if_t<SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeBytes(array, N);
     return *this;
 }
@@ -353,7 +353,7 @@ template <class T, std::size_t N>
 std::enable_if_t<SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator>>(T (&array)[N])
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     deserializeBytes(array, N);
     return *this;
 }
@@ -363,7 +363,7 @@ template <class T>
 std::enable_if_t<SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeVariableLengthInteger(vector.size());
     serializeBytes(&vector.front(), vector.size());
     return *this;
@@ -374,7 +374,7 @@ template <class T>
 std::enable_if_t<SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
     deserializeBytes(&vector.front(), vector.size());
@@ -386,7 +386,7 @@ template <class T, std::size_t N>
 std::enable_if_t<!SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator<<(const T (&array)[N])
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
 
     for (const T &x : array) {
         operator<<(x);
@@ -400,7 +400,7 @@ template <class T, std::size_t N>
 std::enable_if_t<!SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator>>(T (&array)[N])
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
 
     for (T &x : array) {
         operator>>(x);
@@ -414,7 +414,7 @@ template <class T>
 std::enable_if_t<!SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator<<(const std::vector<T> &vector)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     serializeVariableLengthInteger(vector.size());
 
     for (const T &x : vector) {
@@ -429,7 +429,7 @@ template <class T>
 std::enable_if_t<!SIREN__LIKE_CHAR(T), Archive &>
 Archive::operator>>(std::vector<T> &vector)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     std::uintmax_t temp;
     vector.resize((deserializeVariableLengthInteger(&temp), temp));
 
@@ -445,7 +445,7 @@ template <class T>
 std::enable_if_t<std::is_class<T>::value, Archive &>
 Archive::operator<<(const T &object)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     object.serialize(this);
     return *this;
 }
@@ -455,7 +455,7 @@ template <class T>
 std::enable_if_t<std::is_class<T>::value, Archive &>
 Archive::operator>>(T &object)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     object.deserialize(this);
     return *this;
 }

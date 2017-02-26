@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 
+#include "config.h"
 #include "list.h"
 
 
@@ -41,7 +42,7 @@ private:
 
     void initialize() noexcept;
     void move(Semaphore *) noexcept;
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     bool isWaited() const noexcept;
 #endif
 };

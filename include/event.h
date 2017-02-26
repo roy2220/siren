@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "config.h"
 #include "list.h"
 
 
@@ -27,7 +28,7 @@ private:
     Scheduler *const scheduler_;
     List waiterList_;
 
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     bool isWaited() const noexcept;
 #endif
 };

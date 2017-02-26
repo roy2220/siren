@@ -97,8 +97,9 @@ private:
  */
 
 
-#include <cassert>
 #include <utility>
+
+#include "assert.h"
 
 
 namespace siren {
@@ -107,7 +108,7 @@ void *
 Loop::createFiber(const std::function<void ()> &procedure, std::size_t fiberSize
                   , bool fiberIsBackground)
 {
-    assert(procedure != nullptr);
+    SIREN_ASSERT(procedure != nullptr);
     return scheduler_.createFiber(procedure, fiberSize, fiberIsBackground);
 }
 
@@ -116,7 +117,7 @@ void *
 Loop::createFiber(std::function<void ()> &&procedure, std::size_t fiberSize
                   , bool fiberIsBackground)
 {
-    assert(procedure != nullptr);
+    SIREN_ASSERT(procedure != nullptr);
     return scheduler_.createFiber(std::move(procedure), fiberSize, fiberIsBackground);
 }
 

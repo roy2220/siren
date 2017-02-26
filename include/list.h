@@ -108,7 +108,7 @@ constexpr auto RemoveListNodes = List::RemoveNodes;
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -170,8 +170,8 @@ ListNode::setNext(ListNode *next) noexcept
 void
 ListNode::insertBefore(ListNode *other) noexcept
 {
-    assert(other != nullptr);
-    assert(other != this);
+    SIREN_ASSERT(other != nullptr);
+    SIREN_ASSERT(other != this);
     insert(other->prev_, other);
 }
 
@@ -179,8 +179,8 @@ ListNode::insertBefore(ListNode *other) noexcept
 void
 ListNode::insertAfter(ListNode *other) noexcept
 {
-    assert(other != nullptr);
-    assert(other != this);
+    SIREN_ASSERT(other != nullptr);
+    SIREN_ASSERT(other != this);
     insert(other, other->next_);
 }
 
@@ -203,11 +203,11 @@ ListNode::remove() noexcept
 void
 List::InsertNodesBefore(Node *firstNode, Node *lastNode, Node *node) noexcept
 {
-    assert(firstNode != nullptr);
-    assert(firstNode != node);
-    assert(lastNode != nullptr);
-    assert(lastNode != node);
-    assert(node != nullptr);
+    SIREN_ASSERT(firstNode != nullptr);
+    SIREN_ASSERT(firstNode != node);
+    SIREN_ASSERT(lastNode != nullptr);
+    SIREN_ASSERT(lastNode != node);
+    SIREN_ASSERT(node != nullptr);
     InsertNodes(firstNode, lastNode, node->prev_, node);
 }
 
@@ -215,11 +215,11 @@ List::InsertNodesBefore(Node *firstNode, Node *lastNode, Node *node) noexcept
 void
 List::InsertNodesAfter(Node *firstNode, Node *lastNode, Node *node) noexcept
 {
-    assert(firstNode != nullptr);
-    assert(firstNode != node);
-    assert(lastNode != nullptr);
-    assert(lastNode != node);
-    assert(node != nullptr);
+    SIREN_ASSERT(firstNode != nullptr);
+    SIREN_ASSERT(firstNode != node);
+    SIREN_ASSERT(lastNode != nullptr);
+    SIREN_ASSERT(lastNode != node);
+    SIREN_ASSERT(node != nullptr);
     InsertNodes(firstNode, lastNode, node, node->next_);
 }
 
@@ -235,8 +235,8 @@ List::InsertNodes(Node *firstNode, Node *lastNode, Node *firstNodePrev, Node *la
 void
 List::RemoveNodes(Node *firstNode, Node *lastNode) noexcept
 {
-    assert(firstNode != nullptr);
-    assert(lastNode != nullptr);
+    SIREN_ASSERT(firstNode != nullptr);
+    SIREN_ASSERT(lastNode != nullptr);
     firstNode->prev_->setNext(lastNode->next_);
 }
 
@@ -328,7 +328,7 @@ List::getHead() noexcept
 bool
 List::isNil(const Node *node) const noexcept
 {
-    assert(node != nullptr);
+    SIREN_ASSERT(node != nullptr);
     return node == &nil_;
 }
 
@@ -336,8 +336,8 @@ List::isNil(const Node *node) const noexcept
 void
 List::appendNode(Node *node) noexcept
 {
-    assert(node != nullptr);
-    assert(node != &nil_);
+    SIREN_ASSERT(node != nullptr);
+    SIREN_ASSERT(node != &nil_);
     node->insert(getTail(), &nil_);
 }
 
@@ -345,8 +345,8 @@ List::appendNode(Node *node) noexcept
 void
 List::prependNode(Node *node) noexcept
 {
-    assert(node != nullptr);
-    assert(node != &nil_);
+    SIREN_ASSERT(node != nullptr);
+    SIREN_ASSERT(node != &nil_);
     node->insert(&nil_, getHead());
 }
 
@@ -354,10 +354,10 @@ List::prependNode(Node *node) noexcept
 void
 List::appendNodes(Node *firstNode, Node *lastNode) noexcept
 {
-    assert(firstNode != nullptr);
-    assert(firstNode != &nil_);
-    assert(lastNode != nullptr);
-    assert(lastNode != &nil_);
+    SIREN_ASSERT(firstNode != nullptr);
+    SIREN_ASSERT(firstNode != &nil_);
+    SIREN_ASSERT(lastNode != nullptr);
+    SIREN_ASSERT(lastNode != &nil_);
     InsertNodes(firstNode, lastNode, getTail(), &nil_);
 }
 
@@ -365,10 +365,10 @@ List::appendNodes(Node *firstNode, Node *lastNode) noexcept
 void
 List::prependNodes(Node *firstNode, Node *lastNode) noexcept
 {
-    assert(firstNode != nullptr);
-    assert(firstNode != &nil_);
-    assert(lastNode != nullptr);
-    assert(lastNode != &nil_);
+    SIREN_ASSERT(firstNode != nullptr);
+    SIREN_ASSERT(firstNode != &nil_);
+    SIREN_ASSERT(lastNode != nullptr);
+    SIREN_ASSERT(lastNode != &nil_);
     InsertNodes(firstNode, lastNode, &nil_, getHead());
 }
 
@@ -376,8 +376,8 @@ List::prependNodes(Node *firstNode, Node *lastNode) noexcept
 void
 List::append(List *other) noexcept
 {
-    assert(other != nullptr);
-    assert(other != this);
+    SIREN_ASSERT(other != nullptr);
+    SIREN_ASSERT(other != this);
 
     if (!isEmpty()) {
         InsertNodes(getHead(), getTail(), other->getTail(), &other->nil_);
@@ -389,8 +389,8 @@ List::append(List *other) noexcept
 void
 List::prepend(List *other) noexcept
 {
-    assert(other != nullptr);
-    assert(other != this);
+    SIREN_ASSERT(other != nullptr);
+    SIREN_ASSERT(other != this);
 
     if (!isEmpty()) {
         InsertNodes(getHead(), getTail(), &other->nil_, other->getHead());

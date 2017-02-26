@@ -45,7 +45,7 @@ private:
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -74,7 +74,7 @@ Stream::getDataSize() const noexcept
 void
 Stream::pickData(std::size_t dataSize) noexcept
 {
-    assert(bufferOffset_ + dataSize <= base_.getLength());
+    SIREN_ASSERT(bufferOffset_ + dataSize <= base_.getLength());
     bufferOffset_ += dataSize;
 }
 

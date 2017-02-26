@@ -47,8 +47,9 @@ private:
  */
 
 
-#include <cassert>
 #include <cstring>
+
+#include "assert.h"
 
 
 namespace siren {
@@ -85,7 +86,7 @@ MemoryPool::allocateBlock()
 void
 MemoryPool::freeBlock(void *block) noexcept
 {
-    assert(block != nullptr);
+    SIREN_ASSERT(block != nullptr);
     SetBlockNext(block, lastFreeBlock_);
     lastFreeBlock_ = block;
 }

@@ -8,6 +8,7 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "scope_guard.h"
 
 
@@ -15,15 +16,15 @@ namespace siren {
 
 ThreadPoolTask::~ThreadPoolTask()
 {
-    assert(state_.load(std::memory_order_relaxed) == State::Initial);
+    SIREN_ASSERT(state_.load(std::memory_order_relaxed) == State::Initial);
 }
 
 
 void
 ThreadPoolTask::check()
 {
-    assert(state_.load(std::memory_order_relaxed) == State::Completed);
-#ifndef NDEBUG
+    SIREN_ASSERT(state_.load(std::memory_order_relaxed) == State::Completed);
+#ifdef SIREN_WITH_DEBUG
     state_.store(State::Initial, std::memory_order_relaxed);
 #endif
     procedure_ = nullptr;
@@ -146,15 +147,15 @@ ThreadPool::worker() noexcept
 void
 ThreadPool::removeTask(Task *task, bool *taskIsCompleted) noexcept
 {
-    assert(task != nullptr);
-    assert(taskIsCompleted != nullptr);
-    assert(task->state_.load(std::memory_order_relaxed) != TaskState::Initial);
+    SIREN_ASSERT(task != nullptr);
+    SIREN_ASSERT(taskIsCompleted != nullptr);
+    SIREN_ASSERT(task->state_.load(std::memory_order_relaxed) != TaskState::Initial);
 
     if (task->state_.load(std::memory_order_acquire) == TaskState::Uncompleted) {
         *taskIsCompleted = false;
 
         if (removeWaitingTask(task)) {
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
             task->state_.store(TaskState::Initial, std::memory_order_release);
 #endif
             return;

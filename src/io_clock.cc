@@ -1,7 +1,9 @@
 #include "io_clock.h"
 
-#include <cassert>
 #include <utility>
+
+#include "assert.h"
+#include "config.h"
 
 
 namespace siren {
@@ -36,7 +38,7 @@ void
 IOClock::initialize() noexcept
 {
     now_ = std::chrono::milliseconds(0);
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     startTime_ = std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(-1));
 #endif
 }
@@ -62,7 +64,7 @@ IOClock::reset() noexcept
 void
 IOClock::start() noexcept
 {
-    assert(startTime_.time_since_epoch().count() < 0);
+    SIREN_ASSERT(startTime_.time_since_epoch().count() < 0);
     startTime_ = std::chrono::steady_clock::now();
 }
 
@@ -70,10 +72,10 @@ IOClock::start() noexcept
 void
 IOClock::stop() noexcept
 {
-    assert(startTime_.time_since_epoch().count() >= 0);
+    SIREN_ASSERT(startTime_.time_since_epoch().count() >= 0);
     std::chrono::steady_clock::time_point stopTime = std::chrono::steady_clock::now();
     now_ += std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime_);
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     startTime_ = std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(-1));
 #endif
 }
@@ -82,7 +84,7 @@ IOClock::stop() noexcept
 void
 IOClock::restart() noexcept
 {
-    assert(startTime_.time_since_epoch().count() >= 0);
+    SIREN_ASSERT(startTime_.time_since_epoch().count() >= 0);
     std::chrono::steady_clock::time_point stopTime = std::chrono::steady_clock::now();
     now_ += std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime_);
     startTime_ = stopTime;
@@ -92,7 +94,7 @@ IOClock::restart() noexcept
 void
 IOClock::addTimer(Timer *timer, std::chrono::milliseconds interval)
 {
-    assert(timer != nullptr);
+    SIREN_ASSERT(timer != nullptr);
 
     if (interval.count() < 0) {
         timer->expiryTime_ = std::chrono::milliseconds::max();
@@ -107,7 +109,7 @@ IOClock::addTimer(Timer *timer, std::chrono::milliseconds interval)
 void
 IOClock::removeTimer(Timer *timer) noexcept
 {
-    assert(timer != nullptr);
+    SIREN_ASSERT(timer != nullptr);
     timerHeap_.removeNode(timer);
 }
 
@@ -115,7 +117,7 @@ IOClock::removeTimer(Timer *timer) noexcept
 void
 IOClock::getExpiredTimers(std::vector<Timer *> *timers)
 {
-    assert(timers != nullptr);
+    SIREN_ASSERT(timers != nullptr);
 
     while (!timerHeap_.isEmpty()) {
         auto timer = static_cast<Timer *>(timerHeap_.getTop());

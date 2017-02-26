@@ -5,8 +5,8 @@
 #include "loop.h"
 
 
-siren::Loop *siren_loop;
-siren::Async *siren_async;
+siren::Loop *siren_loop = nullptr;
+siren::Async *siren_async = nullptr;
 
 
 extern "C" {

@@ -79,7 +79,7 @@ private:
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -94,7 +94,7 @@ Heap::isEmpty() const noexcept
 const Heap::Node *
 Heap::getTop() const noexcept
 {
-    assert(!isEmpty());
+    SIREN_ASSERT(!isEmpty());
     return getSlot(0);
 }
 
@@ -102,7 +102,7 @@ Heap::getTop() const noexcept
 Heap::Node *
 Heap::getTop() noexcept
 {
-    assert(!isEmpty());
+    SIREN_ASSERT(!isEmpty());
     return getSlot(0);
 }
 

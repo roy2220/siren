@@ -45,8 +45,9 @@ inline ScopeGuard<std::remove_reference_t<T>> MakeScopeGuard(T &&) noexcept;
  */
 
 
-#include <cassert>
 #include <utility>
+
+#include "assert.h"
 
 
 namespace siren {
@@ -120,7 +121,7 @@ template <class T>
 void
 ScopeGuard<T, true>::dismiss() noexcept
 {
-    assert(isEngaged_);
+    SIREN_ASSERT(isEngaged_);
     isEngaged_ = false;
 }
 

@@ -1,7 +1,7 @@
 #include "semaphore.h"
 
-#include <cassert>
-
+#include "assert.h"
+#include "config.h"
 #include "scheduler.h"
 
 
@@ -25,9 +25,9 @@ Semaphore::Semaphore(Scheduler *scheduler, std::intmax_t initialValue, std::intm
     minValue_(minValue),
     maxValue_(maxValue)
 {
-    assert(scheduler != nullptr);
-    assert(initialValue >= minValue);
-    assert(initialValue <= maxValue);
+    SIREN_ASSERT(scheduler != nullptr);
+    SIREN_ASSERT(initialValue >= minValue);
+    SIREN_ASSERT(initialValue <= maxValue);
     initialize();
 }
 
@@ -38,14 +38,14 @@ Semaphore::Semaphore(Semaphore &&other) noexcept
     minValue_(other.minValue_),
     maxValue_(other.maxValue_)
 {
-    assert(!other.isWaited());
+    SIREN_ASSERT(!other.isWaited());
     other.move(this);
 }
 
 
 Semaphore::~Semaphore()
 {
-    assert(!isWaited());
+    SIREN_ASSERT(!isWaited());
 }
 
 
@@ -53,11 +53,11 @@ Semaphore &
 Semaphore::operator=(Semaphore &&other) noexcept
 {
     if (&other != this) {
-        assert(!isWaited());
-        assert(!other.isWaited());
-        assert(initialValue_ == other.initialValue_);
-        assert(minValue_ == other.minValue_);
-        assert(maxValue_ == other.maxValue_);
+        SIREN_ASSERT(!isWaited());
+        SIREN_ASSERT(!other.isWaited());
+        SIREN_ASSERT(initialValue_ == other.initialValue_);
+        SIREN_ASSERT(minValue_ == other.minValue_);
+        SIREN_ASSERT(maxValue_ == other.maxValue_);
         other.move(this);
     }
 
@@ -83,12 +83,12 @@ Semaphore::move(Semaphore *other) noexcept
 void
 Semaphore::reset() noexcept
 {
-    assert(!isWaited());
+    SIREN_ASSERT(!isWaited());
     initialize();
 }
 
 
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
 bool
 Semaphore::isWaited() const noexcept
 {

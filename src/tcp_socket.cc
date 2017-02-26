@@ -1,6 +1,5 @@
 #include "tcp_socket.h"
 
-#include <cassert>
 #include <cerrno>
 #include <algorithm>
 #include <system_error>
@@ -9,6 +8,7 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 
+#include "assert.h"
 #include "loop.h"
 #include "stream.h"
 
@@ -18,7 +18,7 @@ namespace siren {
 TCPSocket::TCPSocket(Loop *loop)
   : loop_(loop)
 {
-    assert(loop != nullptr);
+    SIREN_ASSERT(loop != nullptr);
     initialize();
 }
 
@@ -132,7 +132,7 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
     }
 
     if (keepAlive) {
-        assert(interval >= 1);
+        SIREN_ASSERT(interval >= 1);
 
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPIDLE, &interval, sizeof(interval)) < 0) {
             throw std::system_error(errno, std::system_category(), "setsockopt() failed");
@@ -156,7 +156,7 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
 void
 TCPSocket::setReceiveTimeout(long receiveTimeout)
 {
-    assert(receiveTimeout >= 0);
+    SIREN_ASSERT(receiveTimeout >= 0);
     timeval time;
     time.tv_sec = receiveTimeout / 1000;
     time.tv_usec = (receiveTimeout % 1000) * 1000;
@@ -170,7 +170,7 @@ TCPSocket::setReceiveTimeout(long receiveTimeout)
 void
 TCPSocket::setSendTimeout(long sendTimeout)
 {
-    assert(sendTimeout >= 0);
+    SIREN_ASSERT(sendTimeout >= 0);
     timeval time;
     time.tv_sec = sendTimeout / 1000;
     time.tv_usec = (sendTimeout % 1000) * 1000;
@@ -184,7 +184,7 @@ TCPSocket::setSendTimeout(long sendTimeout)
 void
 TCPSocket::listen(const IPEndpoint &ipEndpoint, int backlog)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     sockaddr_in name;
     name.sin_family = AF_INET;
     name.sin_addr.s_addr = htonl(ipEndpoint.address);
@@ -203,7 +203,7 @@ TCPSocket::listen(const IPEndpoint &ipEndpoint, int backlog)
 TCPSocket
 TCPSocket::accept(IPEndpoint *ipEndpoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     sockaddr_in name;
     socklen_t nameSize = sizeof(name);
     int subFD = loop_->accept(fd_, reinterpret_cast<sockaddr *>(&name), &nameSize);
@@ -223,7 +223,7 @@ TCPSocket::accept(IPEndpoint *ipEndpoint)
 void
 TCPSocket::connect(const IPEndpoint &ipEndpoint)
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     sockaddr_in name;
     name.sin_family = AF_INET;
     name.sin_addr.s_addr = htonl(ipEndpoint.address);
@@ -238,7 +238,7 @@ TCPSocket::connect(const IPEndpoint &ipEndpoint)
 IPEndpoint
 TCPSocket::getLocalEndpoint() const
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     sockaddr_in name;
     socklen_t nameSize = sizeof(name);
 
@@ -253,7 +253,7 @@ TCPSocket::getLocalEndpoint() const
 IPEndpoint
 TCPSocket::getRemoteEndpoint() const
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
     sockaddr_in name;
     socklen_t nameSize = sizeof(name);
 
@@ -268,8 +268,8 @@ TCPSocket::getRemoteEndpoint() const
 std::size_t
 TCPSocket::read(Stream *stream)
 {
-    assert(isValid());
-    assert(stream != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(stream != nullptr);
     void *buffer = stream->getBuffer();
     std::size_t bufferSize = stream->getBufferSize();
     ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0);
@@ -286,8 +286,8 @@ TCPSocket::read(Stream *stream)
 std::size_t
 TCPSocket::write(Stream *stream)
 {
-    assert(isValid());
-    assert(stream != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(stream != nullptr);
     const void *data = stream->getData();
     std::size_t dataSize = stream->getDataSize();
     ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL);
@@ -304,7 +304,7 @@ TCPSocket::write(Stream *stream)
 void
 TCPSocket::closeRead()
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
 
     if (shutdown(fd_, SHUT_RD) < 0) {
         throw std::system_error(errno, std::system_category(), "shutdown() failed");
@@ -315,7 +315,7 @@ TCPSocket::closeRead()
 void
 TCPSocket::closeWrite()
 {
-    assert(isValid());
+    SIREN_ASSERT(isValid());
 
     if (shutdown(fd_, SHUT_WR) < 0) {
         throw std::system_error(errno, std::system_category(), "shutdown() failed");

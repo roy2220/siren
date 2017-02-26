@@ -70,7 +70,7 @@ void DestroyObject(T *) noexcept;
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -146,7 +146,7 @@ template <class T>
 T &
 RCPointer<T>::operator*() const noexcept
 {
-    assert(object_ != nullptr);
+    SIREN_ASSERT(object_ != nullptr);
     return *object_;
 }
 
@@ -228,7 +228,7 @@ RCRecord::RCRecord() noexcept
 
 RCRecord::~RCRecord()
 {
-    assert(value_ == 0);
+    SIREN_ASSERT(value_ == 0);
 }
 
 } // namespace siren

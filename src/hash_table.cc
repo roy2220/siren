@@ -1,7 +1,8 @@
 #include "hash_table.h"
 
-#include <cassert>
 #include <utility>
+
+#include "assert.h"
 
 
 namespace siren {
@@ -65,7 +66,7 @@ HashTable::reset() noexcept
 void
 HashTable::insertNode(Node *node, std::size_t nodeDigest)
 {
-    assert(node != nullptr);
+    SIREN_ASSERT(node != nullptr);
 
     if (nodeCount_ == getNumberOfSlots()) {
         setNumberOfSlots(nodeCount_ + 1);
@@ -94,8 +95,8 @@ HashTable::insertNode(Node *node, std::size_t nodeDigest)
 void
 HashTable::removeNode(Node *node) noexcept
 {
-    assert(!isEmpty());
-    assert(node != nullptr);
+    SIREN_ASSERT(!isEmpty());
+    SIREN_ASSERT(node != nullptr);
 
     {
         Node **slot = locateSlot(computeSlotIndex(node->digest_));

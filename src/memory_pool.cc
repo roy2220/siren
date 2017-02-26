@@ -6,7 +6,7 @@
 #include <system_error>
 #include <utility>
 
-#include "helper_macros.h"
+#include "macros.h"
 #include "next_power_of_two.h"
 
 
@@ -18,7 +18,7 @@ MemoryPool::MemoryPool(std::size_t blockAlignment, std::size_t blockSize
     blockSize_(SIREN_ALIGN(std::max(blockSize, sizeof(void *)), blockAlignment_)),
     minChunkSize_(NextPowerOfTwo(std::max(minChunkLength, std::size_t(1)) * blockSize_))
 {
-    assert(blockAlignment_ <= alignof(std::max_align_t));
+    SIREN_ASSERT(blockAlignment_ <= alignof(std::max_align_t));
     initialize();
 }
 
@@ -44,9 +44,9 @@ MemoryPool::operator=(MemoryPool &&other) noexcept
 {
     if (&other != this) {
         finalize();
-        assert(blockAlignment_ == other.blockAlignment_);
-        assert(blockSize_ == other.blockSize_);
-        assert(minChunkSize_ == other.minChunkSize_);
+        SIREN_ASSERT(blockAlignment_ == other.blockAlignment_);
+        SIREN_ASSERT(blockSize_ == other.blockSize_);
+        SIREN_ASSERT(minChunkSize_ == other.minChunkSize_);
         chunks_ = std::move(other.chunks_);
         other.move(this);
     }
@@ -103,6 +103,7 @@ MemoryPool::makeBlock()
     if (firstNewBlock_ <= lastNewBlock_) {
         block = firstNewBlock_;
     } else {
+        chunks_.reserve(chunks_.size() + 1);
         std::size_t chunkSize = newChunkSize_;
         block = std::malloc(chunkSize);
 

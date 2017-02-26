@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include "config.h"
 #include "memory_pool.h"
 
 
@@ -28,7 +29,7 @@ public:
 private:
     std::size_t memoryBlockAlignment_;
     MemoryPool memoryPool_;
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     std::size_t objectCount_;
 #endif
 };
@@ -41,11 +42,11 @@ private:
  */
 
 
-#include <cassert>
 #include <algorithm>
 #include <utility>
 
-#include "helper_macros.h"
+#include "assert.h"
+#include "macros.h"
 #include "next_power_of_two.h"
 #include "scope_guard.h"
 
@@ -59,7 +60,7 @@ ObjectPool<T>::ObjectPool(std::size_t numberOfObjectsToReserve, std::size_t obje
     memoryPool_(memoryBlockAlignment_, SIREN_ALIGN(sizeof(T), memoryBlockAlignment_)
                                        + SIREN_ALIGN(objectTagSize, memoryBlockAlignment_)
                 , numberOfObjectsToReserve)
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
         ,
     objectCount_(0)
 #endif
@@ -70,7 +71,7 @@ ObjectPool<T>::ObjectPool(std::size_t numberOfObjectsToReserve, std::size_t obje
 template <class T>
 ObjectPool<T>::~ObjectPool()
 {
-    assert(objectCount_ == 0);
+    SIREN_ASSERT(objectCount_ == 0);
 }
 
 
@@ -87,7 +88,7 @@ ObjectPool<T>::createObject(Args &&...args)
 
     T *object = new (memoryBlock) T(std::forward<Args>(args)...);
     scopeGuard.dismiss();
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     ++objectCount_;
 #endif
     return object;
@@ -98,11 +99,11 @@ template <class T>
 void
 ObjectPool<T>::destroyObject(T *object) noexcept
 {
-    assert(objectCount_ >= 1);
-    assert(object != nullptr);
+    SIREN_ASSERT(objectCount_ >= 1);
+    SIREN_ASSERT(object != nullptr);
     void *memoryBlock = (object->~T(), object);
     memoryPool_.freeBlock(memoryBlock);
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     --objectCount_;
 #endif
 }
@@ -112,7 +113,7 @@ template <class T>
 const void *
 ObjectPool<T>::getObjectTag(const T *object) const noexcept
 {
-    assert(object != nullptr);
+    SIREN_ASSERT(object != nullptr);
     return reinterpret_cast<const char *>(object) + SIREN_ALIGN(sizeof(T), memoryBlockAlignment_);
 }
 
@@ -121,7 +122,7 @@ template <class T>
 void *
 ObjectPool<T>::getObjectTag(T *object) const noexcept
 {
-    assert(object != nullptr);
+    SIREN_ASSERT(object != nullptr);
     return reinterpret_cast<char *>(object) + SIREN_ALIGN(sizeof(T), memoryBlockAlignment_);
 }
 

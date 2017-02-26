@@ -5,7 +5,7 @@
 #include <exception>
 #include <string>
 
-#include "helper_macros.h"
+#include "macros.h"
 
 
 #define SIREN__TEST SIREN_CONCAT(SirenTest, __LINE__)

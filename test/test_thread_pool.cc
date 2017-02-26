@@ -1,9 +1,9 @@
-#include <cassert>
 #include <cstdint>
 
 #include <unistd.h>
 
-#include "helper_macros.h"
+#include "assert.h"
+#include "macros.h"
 #include "test.h"
 #include "thread_pool.h"
 
@@ -36,7 +36,7 @@ SIREN_TEST("Add thread pool tasks")
         std::uint64_t dummy;
         int r = read(tp.getEventFD(), &dummy, sizeof(dummy));
         SIREN_UNUSED(r);
-        assert(r == sizeof(dummy));
+        SIREN_ASSERT(r == sizeof(dummy));
         std::vector<ThreadPoolTask *> ts2;
         tp.getCompletedTasks(&ts2);
 

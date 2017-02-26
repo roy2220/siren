@@ -1,6 +1,5 @@
 #include "io_poller.h"
 
-#include <cassert>
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
@@ -12,6 +11,7 @@
 
 #include <unistd.h>
 
+#include "assert.h"
 #include "io_clock.h"
 #include "scope_guard.h"
 
@@ -126,9 +126,9 @@ IOPoller::clearFD(Context *context) noexcept
 void
 IOPoller::createContext(int fd)
 {
-    assert(isValid());
-    assert(fd >= 0);
-    assert(!contextExists(fd));
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(fd >= 0);
+    SIREN_ASSERT(!contextExists(fd));
     auto context = contextPool_.createObject();
 
     auto scopeGuard = MakeScopeGuard([&] () -> void {
@@ -147,8 +147,8 @@ IOPoller::createContext(int fd)
 void
 IOPoller::destroyContext(int fd) noexcept
 {
-    assert(isValid());
-    assert(contextExists(fd));
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(contextExists(fd));
     Context *context = findContext(fd);
     clearFD(context);
 
@@ -170,7 +170,7 @@ IOPoller::destroyContext(int fd) noexcept
 const void *
 IOPoller::getContextTag(int fd) const noexcept
 {
-    assert(contextExists(fd));
+    SIREN_ASSERT(contextExists(fd));
     const Context *context = findContext(fd);
     return contextPool_.getObjectTag(context);
 }
@@ -179,7 +179,7 @@ IOPoller::getContextTag(int fd) const noexcept
 void *
 IOPoller::getContextTag(int fd) noexcept
 {
-    assert(contextExists(fd));
+    SIREN_ASSERT(contextExists(fd));
     Context *context = findContext(fd);
     return contextPool_.getObjectTag(context);
 }
@@ -230,11 +230,11 @@ IOPoller::findContext(int fd) noexcept
 void
 IOPoller::addWatcher(Watcher *watcher, int fd, Condition conditions) noexcept
 {
-    assert(isValid());
-    assert(watcher != nullptr);
-    assert(watcher->context_ == nullptr);
-    assert(fd >= 0);
-    assert(contextExists(fd));
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(watcher != nullptr);
+    SIREN_ASSERT(watcher->context_ == nullptr);
+    SIREN_ASSERT(fd >= 0);
+    SIREN_ASSERT(contextExists(fd));
     Context *context = findContext(fd);
     (watcher->context_ = context)->watcherList.appendNode(watcher);
     watcher->conditions_ = conditions | Condition::Err | Condition::Hup;
@@ -260,11 +260,11 @@ IOPoller::addWatcher(Watcher *watcher, int fd, Condition conditions) noexcept
 void
 IOPoller::removeWatcher(Watcher *watcher) noexcept
 {
-    assert(isValid());
-    assert(watcher != nullptr);
-    assert(watcher->context_ != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(watcher != nullptr);
+    SIREN_ASSERT(watcher->context_ != nullptr);
     Context *context = watcher->context_;
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     watcher->context_ = nullptr;
 #endif
     watcher->remove();
@@ -334,9 +334,9 @@ IOPoller::flushContexts()
 void
 IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
 {
-    assert(isValid());
-    assert(clock != nullptr);
-    assert(watchers != nullptr);
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(clock != nullptr);
+    SIREN_ASSERT(watchers != nullptr);
     flushContexts();
     std::size_t eventCount = 0;
     clock->start();

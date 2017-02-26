@@ -7,7 +7,7 @@ namespace siren {
 
 Archive::Archive(Stream *stream) noexcept
 {
-    assert(stream != nullptr);
+    SIREN_ASSERT(stream != nullptr);
     initialize(stream);
 }
 

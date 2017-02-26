@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 
 #include "buffer.h"
+#include "config.h"
 #include "enum_class_as_flag.h"
 #include "hash_table.h"
 #include "list.h"
@@ -152,7 +153,7 @@ IOPoller::contextExists(int fd) const noexcept
 
 
 IOWatcher::IOWatcher() noexcept
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
   : context_(nullptr)
 #endif
 {

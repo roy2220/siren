@@ -7,6 +7,7 @@
 #include <exception>
 #include <functional>
 
+#include "config.h"
 #include "list.h"
 
 
@@ -24,7 +25,7 @@ struct alignas(std::max_align_t) Fiber
 
     char *stack;
     std::size_t stackSize;
-#ifdef USE_VALGRIND
+#ifdef SIREN_WITH_VALGRIND
     int stackID;
 #endif
     std::function<void ()> procedure;
@@ -68,7 +69,7 @@ private:
     typedef detail::Fiber Fiber;
     typedef detail::FiberState FiberState;
 
-    static constexpr std::size_t MinFiberSize = 4096;
+    static const std::size_t SystemPageSize;
 
     const std::size_t defaultFiberSize_;
     Fiber idleFiber_;
@@ -86,7 +87,7 @@ private:
     void initialize() noexcept;
     void finalize();
     void move(Scheduler *) noexcept;
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     bool isIdle() const noexcept;
 #endif
     void destroyFiber(Fiber *) noexcept;
@@ -112,10 +113,10 @@ struct FiberInterruption
  */
 
 
-#include <cassert>
 #include <utility>
 
-#include "helper_macros.h"
+#include "assert.h"
+#include "macros.h"
 #include "scope_guard.h"
 
 
@@ -165,14 +166,10 @@ template <class T>
 void *
 Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackground)
 {
-    fiberSize = SIREN_ALIGN(fiberSize, alignof(std::max_align_t));
-
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
-        if (fiberSize < MinFiberSize) {
-            fiberSize = MinFiberSize;
-        }
+        fiberSize = SIREN_ALIGN(fiberSize, SystemPageSize);
     }
 
     Fiber *fiber = allocateFiber(fiberSize);
@@ -201,7 +198,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
 void *
 Scheduler::getCurrentFiber() noexcept
 {
-    assert(!isIdle());
+    SIREN_ASSERT(!isIdle());
     return currentFiber_;
 }
 

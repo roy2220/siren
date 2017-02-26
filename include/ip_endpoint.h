@@ -48,7 +48,7 @@ private:
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -69,7 +69,7 @@ IPEndpoint::IPEndpoint(const sockaddr_in &name) noexcept
 IPEndpoint::IPEndpoint(Async *async, const char *hostName, const char *serviceName)
   : IPEndpoint(ResolveName(async, hostName, serviceName))
 {
-    assert(async != nullptr);
+    SIREN_ASSERT(async != nullptr);
 }
 
 } // namespace siren

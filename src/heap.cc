@@ -8,7 +8,7 @@ namespace siren {
 Heap::Heap(bool (*nodeOrderer)(const Node *, const Node *)) noexcept
   : nodeOrderer_(nodeOrderer)
 {
-    assert(nodeOrderer != nullptr);
+    SIREN_ASSERT(nodeOrderer != nullptr);
     initialize();
 }
 
@@ -25,7 +25,7 @@ Heap &
 Heap::operator=(Heap &&other) noexcept
 {
     if (&other != this) {
-        assert(nodeOrderer_ == other.nodeOrderer_);
+        SIREN_ASSERT(nodeOrderer_ == other.nodeOrderer_);
         slots_ = std::move(other.slots_);
         other.move(this);
     }
@@ -60,7 +60,7 @@ Heap::reset() noexcept
 void
 Heap::insertNode(Node *node)
 {
-    assert(node != nullptr);
+    SIREN_ASSERT(node != nullptr);
 
     if (nodeCount_ == getNumberOfSlots()) {
         setNumberOfSlots(nodeCount_ + 1);
@@ -74,8 +74,8 @@ Heap::insertNode(Node *node)
 void
 Heap::removeNode(Node *node1) noexcept
 {
-    assert(!isEmpty());
-    assert(node1 != nullptr);
+    SIREN_ASSERT(!isEmpty());
+    SIREN_ASSERT(node1 != nullptr);
     std::size_t slot1Index = node1->getSlotIndex();
     std::size_t slot2Index = --nodeCount_;
 
@@ -94,7 +94,7 @@ Heap::removeNode(Node *node1) noexcept
 void
 Heap::removeTop() noexcept
 {
-    assert(!isEmpty());
+    SIREN_ASSERT(!isEmpty());
     std::size_t slotIndex = --nodeCount_;
 
     if (slotIndex > 0) {

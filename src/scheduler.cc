@@ -1,15 +1,31 @@
 #include "scheduler.h"
 
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <system_error>
 
-#ifdef USE_VALGRIND
-#    include <valgrind/valgrind.h>
+#include "config.h"
+
+#ifdef SIREN_WITH_DEBUG
+#  include <sys/mman.h>
+#endif
+#include <unistd.h>
+
+#ifdef SIREN_WITH_VALGRIND
+#  include <valgrind/valgrind.h>
 #endif
 
 
 namespace siren {
+
+#ifdef SIREN_WITH_DEBUG
+#  define RED_ZONE_SIZE std::size_t(SystemPageSize)
+#endif
+
+
+const std::size_t Scheduler::SystemPageSize = sysconf(_SC_PAGESIZE);
+
 
 void
 Scheduler::FiberStartWrapper(Scheduler *self) noexcept
@@ -19,8 +35,7 @@ Scheduler::FiberStartWrapper(Scheduler *self) noexcept
 
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
-  : defaultFiberSize_(std::max(SIREN_ALIGN(defaultFiberSize, alignof(std::max_align_t))
-                               , std::size_t(MinFiberSize))),
+  : defaultFiberSize_(SIREN_ALIGN(std::max(defaultFiberSize, std::size_t(1)), SystemPageSize)),
     currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     deadFiber_(nullptr),
     activeFiberCount_(0)
@@ -38,7 +53,7 @@ Scheduler::Scheduler(Scheduler &&other) noexcept
     suspendedFiberList_(std::move(other.suspendedFiberList_)),
     activeFiberCount_(0)
 {
-    assert(other.activeFiberCount_ == 0);
+    SIREN_ASSERT(other.activeFiberCount_ == 0);
     idleFiber_.isPreInterrupted = idleFiber_.isPostInterrupted = false;
     other.move(this);
 }
@@ -46,7 +61,7 @@ Scheduler::Scheduler(Scheduler &&other) noexcept
 
 Scheduler::~Scheduler()
 {
-    assert(isIdle());
+    SIREN_ASSERT(isIdle());
     finalize();
 }
 
@@ -55,8 +70,8 @@ Scheduler &
 Scheduler::operator=(Scheduler &&other) noexcept
 {
     if (&other != this) {
-        assert(isIdle());
-        assert(other.activeFiberCount_ == 0);
+        SIREN_ASSERT(isIdle());
+        SIREN_ASSERT(other.activeFiberCount_ == 0);
         finalize();
         runnableFiberList_ = std::move(other.runnableFiberList_);
         suspendedFiberList_ = std::move(other.suspendedFiberList_);
@@ -112,12 +127,12 @@ Scheduler::move(Scheduler *other) noexcept
 void
 Scheduler::reset() noexcept
 {
-    assert(isIdle());
+    SIREN_ASSERT(isIdle());
     finalize();
 }
 
 
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
 bool
 Scheduler::isIdle() const noexcept
 {
@@ -142,24 +157,58 @@ Scheduler::destroyFiber(Fiber *fiber) noexcept
 Scheduler::Fiber *
 Scheduler::allocateFiber(std::size_t fiberSize)
 {
-    auto base = static_cast<char *>(std::malloc(fiberSize));
+    char *base;
+
+#ifdef SIREN_WITH_DEBUG
+    {
+        void *addr = mmap(nullptr, fiberSize + RED_ZONE_SIZE, PROT_READ | PROT_WRITE
+                          , MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+        if (addr == MAP_FAILED) {
+            throw std::system_error(errno, std::system_category(), "mmap() failed");
+        }
+
+        auto scopeGuard = MakeScopeGuard([&] () -> void {
+            if (munmap(addr, fiberSize + RED_ZONE_SIZE) < 0) {
+                std::perror("munmap() failed");
+                std::terminate();
+            }
+        });
+
+        void *redZone;
+#  if defined(__i386__) || defined(__x86_64__)
+        redZone = addr;
+        base = static_cast<char *>(addr) + RED_ZONE_SIZE;
+#  else
+#    error architecture not supported
+#  endif
+
+        if (mprotect(redZone, RED_ZONE_SIZE, PROT_NONE) < 0) {
+            throw std::system_error(errno, std::system_category(), "mprotect() failed");
+        }
+
+        scopeGuard.dismiss();
+    }
+#else
+    base = static_cast<char *>(std::malloc(fiberSize));
 
     if (base == nullptr) {
         throw std::system_error(errno, std::system_category(), "malloc() failed");
     }
+#endif
 
-    std::size_t fiberOffset, stackOffset, stackSize;
+    std::size_t stackSize = fiberSize - sizeof(Fiber);
+    std::size_t fiberOffset, stackOffset;
 #if defined(__i386__) || defined(__x86_64__)
-    fiberOffset = fiberSize - sizeof(Fiber);
+    fiberOffset = stackSize;
     stackOffset = 0;
-    stackSize = fiberOffset;
 #else
-#    error architecture not supported
+#  error architecture not supported
 #endif
     auto fiber = new (base + fiberOffset) Fiber();
     fiber->stack = base + stackOffset;
     fiber->stackSize = stackSize;
-#ifdef USE_VALGRIND
+#ifdef SIREN_WITH_VALGRIND
     fiber->stackID = VALGRIND_STACK_REGISTER(fiber->stack, fiber->stack + fiber->stackSize);
 #endif
     return fiber;
@@ -173,20 +222,39 @@ Scheduler::freeFiber(Fiber *fiber) noexcept
 #if defined(__i386__) || defined(__x86_64__)
     base = fiber->stack;
 #else
-#    error architecture not supported
+#  error architecture not supported
 #endif
-#ifdef USE_VALGRIND
+    std::size_t fiberSize = sizeof(Fiber) + fiber->stackSize;
+#ifdef SIREN_WITH_VALGRIND
     VALGRIND_STACK_DEREGISTER(fiber->stackID);
 #endif
     fiber->~Fiber();
+
+#ifdef SIREN_WITH_DEBUG
+    {
+        void *addr;
+#  if defined(__i386__) || defined(__x86_64__)
+        addr = base - RED_ZONE_SIZE;
+#  else
+#    error architecture not supported
+#  endif
+
+        if (munmap(addr, fiberSize + RED_ZONE_SIZE) < 0) {
+            std::perror("munmap() failed");
+            std::terminate();
+        }
+    }
+#else
+    SIREN_UNUSED(fiberSize);
     std::free(base);
+#endif
 }
 
 
 void
 Scheduler::suspendFiber(void *fiberHandle)
 {
-    assert(fiberHandle != nullptr);
+    SIREN_ASSERT(fiberHandle != nullptr);
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Runnable) {
@@ -209,7 +277,7 @@ Scheduler::suspendFiber(void *fiberHandle)
 void
 Scheduler::resumeFiber(void *fiberHandle) noexcept
 {
-    assert(fiberHandle != nullptr);
+    SIREN_ASSERT(fiberHandle != nullptr);
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Suspended) {
@@ -222,7 +290,7 @@ Scheduler::resumeFiber(void *fiberHandle) noexcept
 void
 Scheduler::interruptFiber(void *fiberHandle)
 {
-    assert(fiberHandle != nullptr);
+    SIREN_ASSERT(fiberHandle != nullptr);
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Running) {
@@ -252,8 +320,8 @@ Scheduler::interruptFiber(void *fiberHandle)
 void
 Scheduler::yieldToFiber(void *fiberHandle)
 {
-    assert(!isIdle());
-    assert(fiberHandle != nullptr);
+    SIREN_ASSERT(!isIdle());
+    SIREN_ASSERT(fiberHandle != nullptr);
     auto fiber = static_cast<Fiber *>(fiberHandle);
 
     if (fiber->state == FiberState::Runnable) {
@@ -271,7 +339,7 @@ Scheduler::yieldToFiber(void *fiberHandle)
 void
 Scheduler::yieldTo()
 {
-    assert(!isIdle());
+    SIREN_ASSERT(!isIdle());
 
     if (!idleFiber_.isOnly()) {
         (currentFiber_->state = FiberState::Runnable, currentFiber_)->insertAfter(&idleFiber_);
@@ -289,7 +357,7 @@ Scheduler::yieldTo()
 void
 Scheduler::run()
 {
-    assert(isIdle());
+    SIREN_ASSERT(isIdle());
 
     if (!runnableFiberList_.isEmpty()) {
         runnableFiberList_.prependNode((currentFiber_->state = FiberState::Runnable
@@ -335,7 +403,7 @@ Scheduler::runFiber(Fiber *fiber) noexcept
     if (fiber->context == nullptr) {
 #if defined(__GNUG__)
         __asm__ __volatile__ (
-#    if defined(__i386__)
+#  if defined(__i386__)
             "movl\t$0, %%ebp\n\t"
             "movl\t%0, %%esp\n\t"
             "pushl\t%1\n\t"
@@ -343,21 +411,21 @@ Scheduler::runFiber(Fiber *fiber) noexcept
             "jmpl\t*%2"
             :
             : "r"(fiber->stack + fiber->stackSize), "r"(this), "r"(FiberStartWrapper)
-#    elif defined(__x86_64__)
+#  elif defined(__x86_64__)
             "movq\t$0, %%rbp\n\t"
             "movq\t%0, %%rsp\n\t"
             "pushq\t$0\n\t"
             "jmpq\t*%2"
             :
             : "r"(fiber->stack + fiber->stackSize), "D"(this), "r"(FiberStartWrapper)
-#    else
-#        error architecture not supported
-#    endif
+#  else
+#    error architecture not supported
+#  endif
         );
 
         __builtin_unreachable();
 #else
-#    error compiler not supported
+#  error compiler not supported
 #endif
     } else {
         std::longjmp(*fiber->context, 1);

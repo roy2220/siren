@@ -2,16 +2,20 @@
 
 PREFIX ?= /usr/local
 BUILDDIR ?= build
+CXX ?=
 CPPFLAGS ?=
 CXXFLAGS ?=
+AR ?=
 ARFLAGS ?=
 DEBUG ?=
 
 override define settings :=
 PREFIX = $(PREFIX)
 BUILDDIR = $(BUILDDIR)
+CXX = $(CXX)
 CPPFLAGS = $(CPPFLAGS)
 CXXFLAGS = $(CXXFLAGS)
+AR = $(AR)
 ARFLAGS = $(ARFLAGS)
 DEBUG = $(DEBUG)
 endef
@@ -71,7 +75,7 @@ $(BUILDDIR)/libsiren.a: $(libobjs)
 	$(AR) $(ARFLAGS) $@ $^
 
 
-ifneq ($(filter build,$(MAKECMDGOALS)),)
+ifneq ($(filter $(BUILDDIR)/libsiren.a build install,$(MAKECMDGOALS)),)
 -include $(libobjs:%.o=%.d)
 endif
 
@@ -81,7 +85,7 @@ $(BUILDDIR)/siren-test: $(testobjs)
 	$(CXX) -o $@ $^ -lpthread
 
 
-ifneq ($(filter test,$(MAKECMDGOALS)),)
+ifneq ($(filter $(BUILDDIR)/siren-test test,$(MAKECMDGOALS)),)
 -include $(testobjs:%.o=%.d)
 endif
 

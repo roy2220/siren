@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+#include "config.h"
 #include "list.h"
 
 
@@ -95,8 +96,9 @@ private:
  */
 
 
-#include <cassert>
 #include <utility>
+
+#include "assert.h"
 
 
 namespace siren {
@@ -105,7 +107,7 @@ namespace detail {
 
 enum class ThreadPoolTaskState
 {
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
     Initial,
 #endif
     Uncompleted,
@@ -117,7 +119,7 @@ enum class ThreadPoolTaskState
 
 
 ThreadPoolTask::ThreadPoolTask() noexcept
-#ifndef NDEBUG
+#ifdef SIREN_WITH_DEBUG
   : state_(State::Initial)
 #endif
 {
@@ -135,8 +137,8 @@ template <class T>
 void
 ThreadPool::addTask(Task *task, T &&procedure)
 {
-    assert(task != nullptr);
-    assert(task->state_.load(std::memory_order_relaxed) == TaskState::Initial);
+    SIREN_ASSERT(task != nullptr);
+    SIREN_ASSERT(task->state_.load(std::memory_order_relaxed) == TaskState::Initial);
     task->state_.store(TaskState::Uncompleted, std::memory_order_relaxed);
     task->procedure_ = std::forward<T>(procedure);
     addWaitingTask(task);

@@ -103,7 +103,7 @@ private:
  */
 
 
-#include <cassert>
+#include "assert.h"
 
 
 namespace siren {
@@ -179,7 +179,7 @@ RBTree::getRoot() noexcept
 bool
 RBTree::isNil(const Node *node) const noexcept
 {
-    assert(node != nullptr);
+    SIREN_ASSERT(node != nullptr);
     return node == &nil_;
 }
 
