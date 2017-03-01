@@ -23,6 +23,7 @@ Event::Event(Scheduler *scheduler) noexcept
   : scheduler_(scheduler)
 {
     SIREN_ASSERT(scheduler != nullptr);
+    initialize();
 }
 
 
@@ -30,6 +31,7 @@ Event::Event(Event &&other) noexcept
   : scheduler_(other.scheduler_)
 {
     SIREN_ASSERT(!other.isWaited());
+    other.move(this);
 }
 
 
@@ -45,9 +47,35 @@ Event::operator=(Event &&other) noexcept
     if (&other != this) {
         SIREN_ASSERT(!isWaited());
         SIREN_ASSERT(!other.isWaited());
+        other.move(this);
     }
 
     return *this;
+}
+
+
+void
+Event::initialize() noexcept
+{
+    hasOccurred_ = false;
+}
+
+
+void
+Event::move(Event *other) noexcept
+{
+    other->hasOccurred_ = hasOccurred_;
+    initialize();
+}
+
+
+void
+Event::reset() noexcept
+{
+    if (hasOccurred_) {
+        hasOccurred_ = false;
+        waiterSleeps();
+    }
 }
 
 
@@ -63,9 +91,9 @@ Event::isWaited() const noexcept
 void
 Event::trigger() noexcept
 {
-    SIREN_LIST_FOREACH_REVERSE(listNode, waiterList_) {
-        auto waiter = static_cast<Waiter *>(listNode);
-        scheduler_->resumeFiber(waiter->fiberHandle);
+    if (!hasOccurred_) {
+        hasOccurred_ = true;
+        waiterWakes();
     }
 }
 
@@ -73,14 +101,47 @@ Event::trigger() noexcept
 void
 Event::waitFor()
 {
-    Waiter waiter;
-    waiterList_.appendNode(&waiter);
+    if (!hasOccurred_) {
+        {
+            Waiter waiter;
+            waiterList_.appendNode(&waiter);
 
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        waiter.remove();
-    });
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
+                waiter.remove();
+            });
 
-    scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
+            scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
+        }
+
+        waiterWakes();
+    }
+}
+
+
+bool
+Event::tryWaitFor() noexcept
+{
+    return hasOccurred_;
+}
+
+
+void
+Event::waiterWakes() noexcept
+{
+    if (!waiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(waiterList_.getTail());
+        scheduler_->resumeFiber(waiter->fiberHandle);
+    }
+}
+
+
+void
+Event::waiterSleeps() noexcept
+{
+    if (!waiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(waiterList_.getTail());
+        scheduler_->suspendFiber(waiter->fiberHandle);
+    }
 }
 
 } // namespace siren

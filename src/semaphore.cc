@@ -83,8 +83,19 @@ Semaphore::move(Semaphore *other) noexcept
 void
 Semaphore::reset() noexcept
 {
-    SIREN_ASSERT(!isWaited());
-    initialize();
+    if (value_ != initialValue_) {
+        if (value_ == minValue_) {
+            downWaiterWakes();
+        } else if (value_ == maxValue_) {
+            upWaiterWakes();
+        } else if (initialValue_ == minValue_) {
+            downWaiterSleeps();
+        } else if (initialValue_ == maxValue_) {
+            upWaiterSleeps();
+        }
+
+        value_ = initialValue_;
+    }
 }
 
 
@@ -95,39 +106,6 @@ Semaphore::isWaited() const noexcept
     return !upWaiterList_.isEmpty() || !downWaiterList_.isEmpty();
 }
 #endif
-
-
-void
-Semaphore::up()
-{
-    if (value_ < maxValue_) {
-        if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
-            scheduler_->suspendFiber(waiter->fiberHandle);
-        }
-    } else {
-        {
-            Waiter waiter;
-            upWaiterList_.appendNode(&waiter);
-
-            auto scopeGuard = MakeScopeGuard([&] () -> void {
-                waiter.remove();
-            });
-
-            scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
-        }
-
-        if (++value_ < maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
-            scheduler_->resumeFiber(waiter->fiberHandle);
-        }
-    }
-
-    if (value_ == minValue_ + 1 && !downWaiterList_.isEmpty()) {
-        auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
-        scheduler_->resumeFiber(waiter->fiberHandle);
-    }
-}
 
 
 void
@@ -145,41 +123,47 @@ Semaphore::down()
             scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
         }
 
-        if (--value_ > minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
-            scheduler_->resumeFiber(waiter->fiberHandle);
+        if (--value_ > minValue_) {
+            downWaiterWakes();
         }
     } else {
-        if (--value_ == minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
-            scheduler_->suspendFiber(waiter->fiberHandle);
+        if (--value_ == minValue_) {
+            downWaiterSleeps();
         }
     }
 
-    if (value_ == maxValue_ - 1 && !upWaiterList_.isEmpty()) {
-        auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
-        scheduler_->resumeFiber(waiter->fiberHandle);
+    if (value_ == maxValue_ - 1) {
+        upWaiterWakes();
     }
 }
 
 
-bool
-Semaphore::tryUp() noexcept
+void
+Semaphore::up()
 {
-    if (value_ < maxValue_) {
-        if (++value_ == maxValue_ && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
-            scheduler_->suspendFiber(waiter->fiberHandle);
+    if (value_ == maxValue_) {
+        {
+            Waiter waiter;
+            upWaiterList_.appendNode(&waiter);
+
+            auto scopeGuard = MakeScopeGuard([&] () -> void {
+                waiter.remove();
+            });
+
+            scheduler_->suspendFiber(waiter.fiberHandle = scheduler_->getCurrentFiber());
         }
 
-        if (value_ == minValue_ + 1 && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
-            scheduler_->resumeFiber(waiter->fiberHandle);
+        if (++value_ < maxValue_) {
+            upWaiterWakes();
         }
-
-        return true;
     } else {
-        return false;
+        if (++value_ == maxValue_) {
+            upWaiterSleeps();
+        }
+    }
+
+    if (value_ == minValue_ + 1) {
+        downWaiterWakes();
     }
 }
 
@@ -190,17 +174,74 @@ Semaphore::tryDown() noexcept
     if (value_ == minValue_) {
         return false;
     } else {
-        if (--value_ == minValue_ && !downWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
-            scheduler_->suspendFiber(waiter->fiberHandle);
+        if (--value_ == minValue_) {
+            downWaiterSleeps();
         }
 
-        if (value_ == maxValue_ - 1 && !upWaiterList_.isEmpty()) {
-            auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
-            scheduler_->resumeFiber(waiter->fiberHandle);
+        if (value_ == maxValue_ - 1) {
+            upWaiterWakes();
         }
 
         return true;
+    }
+}
+
+
+bool
+Semaphore::tryUp() noexcept
+{
+    if (value_ == maxValue_) {
+        return false;
+    } else {
+        if (++value_ == maxValue_) {
+            upWaiterSleeps();
+        }
+
+        if (value_ == minValue_ + 1) {
+            downWaiterWakes();
+        }
+
+        return true;
+    }
+}
+
+
+void
+Semaphore::downWaiterWakes() noexcept
+{
+    if (!downWaiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
+        scheduler_->resumeFiber(waiter->fiberHandle);
+    }
+}
+
+
+void
+Semaphore::downWaiterSleeps() noexcept
+{
+    if (!downWaiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(downWaiterList_.getTail());
+        scheduler_->suspendFiber(waiter->fiberHandle);
+    }
+}
+
+
+void
+Semaphore::upWaiterWakes() noexcept
+{
+    if (!upWaiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
+        scheduler_->resumeFiber(waiter->fiberHandle);
+    }
+}
+
+
+void
+Semaphore::upWaiterSleeps() noexcept
+{
+    if (!upWaiterList_.isEmpty()) {
+        auto waiter = static_cast<Waiter *>(upWaiterList_.getTail());
+        scheduler_->suspendFiber(waiter->fiberHandle);
     }
 }
 

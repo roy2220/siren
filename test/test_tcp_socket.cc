@@ -1,6 +1,5 @@
 #include <cstring>
 
-#include "async.h"
 #include "ip_endpoint.h"
 #include "loop.h"
 #include "stream.h"

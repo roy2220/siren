@@ -21,6 +21,7 @@ SIREN_TEST("Wait for/Trigger events")
             }
 
             s = 0;
+            e.reset();
         });
     }
 
