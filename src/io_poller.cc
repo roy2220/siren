@@ -18,14 +18,6 @@
 
 namespace siren {
 
-std::array<IOCondition, 4> detail::IOContext::Conditions = {{
-    Condition::In,
-    Condition::Out,
-    Condition::RdHup,
-    Condition::Pri,
-}};
-
-
 IOPoller::IOPoller(std::size_t contextTagAlignment, std::size_t contextTagSize)
   : contextPool_(64, contextTagAlignment, contextTagSize)
 {
@@ -139,7 +131,11 @@ IOPoller::createContext(int fd)
     context->conditions = Condition::No;
     context->pendingConditions = Condition::No;
     context->isDirty = false;
-    context->watcherCounts.fill(0);
+
+    for (std::size_t &watcherCount : context->watcherCounts) {
+        watcherCount = 0;
+    }
+
     scopeGuard.dismiss();
 }
 
@@ -238,17 +234,18 @@ IOPoller::addWatcher(Watcher *watcher, int fd, Condition conditions) noexcept
     Context *context = findContext(fd);
     (watcher->context_ = context)->watcherList.appendNode(watcher);
     watcher->conditions_ = conditions | Condition::Err | Condition::Hup;
+    std::size_t *watcherCount = context->watcherCounts;
     bool contextIsModified = false;
 
-    for (std::size_t i = 0; i < Context::Conditions.size(); ++i) {
-        Condition condition = Context::Conditions[i];
-
+    for (Condition condition : {SIREN__IO_CONDITIONS}) {
         if ((conditions & condition) == condition) {
-            if (context->watcherCounts[i]++ == 0) {
+            if (++*watcherCount == 1) {
                 context->pendingConditions |= condition;
                 contextIsModified = true;
             }
         }
+
+        ++watcherCount;
     }
 
     if (contextIsModified && !context->isDirty) {
@@ -268,17 +265,18 @@ IOPoller::removeWatcher(Watcher *watcher) noexcept
     watcher->context_ = nullptr;
 #endif
     watcher->remove();
+    std::size_t *watcherCount = context->watcherCounts;
     bool contextIsModified = false;
 
-    for (std::size_t i = 0; i < Context::Conditions.size(); ++i) {
-        Condition condition = Context::Conditions[i];
-
+    for (Condition condition : {SIREN__IO_CONDITIONS}) {
         if ((watcher->conditions_ & condition) == condition) {
-            if (--context->watcherCounts[i] == 0) {
+            if (--*watcherCount == 0) {
                 context->pendingConditions &= ~condition;
                 contextIsModified = true;
             }
         }
+
+        ++watcherCount;
     }
 
     if (contextIsModified && !context->isDirty) {

@@ -6,11 +6,11 @@
 
 
 #ifdef SIREN_WITH_DEBUG
-#  define SIREN_ASSERT(EXPRESSION)                                                    \
-    do {                                                                              \
-        if (!(EXPRESSION)) {                                                          \
-            siren::detail::AssertionFails(__FILE__, __LINE__, SIREN_STR(EXPRESSION)); \
-        }                                                                             \
+#  define SIREN_ASSERT(EXPRESSION)                                                      \
+    do {                                                                                \
+        if (!(EXPRESSION)) {                                                            \
+            ::siren::detail::AssertionFails(__FILE__, __LINE__, SIREN_STR(EXPRESSION)); \
+        }                                                                               \
     } while (false)
 #else
 #  define SIREN_ASSERT(EXPRESSION) SIREN_UNUSED(0)

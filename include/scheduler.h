@@ -3,7 +3,7 @@
 
 #include <csetjmp>
 #include <cstddef>
-#include <chrono>
+#include <cstdint>
 #include <exception>
 #include <functional>
 
@@ -34,7 +34,7 @@ struct alignas(std::max_align_t) Fiber
     bool isBackground;
     bool isPreInterrupted;
     bool isPostInterrupted;
-    std::chrono::steady_clock::time_point creationTime;
+    std::uint64_t number;
 };
 
 } // namespace detail
@@ -69,9 +69,9 @@ private:
     typedef detail::Fiber Fiber;
     typedef detail::FiberState FiberState;
 
-    static const std::size_t SystemPageSize;
-
+    const std::size_t systemPageSize_;
     const std::size_t defaultFiberSize_;
+    std::uint64_t nextFiberNumber_;
     Fiber idleFiber_;
     Fiber *currentFiber_;
     Fiber *deadFiber_;
@@ -89,6 +89,7 @@ private:
     void move(Scheduler *) noexcept;
 #ifdef SIREN_WITH_DEBUG
     bool isIdle() const noexcept;
+    std::size_t getRedZoneSize() const noexcept;
 #endif
     void destroyFiber(Fiber *) noexcept;
     Fiber *allocateFiber(std::size_t);
@@ -169,7 +170,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
-        fiberSize = SIREN_ALIGN(fiberSize, SystemPageSize);
+        fiberSize = SIREN_ALIGN(fiberSize, systemPageSize_);
     }
 
     Fiber *fiber = allocateFiber(fiberSize);
@@ -183,7 +184,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
     runnableFiberList_.appendNode((fiber->state = FiberState::Runnable, fiber));
     fiber->isBackground = fiberIsBackground;
     fiber->isPreInterrupted = fiber->isPostInterrupted = false;
-    fiber->creationTime = std::chrono::steady_clock::now();
+    fiber->number = nextFiberNumber_++;
     ++aliveFiberCount_;
 
     if (fiberIsBackground) {

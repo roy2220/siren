@@ -67,7 +67,7 @@ tag:
 
 
 clean:
-	rm -rf $(BUILDDIR)
+	rm --force --recursive $(BUILDDIR)
 
 
 $(BUILDDIR)/libsiren.a: $(libobjs)

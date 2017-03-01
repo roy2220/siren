@@ -2,7 +2,6 @@
 
 
 #include <cstddef>
-#include <array>
 #include <vector>
 
 #include <sys/epoll.h>
@@ -13,6 +12,11 @@
 #include "hash_table.h"
 #include "list.h"
 #include "object_pool.h"
+
+
+#define SIREN__IO_CONDITIONS ::siren::IOCondition::In, ::siren::IOCondition::Out \
+                             , ::siren::IOCondition::RdHup, ::siren::IOCondition::Pri
+#define SIREN__NUMBER_OF_IO_CONDITIONS 4
 
 
 namespace siren {
@@ -30,14 +34,12 @@ struct IOContext
 {
     typedef IOCondition Condition;
 
-    static std::array<IOCondition, 4> Conditions;
-
     int fd;
     Condition conditions;
     Condition pendingConditions;
     bool isDirty;
     List watcherList;
-    std::array<std::size_t, Conditions.size()> watcherCounts;
+    std::size_t watcherCounts[SIREN__NUMBER_OF_IO_CONDITIONS];
 };
 
 } // namespace detail

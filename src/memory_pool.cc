@@ -58,7 +58,7 @@ MemoryPool::operator=(MemoryPool &&other) noexcept
 void
 MemoryPool::initialize() noexcept
 {
-    newChunkSize_ = minChunkSize_;
+    nextChunkSize_ = minChunkSize_;
     static char dummy[2];
     lastNewBlock_ = &dummy[0];
     firstNewBlock_ = &dummy[1];
@@ -78,7 +78,7 @@ MemoryPool::finalize() noexcept
 void
 MemoryPool::move(MemoryPool *other) noexcept
 {
-    other->newChunkSize_ = newChunkSize_;
+    other->nextChunkSize_ = nextChunkSize_;
     other->lastNewBlock_ = lastNewBlock_;
     other->firstNewBlock_ = firstNewBlock_;
     other->lastFreeBlock_ = lastFreeBlock_;
@@ -104,7 +104,7 @@ MemoryPool::makeBlock()
         block = firstNewBlock_;
     } else {
         chunks_.reserve(chunks_.size() + 1);
-        std::size_t chunkSize = newChunkSize_;
+        std::size_t chunkSize = nextChunkSize_;
         block = std::malloc(chunkSize);
 
         if (block == nullptr) {
@@ -112,7 +112,7 @@ MemoryPool::makeBlock()
         }
 
         chunks_.push_back(block);
-        newChunkSize_ = 2 * chunkSize;
+        nextChunkSize_ = 2 * chunkSize;
         lastNewBlock_ = static_cast<char *>(block) + chunkSize - blockSize_;
     }
 

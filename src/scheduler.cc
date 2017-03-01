@@ -19,12 +19,11 @@
 
 namespace siren {
 
-#ifdef SIREN_WITH_DEBUG
-#  define RED_ZONE_SIZE std::size_t(SystemPageSize)
-#endif
+namespace {
 
+std::size_t GetSystemPageSize();
 
-const std::size_t Scheduler::SystemPageSize = sysconf(_SC_PAGESIZE);
+} // namespace
 
 
 void
@@ -35,7 +34,8 @@ Scheduler::FiberStartWrapper(Scheduler *self) noexcept
 
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
-  : defaultFiberSize_(SIREN_ALIGN(std::max(defaultFiberSize, std::size_t(1)), SystemPageSize)),
+  : systemPageSize_(GetSystemPageSize()),
+    defaultFiberSize_(SIREN_ALIGN(std::max(defaultFiberSize, std::size_t(1)), systemPageSize_)),
     currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     deadFiber_(nullptr),
     activeFiberCount_(0)
@@ -46,7 +46,8 @@ Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
 
 
 Scheduler::Scheduler(Scheduler &&other) noexcept
-  : defaultFiberSize_(other.defaultFiberSize_),
+  : systemPageSize_(other.systemPageSize_),
+    defaultFiberSize_(other.defaultFiberSize_),
     currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     deadFiber_(nullptr),
     runnableFiberList_(std::move(other.runnableFiberList_)),
@@ -85,6 +86,7 @@ Scheduler::operator=(Scheduler &&other) noexcept
 void
 Scheduler::initialize() noexcept
 {
+    nextFiberNumber_ = 0;
     aliveFiberCount_ = 0;
     backgroundFiberCount_ = 0;
 }
@@ -100,7 +102,7 @@ Scheduler::finalize()
         list.sort([] (const ListNode *listNode1, const ListNode *listNode2) -> bool {
             auto fiber1 = static_cast<const Fiber *>(listNode1);
             auto fiber2 = static_cast<const Fiber *>(listNode2);
-            return fiber1->creationTime <= fiber2->creationTime;
+            return fiber1->number <= fiber2->number;
         });
 
         while (!list.isEmpty()) {
@@ -118,6 +120,7 @@ Scheduler::finalize()
 void
 Scheduler::move(Scheduler *other) noexcept
 {
+    other->nextFiberNumber_ = nextFiberNumber_;
     other->aliveFiberCount_ = aliveFiberCount_;
     other->backgroundFiberCount_ = backgroundFiberCount_;
     initialize();
@@ -137,6 +140,13 @@ bool
 Scheduler::isIdle() const noexcept
 {
     return currentFiber_ == &idleFiber_;
+}
+
+
+std::size_t
+Scheduler::getRedZoneSize() const noexcept
+{
+    return systemPageSize_;
 }
 #endif
 
@@ -161,7 +171,7 @@ Scheduler::allocateFiber(std::size_t fiberSize)
 
 #ifdef SIREN_WITH_DEBUG
     {
-        void *addr = mmap(nullptr, fiberSize + RED_ZONE_SIZE, PROT_READ | PROT_WRITE
+        void *addr = mmap(nullptr, fiberSize + getRedZoneSize(), PROT_READ | PROT_WRITE
                           , MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
         if (addr == MAP_FAILED) {
@@ -169,7 +179,7 @@ Scheduler::allocateFiber(std::size_t fiberSize)
         }
 
         auto scopeGuard = MakeScopeGuard([&] () -> void {
-            if (munmap(addr, fiberSize + RED_ZONE_SIZE) < 0) {
+            if (munmap(addr, fiberSize + getRedZoneSize()) < 0) {
                 std::perror("munmap() failed");
                 std::terminate();
             }
@@ -178,12 +188,12 @@ Scheduler::allocateFiber(std::size_t fiberSize)
         void *redZone;
 #  if defined(__i386__) || defined(__x86_64__)
         redZone = addr;
-        base = static_cast<char *>(addr) + RED_ZONE_SIZE;
+        base = static_cast<char *>(addr) + getRedZoneSize();
 #  else
 #    error architecture not supported
 #  endif
 
-        if (mprotect(redZone, RED_ZONE_SIZE, PROT_NONE) < 0) {
+        if (mprotect(redZone, getRedZoneSize(), PROT_NONE) < 0) {
             throw std::system_error(errno, std::system_category(), "mprotect() failed");
         }
 
@@ -234,12 +244,12 @@ Scheduler::freeFiber(Fiber *fiber) noexcept
     {
         void *addr;
 #  if defined(__i386__) || defined(__x86_64__)
-        addr = base - RED_ZONE_SIZE;
+        addr = base - getRedZoneSize();
 #  else
 #    error architecture not supported
 #  endif
 
-        if (munmap(addr, fiberSize + RED_ZONE_SIZE) < 0) {
+        if (munmap(addr, fiberSize + getRedZoneSize()) < 0) {
             std::perror("munmap() failed");
             std::terminate();
         }
@@ -481,5 +491,17 @@ Scheduler::fiberStart() noexcept
     deadFiber_ = currentFiber_;
     runFiber(fiber);
 }
+
+
+namespace {
+
+std::size_t
+GetSystemPageSize()
+{
+    static std::size_t systemPageSize = sysconf(_SC_PAGESIZE);
+    return systemPageSize;
+}
+
+} // namespace
 
 } // namespace siren

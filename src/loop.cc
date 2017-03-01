@@ -17,9 +17,9 @@
 namespace siren {
 
 #ifdef SIREN_WITH_DEBUG
-#  define CHECK_FD(FD) SIREN_ASSERT(ioContextExists((FD)))
+#  define LOOP_CHECK_FD(FD) SIREN_ASSERT(ioContextExists((FD)))
 #else
-#  define CHECK_FD(FD)                \
+#  define LOOP_CHECK_FD(FD)           \
     do {                              \
         if (!ioContextExists((FD))) { \
             errno = EBADF;            \
@@ -224,7 +224,7 @@ Loop::open(const char *path, int flags, mode_t mode)
 int
 Loop::fcntl(int fd, int command, int argument) noexcept
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
 
     if (command == F_GETFL) {
         SIREN_UNUSED(argument);
@@ -286,7 +286,7 @@ Loop::pipe2(int fds[2], int flags)
 ssize_t
 Loop::read(int fd, void *buffer, size_t bufferSize)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     return readFile(fd, getEffectiveReadTimeout(fd), ::read, buffer, bufferSize);
 }
 
@@ -294,7 +294,7 @@ Loop::read(int fd, void *buffer, size_t bufferSize)
 ssize_t
 Loop::write(int fd, const void *data, size_t dataSize)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     return writeFile(fd, getEffectiveWriteTimeout(fd), ::write, data, dataSize);
 }
 
@@ -302,7 +302,7 @@ Loop::write(int fd, const void *data, size_t dataSize)
 ssize_t
 Loop::readv(int fd, const iovec *vector, int vectorLength)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     return readFile(fd, getEffectiveReadTimeout(fd), ::readv, vector, vectorLength);
 }
 
@@ -310,7 +310,7 @@ Loop::readv(int fd, const iovec *vector, int vectorLength)
 ssize_t
 Loop::writev(int fd, const iovec *vector, int vectorLength)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     return writeFile(fd, getEffectiveWriteTimeout(fd), ::writev, vector, vectorLength);
 }
 
@@ -342,7 +342,7 @@ int
 Loop::getsockopt(int fd, int level, int optionType, void *optionValue
                  , socklen_t *optionValueSize) const noexcept
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
 
     if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         const FileOptions *fileOptions = getFileOptions(fd);
@@ -380,7 +380,7 @@ int
 Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
                  , socklen_t optionValueSize) noexcept
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
 
     if (level == SOL_SOCKET && (optionType == SO_RCVTIMEO || optionType == SO_SNDTIMEO)) {
         FileOptions *fileOptions = getFileOptions(fd);
@@ -417,7 +417,7 @@ Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
 int
 Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
 
     for (;;) {
         int subFD = ::accept4(fd, name, nameSize, flags | SOCK_NONBLOCK);
@@ -454,7 +454,7 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
 int
 Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
 
     if (::connect(fd, name, nameSize) < 0) {
         if (errno == EINTR || errno == EINPROGRESS) {
@@ -489,7 +489,7 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
 ssize_t
 Loop::recv(int fd, void *buffer, size_t bufferSize, int flags)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     long timeout;
 
     if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
@@ -529,7 +529,7 @@ Loop::recv(int fd, void *buffer, size_t bufferSize, int flags)
 ssize_t
 Loop::send(int fd, const void *data, size_t dataSize, int flags)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     long timeout;
 
     if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
@@ -547,7 +547,7 @@ ssize_t
 Loop::recvfrom(int fd, void *buffer, size_t bufferSize, int flags, sockaddr *name
                , socklen_t *nameSize)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     long timeout;
 
     if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
@@ -588,7 +588,7 @@ ssize_t
 Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockaddr *name
              , socklen_t nameSize)
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     long timeout;
 
     if ((flags & MSG_DONTWAIT) == MSG_DONTWAIT) {
@@ -605,7 +605,7 @@ Loop::sendto(int fd, const void *data, size_t dataSize, int flags, const sockadd
 int
 Loop::close(int fd) noexcept
 {
-    CHECK_FD(fd);
+    LOOP_CHECK_FD(fd);
     destroyIOContext(fd);
     return ::close(fd);
 }

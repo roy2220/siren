@@ -25,7 +25,7 @@ private:
     const std::size_t blockSize_;
     const std::size_t minChunkSize_;
     std::vector<void *> chunks_;
-    std::size_t newChunkSize_;
+    std::size_t nextChunkSize_;
     void *lastNewBlock_;
     void *firstNewBlock_;
     void *lastFreeBlock_;
