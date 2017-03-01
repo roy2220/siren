@@ -1,13 +1,13 @@
--include .makesettings
+PREFIX = /usr/local
+BUILDDIR = build
+CXX = c++
+CPPFLAGS =
+CXXFLAGS =
+AR = ar
+ARFLAGS =
+DEBUG =
 
-PREFIX ?= /usr/local
-BUILDDIR ?= build
-CXX ?=
-CPPFLAGS ?=
-CXXFLAGS ?=
-AR ?=
-ARFLAGS ?=
-DEBUG ?=
+-include .makesettings
 
 override define settings :=
 PREFIX = $(PREFIX)
@@ -49,21 +49,21 @@ test: $(BUILDDIR)/siren-test
 
 
 install: build
-	mkdir -p $(PREFIX)/lib
-	cp -T $(BUILDDIR)/libsiren.a $(PREFIX)/lib/libsiren.a
-	mkdir -p $(PREFIX)/include
-	cp -rT include $(PREFIX)/include/siren
+	mkdir --parents $(PREFIX)/lib
+	cp --no-target-directory $(BUILDDIR)/libsiren.a $(PREFIX)/lib/libsiren.a
+	mkdir --parents $(PREFIX)/include
+	cp --no-target-directory --recursive include $(PREFIX)/include/siren
 
 
 uninstall:
-	rm -f $(PREFIX)/lib/libsiren.a
-	rmdir -p --ignore-fail-on-non-empty $(PREFIX)/lib
-	rm -rf $(PREFIX)/include/siren
-	rmdir -p --ignore-fail-on-non-empty $(PREFIX)/include
+	rm --force $(PREFIX)/lib/libsiren.a
+	rmdir --parents --ignore-fail-on-non-empty $(PREFIX)/lib
+	rm --force --recursive $(PREFIX)/include/siren
+	rmdir --parents --ignore-fail-on-non-empty $(PREFIX)/include
 
 
 tag:
-	GTAGSFORCECPP= gtags -i
+	GTAGSFORCECPP= gtags --incremental
 
 
 clean:
@@ -71,7 +71,7 @@ clean:
 
 
 $(BUILDDIR)/libsiren.a: $(libobjs)
-	@mkdir -p $(@D)
+	@mkdir --parents $(@D)
 	$(AR) $(ARFLAGS) $@ $^
 
 
@@ -81,7 +81,7 @@ endif
 
 
 $(BUILDDIR)/siren-test: $(testobjs)
-	@mkdir -p $(@D)
+	@mkdir --parents $(@D)
 	$(CXX) -o $@ $^ -lpthread
 
 
@@ -91,5 +91,5 @@ endif
 
 
 $(BUILDDIR)/%.o: %.cc
-	@mkdir -p $(@D)
+	@mkdir --parents $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<

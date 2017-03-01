@@ -363,8 +363,12 @@ Loop::getsockopt(int fd, int level, int optionType, void *optionValue
                 return 0;
             }
         } else {
+#ifdef SIREN_WITH_DEBUG
+            SIREN_ASSERT(false);
+#else
             errno = ENOTSOCK;
             return -1;
+#endif
         }
     } else {
         return ::getsockopt(fd, level, optionType, optionValue, optionValueSize);
@@ -397,8 +401,12 @@ Loop::setsockopt(int fd, int level, int optionType, const void *optionValue
                 return 0;
             }
         } else {
+#ifdef SIREN_WITH_DEBUG
+            SIREN_ASSERT(false);
+#else
             errno = ENOTSOCK;
             return -1;
+#endif
         }
     } else {
         return ::setsockopt(fd, level, optionType, optionValue, optionValueSize);
