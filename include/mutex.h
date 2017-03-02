@@ -20,9 +20,6 @@ public:
     inline bool tryLock() noexcept;
     inline bool tryUnlock() noexcept;
 
-    Mutex(Mutex &&) noexcept = default;
-    Mutex &operator=(Mutex &&) noexcept = default;
-
 private:
     Semaphore semaphore_;
 };

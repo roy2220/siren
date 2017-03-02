@@ -627,20 +627,15 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
             if (ioContextExists(pollFD->fd)) {
                 IOCondition ioConditions = IOCondition::No;
 
-                if ((pollFD->events & POLLIN) == POLLIN) {
-                    ioConditions |= IOCondition::In;
-                }
-
-                if ((pollFD->events & POLLOUT) == POLLOUT) {
-                    ioConditions |= IOCondition::Out;
-                }
-
-                if ((pollFD->events & POLLRDHUP) == POLLRDHUP) {
-                    ioConditions |= IOCondition::RdHup;
-                }
-
-                if ((pollFD->events & POLLPRI) == POLLPRI) {
-                    ioConditions |= IOCondition::Pri;
+                for (std::pair<int, IOCondition> x : {
+                     std::make_pair(POLLIN, IOCondition::In),
+                     std::make_pair(POLLOUT, IOCondition::Out),
+                     std::make_pair(POLLRDHUP, IOCondition::RdHup),
+                     std::make_pair(POLLPRI, IOCondition::Pri),
+                }) {
+                    if ((pollFD->events & x.first) == x.first) {
+                        ioConditions |= x.second;
+                    }
                 }
 
                 IOCondition readyIOConditions;
@@ -649,28 +644,17 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
                                 , std::chrono::milliseconds(timeout))) {
                     pollFD->revents = 0;
 
-                    if ((readyIOConditions & IOCondition::In) == IOCondition::In) {
-                        pollFD->revents |= POLLIN;
-                    }
-
-                    if ((readyIOConditions & IOCondition::Out) == IOCondition::Out) {
-                        pollFD->revents |= POLLOUT;
-                    }
-
-                    if ((readyIOConditions & IOCondition::RdHup) == IOCondition::RdHup) {
-                        pollFD->revents |= POLLRDHUP;
-                    }
-
-                    if ((readyIOConditions & IOCondition::Pri) == IOCondition::Pri) {
-                        pollFD->revents |= POLLPRI;
-                    }
-
-                    if ((readyIOConditions & IOCondition::Err) == IOCondition::Err) {
-                        pollFD->revents |= POLLERR;
-                    }
-
-                    if ((readyIOConditions & IOCondition::Hup) == IOCondition::Hup) {
-                        pollFD->revents |= POLLHUP;
+                    for (std::pair<IOCondition, int> x : {
+                         std::make_pair(IOCondition::In, POLLIN),
+                         std::make_pair(IOCondition::Out, POLLOUT),
+                         std::make_pair(IOCondition::RdHup, POLLRDHUP),
+                         std::make_pair(IOCondition::Pri, POLLPRI),
+                         std::make_pair(IOCondition::Err, POLLERR),
+                         std::make_pair(IOCondition::Hup, POLLHUP),
+                    }) {
+                        if ((readyIOConditions & x.first) == x.first) {
+                            pollFD->revents |= x.second;
+                        }
                     }
 
                     return 1;

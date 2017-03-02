@@ -14,7 +14,7 @@ public:
     inline const void *getData(std::size_t = 0) const noexcept;
     inline void *getData(std::size_t = 0) noexcept;
     inline std::size_t getDataSize() const noexcept;
-    inline void pickData(std::size_t) noexcept;
+    inline void commitData(std::size_t) noexcept;
     inline void *getBuffer(std::size_t = 0) noexcept;
     inline std::size_t getBufferSize() const noexcept;
 
@@ -23,7 +23,7 @@ public:
     Stream &operator=(Stream &&) noexcept;
 
     void reset() noexcept;
-    void dropData(std::size_t) noexcept;
+    void discardData(std::size_t) noexcept;
     void reserveBuffer(std::size_t);
     void read(void *, std::size_t) noexcept;
     void write(const void *, std::size_t);
@@ -72,7 +72,7 @@ Stream::getDataSize() const noexcept
 
 
 void
-Stream::pickData(std::size_t dataSize) noexcept
+Stream::commitData(std::size_t dataSize) noexcept
 {
     SIREN_ASSERT(bufferOffset_ + dataSize <= base_.getLength());
     bufferOffset_ += dataSize;

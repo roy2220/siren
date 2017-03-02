@@ -38,9 +38,6 @@ public:
     inline int pipe(int [2]);
     inline int accept(int, sockaddr *, socklen_t *);
 
-    Loop(Loop &&) noexcept = default;
-    Loop &operator=(Loop &&) noexcept = default;
-
     explicit Loop(std::size_t = 0);
 
     void run();

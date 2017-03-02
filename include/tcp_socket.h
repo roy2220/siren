@@ -16,6 +16,7 @@ class TCPSocket final
 {
 public:
     inline bool isValid() const noexcept;
+    inline int getFD() const noexcept;
 
     explicit TCPSocket(Loop *);
     TCPSocket(TCPSocket &&) noexcept;
@@ -28,6 +29,8 @@ public:
     void setKeepAlive(bool, int);
     void setReceiveTimeout(long);
     void setSendTimeout(long);
+    void setReceiveBufferSize(int);
+    void setSendBufferSize(int);
     void listen(const IPEndpoint &, int = 511);
     TCPSocket accept(IPEndpoint * = nullptr);
     void connect(const IPEndpoint &);
@@ -63,6 +66,13 @@ bool
 TCPSocket::isValid() const noexcept
 {
     return fd_ >= 0;
+}
+
+
+int
+TCPSocket::getFD() const noexcept
+{
+    return fd_;
 }
 
 } // namespace siren

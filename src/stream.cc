@@ -57,7 +57,7 @@ Stream::reset() noexcept
 
 
 void
-Stream::dropData(std::size_t dataSize) noexcept
+Stream::discardData(std::size_t dataSize) noexcept
 {
     SIREN_ASSERT(dataOffset_ + dataSize <= bufferOffset_);
     dataOffset_ += dataSize;
@@ -90,7 +90,7 @@ Stream::read(void *buffer, std::size_t bufferSize) noexcept
 {
     SIREN_ASSERT(bufferSize <= getDataSize());
     std::memcpy(buffer, getData(), bufferSize);
-    dropData(bufferSize);
+    discardData(bufferSize);
 }
 
 
@@ -99,7 +99,7 @@ Stream::write(const void *data, std::size_t dataSize)
 {
     reserveBuffer(dataSize);
     std::memcpy(getBuffer(), data, dataSize);
-    pickData(dataSize);
+    commitData(dataSize);
 }
 
 } // namespace siren

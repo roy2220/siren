@@ -49,8 +49,8 @@ void
 Archive::finalize() noexcept
 {
     if (isValid() && !std::uncaught_exception()) {
-        stream_->pickData(writtenByteCount_);
-        stream_->dropData(readByteCount_);
+        stream_->commitData(writtenByteCount_);
+        stream_->discardData(readByteCount_);
     }
 }
 

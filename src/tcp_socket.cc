@@ -132,8 +132,6 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
     }
 
     if (keepAlive) {
-        SIREN_ASSERT(interval >= 1);
-
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPIDLE, &interval, sizeof(interval)) < 0) {
             throw std::system_error(errno, std::system_category(), "setsockopt() failed");
         }
@@ -176,6 +174,24 @@ TCPSocket::setSendTimeout(long sendTimeout)
     time.tv_usec = (sendTimeout % 1000) * 1000;
 
     if (loop_->setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &time, sizeof(time)) < 0) {
+        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+    }
+}
+
+
+void
+TCPSocket::setReceiveBufferSize(int receiveBufferSize)
+{
+    if (setsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) < 0) {
+        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+    }
+}
+
+
+void
+TCPSocket::setSendBufferSize(int sendBufferSize)
+{
+    if (setsockopt(fd_, SOL_SOCKET, SO_SNDBUF, &sendBufferSize, sizeof(sendBufferSize)) < 0) {
         throw std::system_error(errno, std::system_category(), "setsockopt() failed");
     }
 }
@@ -278,7 +294,7 @@ TCPSocket::read(Stream *stream)
         throw std::system_error(errno, std::system_category(), "read() failed");
     }
 
-    stream->pickData(numberOfBytes);
+    stream->commitData(numberOfBytes);
     return numberOfBytes;
 }
 
@@ -296,7 +312,7 @@ TCPSocket::write(Stream *stream)
         throw std::system_error(errno, std::system_category(), "send() failed");
     }
 
-    stream->dropData(numberOfBytes);
+    stream->discardData(numberOfBytes);
     return numberOfBytes;
 }
 
