@@ -2,7 +2,7 @@
 
 
 #include "config.h"
-#include "macros.h"
+#include "utility.h"
 
 
 #ifdef SIREN_WITH_DEBUG

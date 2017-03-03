@@ -23,8 +23,8 @@ public:
     inline const void *getObjectTag(const T *) const noexcept;
     inline void *getObjectTag(T *) const noexcept;
 
-    template <class ...Args>
-    inline T *createObject(Args &&...);
+    template <class ...U>
+    inline T *createObject(U &&...);
 
 private:
     std::size_t memoryBlockAlignment_;
@@ -43,12 +43,12 @@ private:
 
 
 #include <algorithm>
+#include <new>
 #include <utility>
 
 #include "assert.h"
-#include "macros.h"
-#include "next_power_of_two.h"
 #include "scope_guard.h"
+#include "utility.h"
 
 
 namespace siren {
@@ -57,8 +57,8 @@ template <class T>
 ObjectPool<T>::ObjectPool(std::size_t numberOfObjectsToReserve, std::size_t objectTagAlignment
                           , std::size_t objectTagSize) noexcept
   : memoryBlockAlignment_(std::max(alignof(T), NextPowerOfTwo(objectTagAlignment))),
-    memoryPool_(memoryBlockAlignment_, SIREN_ALIGN(sizeof(T), memoryBlockAlignment_)
-                                       + SIREN_ALIGN(objectTagSize, memoryBlockAlignment_)
+    memoryPool_(memoryBlockAlignment_, AlignSize(sizeof(T), memoryBlockAlignment_)
+                                       + AlignSize(objectTagSize, memoryBlockAlignment_)
                 , numberOfObjectsToReserve)
 #ifdef SIREN_WITH_DEBUG
         ,
@@ -76,9 +76,9 @@ ObjectPool<T>::~ObjectPool()
 
 
 template <class T>
-template <class ...Args>
+template <class ...U>
 T *
-ObjectPool<T>::createObject(Args &&...args)
+ObjectPool<T>::createObject(U &&...argument)
 {
     void *memoryBlock = memoryPool_.allocateBlock();
 
@@ -86,7 +86,7 @@ ObjectPool<T>::createObject(Args &&...args)
         memoryPool_.freeBlock(memoryBlock);
     });
 
-    T *object = new (memoryBlock) T(std::forward<Args>(args)...);
+    T *object = new (memoryBlock) T(std::forward<U>(argument)...);
     scopeGuard.dismiss();
 #ifdef SIREN_WITH_DEBUG
     ++objectCount_;
@@ -114,7 +114,7 @@ const void *
 ObjectPool<T>::getObjectTag(const T *object) const noexcept
 {
     SIREN_ASSERT(object != nullptr);
-    return reinterpret_cast<const char *>(object) + SIREN_ALIGN(sizeof(T), memoryBlockAlignment_);
+    return reinterpret_cast<const char *>(object) + AlignSize(sizeof(T), memoryBlockAlignment_);
 }
 
 
@@ -123,7 +123,7 @@ void *
 ObjectPool<T>::getObjectTag(T *object) const noexcept
 {
     SIREN_ASSERT(object != nullptr);
-    return reinterpret_cast<char *>(object) + SIREN_ALIGN(sizeof(T), memoryBlockAlignment_);
+    return reinterpret_cast<char *>(object) + AlignSize(sizeof(T), memoryBlockAlignment_);
 }
 
 } // namespace siren

@@ -117,8 +117,8 @@ struct FiberInterruption
 #include <utility>
 
 #include "assert.h"
-#include "macros.h"
 #include "scope_guard.h"
+#include "utility.h"
 
 
 namespace siren {
@@ -170,7 +170,7 @@ Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackgro
     if (fiberSize == 0) {
         fiberSize = defaultFiberSize_;
     } else {
-        fiberSize = SIREN_ALIGN(fiberSize, systemPageSize_);
+        fiberSize = AlignSize(fiberSize, systemPageSize_);
     }
 
     Fiber *fiber = allocateFiber(fiberSize);

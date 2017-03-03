@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 
 #include "config.h"
-#include "macros.h"
+#include "utility.h"
 #include "scope_guard.h"
 
 
@@ -133,7 +133,8 @@ Loop::registerFD(int fd)
             socklen_t timeSize = sizeof(time);
 
             if (::getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &time, &timeSize) < 0) {
-                throw std::system_error(errno, std::system_category(), "getsockopt() failed");
+                throw std::system_error(errno, std::system_category()
+                                        , "getsockopt(SO_RCVTIMEO) failed");
             }
 
             readTimeout = TimeToTimeout(time);
@@ -144,7 +145,8 @@ Loop::registerFD(int fd)
             socklen_t timeSize = sizeof(time);
 
             if (::getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &time, &timeSize) < 0) {
-                throw std::system_error(errno, std::system_category(), "getsockopt() failed");
+                throw std::system_error(errno, std::system_category()
+                                        , "getsockopt(SO_SNDTIMEO) failed");
             }
 
             writeTimeout = TimeToTimeout(time);
@@ -174,7 +176,7 @@ Loop::unregisterFD(int fd) noexcept
             timeval time = TimeoutToTime(fileOptions->readTimeout);
 
             if (::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
-                std::perror("setsockopt() failed");
+                std::perror("setsockopt(SO_RCVTIMEO) failed");
                 std::terminate();
             }
         }
@@ -183,7 +185,7 @@ Loop::unregisterFD(int fd) noexcept
             timeval time = TimeoutToTime(fileOptions->writeTimeout);
 
             if (::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &time, sizeof(time)) < 0) {
-                std::perror("setsockopt() failed");
+                std::perror("setsockopt(SO_SNDTIMEO) failed");
                 std::terminate();
             }
         }
@@ -464,7 +466,8 @@ Loop::connect(int fd, const sockaddr *name, socklen_t nameSize)
                 socklen_t errorNumberSize = sizeof(errorNumber);
 
                 if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &errorNumber, &errorNumberSize) < 0) {
-                    throw std::system_error(errno, std::system_category(), "getsockopt() failed");
+                    throw std::system_error(errno, std::system_category()
+                                            , "getsockopt(SO_ERROR) failed");
                 }
 
                 if (errorNumber == 0) {
@@ -678,12 +681,12 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
 
 
 
-template <class Func, class ...Args>
+template <class T, class ...U>
 ssize_t
-Loop::readFile(int fd, long timeout, Func func, Args &&...args)
+Loop::readFile(int fd, long timeout, T &&function, U &&...argument)
 {
     for (;;) {
-        ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
+        ssize_t numberOfBytes = function(fd, std::forward<U>(argument)...);
 
         if (numberOfBytes < 0) {
             if (errno == EAGAIN) {
@@ -704,12 +707,12 @@ Loop::readFile(int fd, long timeout, Func func, Args &&...args)
 }
 
 
-template <class Func, class ...Args>
+template <class T, class ...U>
 ssize_t
-Loop::writeFile(int fd, long timeout, Func func, Args &&...args)
+Loop::writeFile(int fd, long timeout, T &&function, U &&...argument)
 {
     for (;;) {
-        ssize_t numberOfBytes = func(fd, std::forward<Args>(args)...);
+        ssize_t numberOfBytes = function(fd, std::forward<U>(argument)...);
 
         if (numberOfBytes < 0) {
             if (errno == EAGAIN) {
@@ -908,7 +911,7 @@ SetBlocking(int fd, bool blocking)
     int flags = fcntl(fd, F_GETFL);
 
     if (flags < 0) {
-        throw std::system_error(errno, std::system_category(), "fcntl() failed");
+        throw std::system_error(errno, std::system_category(), "fcntl(F_GETFL) failed");
     }
 
     if ((flags & O_NONBLOCK) == O_NONBLOCK) {
@@ -926,7 +929,7 @@ SetBlocking(int fd, bool blocking)
     }
 
     if (fcntl(fd, F_SETFL, flags) < 0) {
-        throw std::system_error(errno, std::system_category(), "fcntl() failed");
+        throw std::system_error(errno, std::system_category(), "fcntl(F_SETFL) failed");
     }
 
     return !blocking;

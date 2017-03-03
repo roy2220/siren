@@ -1,4 +1,5 @@
-#include <unistd.h>
+#include <cerrno>
+#include <functional>
 
 #include "async.h"
 #include "loop.h"
@@ -13,7 +14,7 @@ using namespace siren;
 SIREN_TEST("Execute async task")
 {
     Loop loop;
-    Async async(&loop);
+    Async async(&loop, 1);
 
     loop.createFiber([&] () {
         int f = false;
@@ -60,4 +61,29 @@ SIREN_TEST("Execute async task")
     loop.run();
 }
 
+}
+
+
+SIREN_TEST("Do async calls")
+{
+    Loop loop;
+    Async async(&loop, 1);
+
+    loop.createFiber([&] () {
+        int a = async.callFunction([] (int x, int y) -> int { return x > y ? x : y; }, 43, 99);
+        SIREN_TEST_ASSERT(a == 99);
+    });
+
+    loop.createFiber([&] () {
+        int a = 0;
+        async.callFunction([] (int &a) -> void { a = 4399; }, std::ref(a));
+        SIREN_TEST_ASSERT(a == 4399);
+    });
+
+    loop.createFiber([&] () {
+        async.callFunction([] () -> void { errno = 4399; });
+        SIREN_TEST_ASSERT(errno == 4399);
+    });
+
+    loop.run();
 }

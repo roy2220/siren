@@ -150,7 +150,7 @@ IOPoller::destroyContext(int fd) noexcept
 
     if (context->conditions != Condition::No) {
         if (epoll_ctl(epollFD_, EPOLL_CTL_DEL, fd, nullptr) < 0) {
-            std::perror("epoll_ctl() failed");
+            std::perror("epoll_ctl(EPOLL_CTL_DEL) failed");
             std::terminate();
         }
     }
@@ -316,7 +316,15 @@ IOPoller::flushContexts()
             event.data.ptr = context;
 
             if (epoll_ctl(epollFD_, op, getFD(context), &event) < 0) {
-                throw std::system_error(errno, std::system_category(), "epoll_ctl() failed");
+                if (op == EPOLL_CTL_DEL) {
+                    std::perror("epoll_ctl(EPOLL_CTL_DEL) failed");
+                    std::terminate();
+                } else {
+                    throw std::system_error(errno, std::system_category()
+                                            , op == EPOLL_CTL_ADD
+                                              ? "epoll_ctl(EPOLL_CTL_ADD) failed"
+                                              : "epoll_ctl(EPOLL_CTL_MOD) failed");
+                }
             }
 
             context->conditions = context->pendingConditions;

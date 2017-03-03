@@ -47,7 +47,7 @@ private:
 #include <cstdlib>
 #include <system_error>
 
-#include "next_power_of_two.h"
+#include "utility.h"
 
 
 namespace siren {

@@ -177,9 +177,8 @@ private:
 #include <limits>
 
 #include "assert.h"
-#include "convert_pointer.h"
 #include "stream.h"
-#include "unsigned_to_signed.h"
+#include "utility.h"
 
 
 namespace siren {

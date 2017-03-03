@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <new>
 #include <system_error>
 
 #include "config.h"
@@ -35,7 +36,7 @@ Scheduler::FiberStartWrapper(Scheduler *self) noexcept
 
 Scheduler::Scheduler(std::size_t defaultFiberSize) noexcept
   : systemPageSize_(GetSystemPageSize()),
-    defaultFiberSize_(SIREN_ALIGN(std::max(defaultFiberSize, std::size_t(1)), systemPageSize_)),
+    defaultFiberSize_(AlignSize(std::max(defaultFiberSize, std::size_t(1)), systemPageSize_)),
     currentFiber_((idleFiber_.state = FiberState::Running, &idleFiber_)),
     deadFiber_(nullptr),
     activeFiberCount_(0)

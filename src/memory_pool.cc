@@ -6,8 +6,7 @@
 #include <system_error>
 #include <utility>
 
-#include "macros.h"
-#include "next_power_of_two.h"
+#include "utility.h"
 
 
 namespace siren {
@@ -15,7 +14,7 @@ namespace siren {
 MemoryPool::MemoryPool(std::size_t blockAlignment, std::size_t blockSize
                        , std::size_t minChunkLength) noexcept
   : blockAlignment_(std::max(NextPowerOfTwo(blockAlignment), std::size_t(1))),
-    blockSize_(SIREN_ALIGN(std::max(blockSize, sizeof(void *)), blockAlignment_)),
+    blockSize_(AlignSize(std::max(blockSize, sizeof(void *)), blockAlignment_)),
     minChunkSize_(NextPowerOfTwo(std::max(minChunkLength, std::size_t(1)) * blockSize_))
 {
     SIREN_ASSERT(blockAlignment_ <= alignof(std::max_align_t));

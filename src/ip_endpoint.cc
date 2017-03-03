@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include <netdb.h>
+
 #include "async.h"
 #include "scope_guard.h"
 
@@ -15,7 +17,7 @@ IPEndpoint::ResolveName(Async *async, const char *hostName, const char *serviceN
     std::memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     addrinfo *result;
-    int errorCode = async->getaddrinfo(hostName, serviceName, &hints, &result);
+    int errorCode = async->callFunction(getaddrinfo, hostName, serviceName, &hints, &result);
 
     if (errorCode != 0) {
         throw GAIError(errorCode);

@@ -1,6 +1,12 @@
 #include <errno.h>
 #include <stdarg.h>
 
+#include <fcntl.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 #include "async.h"
 #include "loop.h"
 
@@ -31,7 +37,7 @@ siren_fs_open(const char *arg1, int arg2, ...) noexcept
     va_end(ap);
 
     try {
-        return siren_async->open(arg1, arg2, arg3);
+        return siren_async->callFunction(open, arg1, arg2, arg3);
     } catch (siren::FiberInterruption){
         errno = ECANCELED;
         return -1;
@@ -80,7 +86,7 @@ ssize_t
 siren_fs_read(int arg1, void *arg2, size_t arg3) noexcept
 {
     try {
-        return siren_async->read(arg1, arg2, arg3);
+        return siren_async->callFunction(read, arg1, arg2, arg3);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -104,7 +110,7 @@ ssize_t
 siren_fs_write(int arg1, const void *arg2, size_t arg3) noexcept
 {
     try {
-        return siren_async->write(arg1, arg2, arg3);
+        return siren_async->callFunction(write, arg1, arg2, arg3);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -128,7 +134,7 @@ ssize_t
 siren_fs_readv(int arg1, const struct iovec *arg2, int arg3) noexcept
 {
     try {
-        return siren_async->readv(arg1, arg2, arg3);
+        return siren_async->callFunction(readv, arg1, arg2, arg3);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -152,7 +158,7 @@ ssize_t
 siren_fs_writev(int arg1, const struct iovec *arg2, int arg3) noexcept
 {
     try {
-        return siren_async->writev(arg1, arg2, arg3);
+        return siren_async->callFunction(writev, arg1, arg2, arg3);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -164,7 +170,7 @@ off_t
 siren_lseek(int arg1, off_t arg2, int arg3) noexcept
 {
     try {
-        return siren_async->lseek(arg1, arg2, arg3);
+        return siren_async->callFunction(lseek, arg1, arg2, arg3);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -183,7 +189,7 @@ int
 siren_fs_close(int arg1) noexcept
 {
     try {
-        return siren_async->close(arg1);
+        return siren_async->callFunction(close, arg1);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return -1;
@@ -315,7 +321,7 @@ siren_getaddrinfo(const char *arg1, const char *arg2, const struct addrinfo *arg
                   , struct addrinfo **arg4) noexcept
 {
     try {
-        return siren_async->getaddrinfo(arg1, arg2, arg3, arg4);
+        return siren_async->callFunction(getaddrinfo, arg1, arg2, arg3, arg4);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return EAI_SYSTEM;
@@ -328,7 +334,7 @@ siren_getnameinfo(const struct sockaddr *arg1, socklen_t arg2, char *arg3, sockl
                   , char *arg5, socklen_t arg6, int arg7) noexcept
 {
     try {
-        return siren_async->getnameinfo(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        return siren_async->callFunction(getnameinfo, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     } catch (siren::FiberInterruption) {
         errno = ECANCELED;
         return EAI_SYSTEM;

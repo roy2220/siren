@@ -8,8 +8,8 @@
 #include "assert.h"
 #include "io_clock.h"
 #include "io_poller.h"
-#include "macros.h"
 #include "test.h"
+#include "utility.h"
 
 
 namespace {

@@ -79,11 +79,11 @@ private:
     bool waitForFile(int, IOCondition, IOCondition *, std::chrono::milliseconds);
     void setDelay(std::chrono::milliseconds);
 
-    template <class Func, class ...Args>
-    ssize_t readFile(int, long, Func, Args &&...);
+    template <class T, class ...U>
+    ssize_t readFile(int, long, T &&, U &&...);
 
-    template <class Func, class ...Args>
-    ssize_t writeFile(int, long, Func, Args &&...);
+    template <class T, class ...U>
+    ssize_t writeFile(int, long, T &&, U &&...);
 };
 
 } // namespace siren

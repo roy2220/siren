@@ -156,7 +156,7 @@ ThreadPool::removeTask(Task *task, bool *taskIsCompleted) noexcept
 
         if (removeWaitingTask(task)) {
 #ifdef SIREN_WITH_DEBUG
-            task->state_.store(TaskState::Initial, std::memory_order_release);
+            task->state_.store(TaskState::Initial, std::memory_order_relaxed);
 #endif
             return;
         } else {
@@ -257,8 +257,8 @@ ThreadPool::getCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
         completedTaskList_.prependNodes(list.getHead(), task);
     });
 
-    SIREN_LIST_FOREACH_REVERSE(ListNode, list) {
-        task = static_cast<Task *>(ListNode);
+    SIREN_LIST_FOREACH_REVERSE(listNode, list) {
+        task = static_cast<Task *>(listNode);
         tasks->push_back(task);
     }
 

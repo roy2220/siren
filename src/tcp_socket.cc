@@ -93,7 +93,7 @@ TCPSocket::setReuseAddress(bool reuseAddress)
     int onOff = reuseAddress;
 
     if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &onOff, sizeof(onOff)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_REUSEADDR) failed");
     }
 }
 
@@ -104,7 +104,7 @@ TCPSocket::setNoDelay(bool noDelay)
     int onOff = noDelay;
 
     if (setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &onOff, sizeof(onOff)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(TCP_NODELAY) failed");
     }
 }
 
@@ -117,7 +117,7 @@ TCPSocket::setLinger(bool linger1, int interval)
     value.l_linger = interval;
 
     if (setsockopt(fd_, SOL_SOCKET, SO_LINGER, &value, sizeof(value)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_LINGER) failed");
     }
 }
 
@@ -128,24 +128,27 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
     int onOff = keepAlive;
 
     if (setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, &onOff, sizeof(onOff)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_KEEPALIVE) failed");
     }
 
     if (keepAlive) {
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPIDLE, &interval, sizeof(interval)) < 0) {
-            throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+            throw std::system_error(errno, std::system_category()
+                                    , "setsockopt(TCP_KEEPIDLE) failed");
         }
 
         int count = 3;
 
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)) < 0) {
-            throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+            throw std::system_error(errno, std::system_category()
+                                    , "setsockopt(TCP_KEEPCNT) failed");
         }
 
         interval = std::max(interval / count, 1);
 
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) < 0) {
-            throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+            throw std::system_error(errno, std::system_category()
+                                    , "setsockopt(TCP_KEEPINTVL) failed");
         }
     }
 }
@@ -160,7 +163,7 @@ TCPSocket::setReceiveTimeout(long receiveTimeout)
     time.tv_usec = (receiveTimeout % 1000) * 1000;
 
     if (loop_->setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_RCVTIMEO) failed");
     }
 }
 
@@ -174,7 +177,7 @@ TCPSocket::setSendTimeout(long sendTimeout)
     time.tv_usec = (sendTimeout % 1000) * 1000;
 
     if (loop_->setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &time, sizeof(time)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_SNDTIMEO) failed");
     }
 }
 
@@ -183,7 +186,7 @@ void
 TCPSocket::setReceiveBufferSize(int receiveBufferSize)
 {
     if (setsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_RCVBUF) failed");
     }
 }
 
@@ -192,7 +195,7 @@ void
 TCPSocket::setSendBufferSize(int sendBufferSize)
 {
     if (setsockopt(fd_, SOL_SOCKET, SO_SNDBUF, &sendBufferSize, sizeof(sendBufferSize)) < 0) {
-        throw std::system_error(errno, std::system_category(), "setsockopt() failed");
+        throw std::system_error(errno, std::system_category(), "setsockopt(SO_SNDBUF) failed");
     }
 }
 
@@ -323,7 +326,7 @@ TCPSocket::closeRead()
     SIREN_ASSERT(isValid());
 
     if (shutdown(fd_, SHUT_RD) < 0) {
-        throw std::system_error(errno, std::system_category(), "shutdown() failed");
+        throw std::system_error(errno, std::system_category(), "shutdown(SHUT_RD) failed");
     }
 }
 
@@ -334,7 +337,7 @@ TCPSocket::closeWrite()
     SIREN_ASSERT(isValid());
 
     if (shutdown(fd_, SHUT_WR) < 0) {
-        throw std::system_error(errno, std::system_category(), "shutdown() failed");
+        throw std::system_error(errno, std::system_category(), "shutdown(SHUT_WR) failed");
     }
 }
 
