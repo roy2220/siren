@@ -5,10 +5,11 @@
 
 namespace siren {
 
-Archive::Archive(Stream *stream) noexcept
+Archive::Archive(Stream *stream, std::size_t numberOfPreReadBytes
+                 , std::size_t numberOfPreWrittenBytes) noexcept
 {
     SIREN_ASSERT(stream != nullptr);
-    initialize(stream);
+    initialize(stream, numberOfPreReadBytes, numberOfPreWrittenBytes);
 }
 
 
@@ -18,17 +19,10 @@ Archive::Archive(Archive &&other) noexcept
 }
 
 
-Archive::~Archive()
-{
-    finalize();
-}
-
-
 Archive &
 Archive::operator=(Archive &&other) noexcept
 {
     if (&other != this) {
-        finalize();
         other.move(this);
     }
 
@@ -37,21 +31,12 @@ Archive::operator=(Archive &&other) noexcept
 
 
 void
-Archive::initialize(Stream *stream) noexcept
+Archive::initialize(Stream *stream, std::size_t numberOfPreReadBytes
+                    , std::size_t numberOfPreWrittenBytes) noexcept
 {
     stream_ = stream;
-    writtenByteCount_ = 0;
-    readByteCount_ = 0;
-}
-
-
-void
-Archive::finalize() noexcept
-{
-    if (isValid() && !std::uncaught_exception()) {
-        stream_->commitData(writtenByteCount_);
-        stream_->discardData(readByteCount_);
-    }
+    preReadByteCount_ = numberOfPreReadBytes;
+    preWrittenByteCount_ = numberOfPreWrittenBytes;
 }
 
 
@@ -60,8 +45,8 @@ Archive::move(Archive *other) noexcept
 {
     other->stream_ = stream_;
     stream_ = nullptr;
-    other->writtenByteCount_ = writtenByteCount_;
-    other->readByteCount_ = readByteCount_;
+    other->preReadByteCount_ = preReadByteCount_;
+    other->preWrittenByteCount_ = preWrittenByteCount_;
 }
 
 
@@ -76,7 +61,8 @@ Archive::serializeVariableLengthInteger(std::uintmax_t integer)
 
     for (unsigned int n = k1 - k2; UnsignedToSigned(n) >= 1; n -= k2) {
         if ((((integer >> k2) ^ (integer >> (k2 - 1))) & ((UINTMAX_C(1) << n) - 1)) == 0) {
-            auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_ - 1));
+            auto buffer = static_cast<unsigned char *>(stream_->getBuffer(preWrittenByteCount_
+                                                                          - 1));
             *buffer |= k3 + 1;
             return;
         } else {
@@ -110,23 +96,23 @@ Archive::deserializeVariableLengthInteger(std::uintmax_t *integer)
 void
 Archive::serializeBytes(const void *bytes, std::size_t numberOfBytes)
 {
-    stream_->reserveBuffer(writtenByteCount_ + numberOfBytes);
-    void *buffer = stream_->getBuffer(writtenByteCount_);
+    stream_->reserveBuffer(preWrittenByteCount_ + numberOfBytes);
+    void *buffer = stream_->getBuffer(preWrittenByteCount_);
     std::memcpy(buffer, bytes, numberOfBytes);
-    writtenByteCount_ += numberOfBytes;
+    preWrittenByteCount_ += numberOfBytes;
 }
 
 
 void
 Archive::deserializeBytes(void *bytes, std::size_t numberOfBytes)
 {
-    if (stream_->getDataSize() < readByteCount_ + numberOfBytes) {
+    if (stream_->getDataSize() < preReadByteCount_ + numberOfBytes) {
         throw EndOfStream();
     }
 
-    void *data = stream_->getData(readByteCount_);
+    void *data = stream_->getData(preReadByteCount_);
     std::memcpy(bytes, data, numberOfBytes);
-    readByteCount_ += numberOfBytes;
+    preReadByteCount_ += numberOfBytes;
 }
 
 

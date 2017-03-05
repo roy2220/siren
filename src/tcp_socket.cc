@@ -285,18 +285,41 @@ TCPSocket::getRemoteEndpoint() const
 
 
 std::size_t
+TCPSocket::read(void *buffer, std::size_t bufferSize)
+{
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(buffer != nullptr || bufferSize == 0);
+    ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0);
+
+    if (numberOfBytes < 0) {
+        throw std::system_error(errno, std::system_category(), "recv() failed");
+    }
+
+    return numberOfBytes;
+}
+
+
+std::size_t
+TCPSocket::write(const void *data, std::size_t dataSize)
+{
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(data != nullptr || dataSize == 0);
+    ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL);
+
+    if (numberOfBytes < 0) {
+        throw std::system_error(errno, std::system_category(), "send() failed");
+    }
+
+    return numberOfBytes;
+}
+
+
+std::size_t
 TCPSocket::read(Stream *stream)
 {
     SIREN_ASSERT(isValid());
     SIREN_ASSERT(stream != nullptr);
-    void *buffer = stream->getBuffer();
-    std::size_t bufferSize = stream->getBufferSize();
-    ssize_t numberOfBytes = loop_->recv(fd_, buffer, bufferSize, 0);
-
-    if (numberOfBytes < 0) {
-        throw std::system_error(errno, std::system_category(), "read() failed");
-    }
-
+    std::size_t numberOfBytes = read(stream->getBuffer(), stream->getBufferSize());
     stream->commitData(numberOfBytes);
     return numberOfBytes;
 }
@@ -307,14 +330,7 @@ TCPSocket::write(Stream *stream)
 {
     SIREN_ASSERT(isValid());
     SIREN_ASSERT(stream != nullptr);
-    const void *data = stream->getData();
-    std::size_t dataSize = stream->getDataSize();
-    ssize_t numberOfBytes = loop_->send(fd_, data, dataSize, MSG_NOSIGNAL);
-
-    if (numberOfBytes < 0) {
-        throw std::system_error(errno, std::system_category(), "send() failed");
-    }
-
+    std::size_t numberOfBytes = write(stream->getData(), stream->getDataSize());
     stream->discardData(numberOfBytes);
     return numberOfBytes;
 }

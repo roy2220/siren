@@ -27,6 +27,9 @@ namespace siren {
 class ArchiveEndOfStream;
 class Stream;
 
+template <class T, bool = std::is_integral<T>::value>
+class VLI;
+
 
 class Archive final
 {
@@ -43,16 +46,16 @@ public:
     inline Archive &operator>>(std::string &);
 
     template <class T>
-    inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator<<(T);
+    inline std::enable_if_t<std::is_integral<T>::value, Archive &> operator<<(T);
 
     template <class T>
-    inline std::enable_if_t<std::is_unsigned<T>::value, Archive &> operator>>(T &);
+    inline std::enable_if_t<std::is_integral<T>::value, Archive &> operator>>(T &);
 
     template <class T>
-    inline std::enable_if_t<std::is_signed<T>::value, Archive &> operator<<(T);
+    inline Archive &operator<<(VLI<T>);
 
     template <class T>
-    inline std::enable_if_t<std::is_signed<T>::value, Archive &> operator>>(T &);
+    inline Archive &operator>>(VLI<T> &);
 
     template <class T>
     inline std::enable_if_t<std::is_enum<T>::value, Archive &> operator<<(T);
@@ -91,30 +94,47 @@ public:
     inline std::enable_if_t<std::is_class<T>::value, Archive &> operator>>(T &);
 
     inline bool isValid() const noexcept;
+    inline std::size_t getNumberOfPreReadBytes() const noexcept;
+    inline std::size_t getNumberOfPreWrittenBytes() const noexcept;
 
-    explicit Archive(Stream *) noexcept;
+    explicit Archive(Stream *, std::size_t = 0, std::size_t = 0) noexcept;
     Archive(Archive &&) noexcept;
-    ~Archive();
     Archive &operator=(Archive &&) noexcept;
+
+    void serializeBytes(const void *, std::size_t);
+    void deserializeBytes(void *, std::size_t);
 
 private:
     Stream *stream_;
-    std::size_t writtenByteCount_;
-    std::size_t readByteCount_;
+    std::size_t preReadByteCount_;
+    std::size_t preWrittenByteCount_;
 
     template <class T>
-    inline std::enable_if_t<std::is_unsigned<T>::value, void> serializeInteger(T);
+    inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+                            , void> serializeInteger(T);
 
     template <class T>
-    inline std::enable_if_t<std::is_unsigned<T>::value, void> deserializeInteger(T *);
+    inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+                            , void> deserializeInteger(T *);
 
-    void initialize(Stream *) noexcept;
-    void finalize() noexcept;
+    void initialize(Stream *, std::size_t, std::size_t) noexcept;
     void move(Archive *) noexcept;
     void serializeVariableLengthInteger(std::uintmax_t);
     void deserializeVariableLengthInteger(std::uintmax_t *);
-    void serializeBytes(const void *, std::size_t);
-    void deserializeBytes(void *, std::size_t);
+};
+
+
+template <class T>
+class VLI<T, true> final
+{
+public:
+    inline VLI();
+    inline VLI(T);
+    inline operator const T &() const;
+    inline operator T &();
+
+private:
+    T value_;
 };
 
 
@@ -269,27 +289,7 @@ Archive::operator>>(std::string &string)
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, Archive &>
-Archive::operator<<(T integer)
-{
-    SIREN_ASSERT(isValid());
-    serializeInteger(integer);
-    return *this;
-}
-
-
-template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, Archive &>
-Archive::operator>>(T &integer)
-{
-    SIREN_ASSERT(isValid());
-    deserializeInteger(&integer);
-    return *this;
-}
-
-
-template <class T>
-std::enable_if_t<std::is_signed<T>::value, Archive &>
+std::enable_if_t<std::is_integral<T>::value, Archive &>
 Archive::operator<<(T integer)
 {
     typedef std::make_unsigned_t<T> U;
@@ -301,14 +301,37 @@ Archive::operator<<(T integer)
 
 
 template <class T>
-std::enable_if_t<std::is_signed<T>::value, Archive &>
+std::enable_if_t<std::is_integral<T>::value, Archive &>
 Archive::operator>>(T &integer)
 {
     typedef std::make_unsigned_t<T> U;
 
     SIREN_ASSERT(isValid());
     U temp;
-    integer = UnsignedToSigned((deserializeInteger(&temp), temp));
+    deserializeInteger(&temp);
+    integer = UnsignedToSigned(temp);
+    return *this;
+}
+
+
+template <class T>
+Archive &
+Archive::operator<<(VLI<T> integer)
+{
+    SIREN_ASSERT(isValid());
+    serializeVariableLengthInteger(integer);
+    return *this;
+}
+
+
+template <class T>
+Archive &
+Archive::operator>>(VLI<T> &integer)
+{
+    SIREN_ASSERT(isValid());
+    std::uintmax_t temp;
+    deserializeVariableLengthInteger(&temp);
+    integer = UnsignedToSigned(temp);
     return *this;
 }
 
@@ -466,45 +489,85 @@ Archive::isValid() const noexcept
     return stream_ != nullptr;
 }
 
+std::size_t
+Archive::getNumberOfPreReadBytes() const noexcept
+{
+    return preReadByteCount_;
+}
+
+
+std::size_t
+Archive::getNumberOfPreWrittenBytes() const noexcept
+{
+    return preWrittenByteCount_;
+}
+
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, void>
+std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, void>
 Archive::serializeInteger(T integer)
 {
     constexpr unsigned int k1 = std::numeric_limits<T>::digits;
     constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits;
 
-    stream_->reserveBuffer(writtenByteCount_ + sizeof(T));
-    auto buffer = static_cast<unsigned char *>(stream_->getBuffer(writtenByteCount_));
+    stream_->reserveBuffer(preWrittenByteCount_ + sizeof(T));
+    auto buffer = static_cast<unsigned char *>(stream_->getBuffer(preWrittenByteCount_));
     *buffer = integer;
 
     for (unsigned int n = k1 - k2; UnsignedToSigned(n) >= 1; n -= k2) {
         *++buffer = (integer >>= k2);
     }
 
-    writtenByteCount_ += sizeof(T);
+    preWrittenByteCount_ += sizeof(T);
 }
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, void>
+std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, void>
 Archive::deserializeInteger(T *integer)
 {
     constexpr unsigned int k1 = std::numeric_limits<T>::digits;
     constexpr unsigned int k2 = std::numeric_limits<unsigned char>::digits;
 
-    if (stream_->getDataSize() < readByteCount_ + sizeof(T)) {
+    if (stream_->getDataSize() < preReadByteCount_ + sizeof(T)) {
         throw EndOfStream();
     }
 
-    auto data = static_cast<unsigned char *>(stream_->getData(readByteCount_));
+    auto data = static_cast<unsigned char *>(stream_->getData(preReadByteCount_));
     *integer = *data;
 
     for (unsigned int n = k2; n < k1; n += k2) {
         *integer |= static_cast<T>(*++data) << n;
     }
 
-    readByteCount_ += sizeof(T);
+    preReadByteCount_ += sizeof(T);
+}
+
+
+template <class T>
+VLI<T, true>::VLI()
+{
+}
+
+
+template <class T>
+VLI<T, true>::VLI(T value)
+  : value_(value)
+{
+}
+
+
+template <class T>
+VLI<T, true>::operator const T &() const
+{
+    return value_;
+}
+
+
+template <class T>
+VLI<T, true>::operator T &()
+{
+    return value_;
 }
 
 

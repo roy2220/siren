@@ -31,7 +31,7 @@ private:
 
     T *object_;
 
-    inline void initialize(T * = nullptr) noexcept;
+    inline void initialize(T *) noexcept;
     inline void finalize() noexcept;
     inline void copy(RCPointer *) const noexcept;
     inline void move(RCPointer *) noexcept;
@@ -207,7 +207,7 @@ void
 RCPointer<T>::move(RCPointer *other) noexcept
 {
     other->object_ = object_;
-    initialize();
+    initialize(nullptr);
 }
 
 
@@ -216,7 +216,7 @@ void
 RCPointer<T>::reset() noexcept
 {
     finalize();
-    initialize();
+    initialize(nullptr);
 }
 
 

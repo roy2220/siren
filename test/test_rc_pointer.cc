@@ -5,37 +5,24 @@
 #include "test.h"
 
 
-namespace siren {
-
-struct Foo
-  : RCRecord
-{
-    char c[100];
-};
-
-
-namespace detail {
-
-template <>
-void
-DestroyObject(Foo *f) noexcept
-{
-    delete f;
-}
-
-}
-
-}
-
-
 namespace {
 
 using namespace siren;
 
 
+struct Foo
+  : RCRecord
+{
+    int *p;
+    Foo(int *p) : p(p) {}
+    ~Foo() { *p = -99; }
+};
+
+
 SIREN_TEST("Test reference-counting pointer")
 {
-    RCPointer<Foo> p1(new Foo());
+    int i = 0;
+    RCPointer<Foo> p1(new Foo{&i});
 
     {
         RCPointer<Foo> p2 = p1;
@@ -46,7 +33,25 @@ SIREN_TEST("Test reference-counting pointer")
     p3.reset();
     p3 = p1.get();
     p1 = nullptr;
+    SIREN_TEST_ASSERT(i == 0);
     p3 = nullptr;
+    SIREN_TEST_ASSERT(i == -99);
+}
+
+}
+
+
+namespace siren {
+
+namespace detail {
+
+template <>
+void
+DestroyObject(Foo *f) noexcept
+{
+    delete f;
+}
+
 }
 
 }

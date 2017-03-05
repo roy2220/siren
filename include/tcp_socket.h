@@ -36,6 +36,8 @@ public:
     void connect(const IPEndpoint &);
     IPEndpoint getLocalEndpoint() const;
     IPEndpoint getRemoteEndpoint() const;
+    std::size_t read(void *, std::size_t);
+    std::size_t write(const void *, std::size_t);
     std::size_t read(Stream *);
     std::size_t write(Stream *);
     void closeRead();

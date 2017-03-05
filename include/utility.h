@@ -27,14 +27,16 @@ namespace siren {
 inline std::size_t AlignSize(std::size_t, std::size_t) noexcept;
 
 template <class T>
-inline std::enable_if_t<std::is_unsigned<T>::value, T> NextPowerOfTwo(T) noexcept;
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+                        , T> NextPowerOfTwo(T) noexcept;
 
 template <class T>
-inline std::enable_if_t<std::is_unsigned<T>::value, bool> TestPowerOfTwo(T) noexcept;
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+                        , bool> TestPowerOfTwo(T) noexcept;
 
 template <class T>
-inline std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>> UnsignedToSigned(T)
-    noexcept;
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+                        , std::make_signed_t<T>> UnsignedToSigned(T) noexcept;
 
 template <class T, class U>
 inline std::enable_if_t<std::is_const<T>::value == std::is_const<U>::value
@@ -74,7 +76,7 @@ AlignSize(std::size_t size, std::size_t alignment) noexcept
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, T>
 NextPowerOfTwo(T x) noexcept
 {
     constexpr unsigned int k = std::numeric_limits<T>::digits;
@@ -91,7 +93,7 @@ NextPowerOfTwo(T x) noexcept
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, bool>
+std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, bool>
 TestPowerOfTwo(T x) noexcept
 {
     return (x & (x - 1)) == 0;
@@ -99,7 +101,7 @@ TestPowerOfTwo(T x) noexcept
 
 
 template <class T>
-std::enable_if_t<std::is_unsigned<T>::value, std::make_signed_t<T>>
+std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, std::make_signed_t<T>>
 UnsignedToSigned(T x) noexcept
 {
     typedef std::make_signed_t<T> U;
