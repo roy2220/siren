@@ -31,17 +31,16 @@ IPEndpoint::ResolveName(Async *async, const char *hostName, const char *serviceN
 }
 
 
-GAIError::GAIError(int code)
+GAIError::GAIError(int code) noexcept
+  : code_(code)
 {
-    description_ = "getaddrinfo() failed: ";
-    description_ += gai_strerror(code);
 }
 
 
 const char *
 GAIError::what() const noexcept
 {
-    return description_.c_str();
+    return gai_strerror(code_);
 }
 
 } // namespace siren

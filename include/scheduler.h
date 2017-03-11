@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <type_traits>
 
 #include "config.h"
 #include "list.h"
@@ -50,7 +51,8 @@ public:
     inline void *getCurrentFiber() noexcept;
 
     template <class T>
-    inline void *createFiber(T &&, std::size_t = 0, bool = false);
+    inline std::enable_if_t<!std::is_same<T, nullptr_t>::value, void *>
+        createFiber(T &&, std::size_t = 0, bool = false);
 
     explicit Scheduler(std::size_t = 0) noexcept;
     Scheduler(Scheduler &&) noexcept;
@@ -164,7 +166,7 @@ Scheduler::getNumberOfActiveFibers() const noexcept
 
 
 template <class T>
-void *
+std::enable_if_t<!std::is_same<T, nullptr_t>::value, void *>
 Scheduler::createFiber(T &&procedure, std::size_t fiberSize, bool fiberIsBackground)
 {
     if (fiberSize == 0) {

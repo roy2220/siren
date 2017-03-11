@@ -40,7 +40,7 @@ Async::EventTrigger(ThreadPool *threadPool, Loop *loop) noexcept
             return;
         }
 
-        threadPool->getCompletedTasks(&threadPoolTasks);
+        threadPool->removeCompletedTasks(&threadPoolTasks);
 
         for (ThreadPoolTask *threadPoolTask : threadPoolTasks) {
             auto task = static_cast<Task *>(threadPoolTask);

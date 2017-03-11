@@ -41,7 +41,7 @@ SIREN_TEST("Add/Remove io watchers")
     ioPoller.getReadyWatchers(&ioClock, &readyWatchers);
     SIREN_TEST_ASSERT(readyWatchers.size() == 0);
     std::vector<IOTimer *> expiredTimers;
-    ioClock.getExpiredTimers(&expiredTimers);
+    ioClock.removeExpiredTimers(&expiredTimers);
     SIREN_TEST_ASSERT(expiredTimers.size() == 1);
     SIREN_TEST_ASSERT(expiredTimers[0] == &ioTimerContext);
     char c;

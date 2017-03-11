@@ -29,7 +29,7 @@ public:
     void restart() noexcept;
     void addTimer(Timer *, std::chrono::milliseconds);
     void removeTimer(Timer *) noexcept;
-    void getExpiredTimers(std::vector<Timer *> *);
+    void removeExpiredTimers(std::vector<Timer *> *);
 
 private:
     Heap timerHeap_;

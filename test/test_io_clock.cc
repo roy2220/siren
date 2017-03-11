@@ -34,7 +34,7 @@ SIREN_TEST("Add/Remove io timers")
         usleep(7 * 1000);
         ioClock.stop();
 
-        ioClock.getExpiredTimers(&timers);
+        ioClock.removeExpiredTimers(&timers);
 
         if (timers.size() == 20) {
             return;

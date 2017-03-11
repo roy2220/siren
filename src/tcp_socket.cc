@@ -320,7 +320,7 @@ TCPSocket::read(Stream *stream)
     SIREN_ASSERT(isValid());
     SIREN_ASSERT(stream != nullptr);
     std::size_t numberOfBytes = read(stream->getBuffer(), stream->getBufferSize());
-    stream->commitData(numberOfBytes);
+    stream->commitBuffer(numberOfBytes);
     return numberOfBytes;
 }
 

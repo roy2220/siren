@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <exception>
-#include <string>
 
 #include <netinet/in.h>
 
@@ -32,12 +31,12 @@ class GAIError final
   : public std::exception
 {
 public:
-    explicit GAIError(int);
+    explicit GAIError(int) noexcept;
 
     const char *what() const noexcept override;
 
 private:
-    std::string description_;
+    int code_;
 };
 
 } // namespace siren

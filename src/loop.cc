@@ -92,7 +92,7 @@ Loop::run()
             }
 
             ioWatchers.clear();
-            ioClock_.getExpiredTimers(&ioTimers);
+            ioClock_.removeExpiredTimers(&ioTimers);
 
             for (IOTimer *ioTimer : ioTimers) {
                 auto myIOTimer = static_cast<MyIOTimer *>(ioTimer);
@@ -445,7 +445,9 @@ Loop::accept4(int fd, sockaddr *name, socklen_t *nameSize, int flags)
             });
 
             bool blocking = (flags & SOCK_NONBLOCK) == 0;
-            createIOContext(subFD, true, blocking);
+            FileOptions *fileOptions = getFileOptions(fd);
+            createIOContext(subFD, true, blocking, fileOptions->readTimeout
+                            , fileOptions->writeTimeout);
             scopeGuard.dismiss();
             return subFD;
         }

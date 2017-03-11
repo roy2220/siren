@@ -2,6 +2,7 @@
 
 
 #include <cstddef>
+#include <exception>
 
 #include "buffer.h"
 
@@ -14,9 +15,9 @@ public:
     inline const void *getData(std::size_t = 0) const noexcept;
     inline void *getData(std::size_t = 0) noexcept;
     inline std::size_t getDataSize() const noexcept;
-    inline void commitData(std::size_t) noexcept;
     inline void *getBuffer(std::size_t = 0) noexcept;
     inline std::size_t getBufferSize() const noexcept;
+    inline void commitBuffer(std::size_t) noexcept;
 
     explicit Stream() noexcept;
     Stream(Stream &&) noexcept;
@@ -35,6 +36,16 @@ private:
 
     void initialize() noexcept;
     void move(Stream *) noexcept;
+};
+
+
+class EndOfStream final
+  : public std::exception
+{
+public:
+    explicit EndOfStream() noexcept;
+
+    const char *what() const noexcept override;
 };
 
 } // namespace siren
@@ -71,14 +82,6 @@ Stream::getDataSize() const noexcept
 }
 
 
-void
-Stream::commitData(std::size_t dataSize) noexcept
-{
-    SIREN_ASSERT(bufferOffset_ + dataSize <= base_.getLength());
-    bufferOffset_ += dataSize;
-}
-
-
 void *
 Stream::getBuffer(std::size_t offset) noexcept
 {
@@ -90,6 +93,14 @@ std::size_t
 Stream::getBufferSize() const noexcept
 {
     return base_.getLength() - bufferOffset_;
+}
+
+
+void
+Stream::commitBuffer(std::size_t bufferSize) noexcept
+{
+    SIREN_ASSERT(bufferOffset_ + bufferSize <= base_.getLength());
+    bufferOffset_ += bufferSize;
 }
 
 } // namespace siren

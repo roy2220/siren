@@ -38,7 +38,7 @@ SIREN_TEST("Add thread pool tasks")
         SIREN_UNUSED(r);
         SIREN_ASSERT(r == sizeof(dummy));
         std::vector<ThreadPoolTask *> ts2;
-        tp.getCompletedTasks(&ts2);
+        tp.removeCompletedTasks(&ts2);
 
         for (ThreadPoolTask *t : ts2) {
             int j = static_cast<MyThreadPoolTask *>(t) - ts;

@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <exception>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -24,7 +23,6 @@
 
 namespace siren {
 
-class ArchiveEndOfStream;
 class Stream;
 
 template <class T, bool = std::is_integral<T>::value>
@@ -34,8 +32,6 @@ class VLI;
 class Archive final
 {
 public:
-    typedef ArchiveEndOfStream EndOfStream;
-
     inline Archive &operator<<(bool);
     inline Archive &operator>>(bool &);
     inline Archive &operator<<(float);
@@ -135,19 +131,6 @@ public:
 
 private:
     T value_;
-};
-
-
-class ArchiveEndOfStream final
-  : public std::exception
-{
-public:
-    const char *what() const noexcept override;
-
-private:
-    explicit ArchiveEndOfStream() noexcept;
-
-    friend Archive;
 };
 
 

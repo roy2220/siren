@@ -115,16 +115,4 @@ Archive::deserializeBytes(void *bytes, std::size_t numberOfBytes)
     preReadByteCount_ += numberOfBytes;
 }
 
-
-ArchiveEndOfStream::ArchiveEndOfStream() noexcept
-{
-}
-
-
-const char *
-ArchiveEndOfStream::what() const noexcept
-{
-    return "Siren: Archive: End of stream";
-}
-
 } // namespace siren

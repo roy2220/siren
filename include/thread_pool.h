@@ -2,11 +2,12 @@
 
 
 #include <cstddef>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
-#include <atomic>
 #include <mutex>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "config.h"
@@ -53,13 +54,13 @@ public:
     inline int getEventFD() const noexcept;
 
     template <class T>
-    inline void addTask(Task *, T &&);
+    inline std::enable_if_t<!std::is_same<T, nullptr_t>::value, void> addTask(Task *, T &&);
 
     explicit ThreadPool(std::size_t = 0);
     ~ThreadPool();
 
     void removeTask(Task *, bool *) noexcept;
-    void getCompletedTasks(std::vector<Task *> *);
+    void removeCompletedTasks(std::vector<Task *> *);
 
 private:
     typedef detail::ThreadPoolTaskState TaskState;
@@ -79,7 +80,7 @@ private:
     void worker() noexcept;
     void addWaitingTask(Task *);
     bool removeWaitingTask(Task *) noexcept;
-    Task *getWaitingTask();
+    Task *removeWaitingTask() noexcept;
     void noMoreWaitingTasks();
     void addCompletedTask(Task *);
     void removeCompletedTask(Task *) noexcept;
@@ -134,7 +135,7 @@ ThreadPool::getEventFD() const noexcept
 
 
 template <class T>
-void
+std::enable_if_t<!std::is_same<T, nullptr_t>::value, void>
 ThreadPool::addTask(Task *task, T &&procedure)
 {
     SIREN_ASSERT(task != nullptr);

@@ -99,7 +99,19 @@ Stream::write(const void *data, std::size_t dataSize)
 {
     reserveBuffer(dataSize);
     std::memcpy(getBuffer(), data, dataSize);
-    commitData(dataSize);
+    commitBuffer(dataSize);
+}
+
+
+EndOfStream::EndOfStream() noexcept
+{
+}
+
+
+const char *
+EndOfStream::what() const noexcept
+{
+    return "End of stream";
 }
 
 } // namespace siren

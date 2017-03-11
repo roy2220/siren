@@ -113,7 +113,7 @@ void
 ThreadPool::worker() noexcept
 {
     for (;;) {
-        ThreadPoolTask *task = getWaitingTask();
+        ThreadPoolTask *task = removeWaitingTask();
 
         if (task == nullptr) {
             return;
@@ -195,7 +195,7 @@ ThreadPool::removeWaitingTask(Task *task) noexcept
 
 
 ThreadPoolTask *
-ThreadPool::getWaitingTask()
+ThreadPool::removeWaitingTask() noexcept
 {
     std::unique_lock<std::mutex> uniqueLock(mutexes_[0]);
 
@@ -241,7 +241,7 @@ ThreadPool::removeCompletedTask(Task *task) noexcept
 
 
 void
-ThreadPool::getCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
+ThreadPool::removeCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
 {
     List list;
 

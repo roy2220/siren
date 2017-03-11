@@ -115,7 +115,7 @@ IOClock::removeTimer(Timer *timer) noexcept
 
 
 void
-IOClock::getExpiredTimers(std::vector<Timer *> *timers)
+IOClock::removeExpiredTimers(std::vector<Timer *> *timers)
 {
     SIREN_ASSERT(timers != nullptr);
 

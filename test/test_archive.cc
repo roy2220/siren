@@ -41,7 +41,7 @@ SIREN_TEST("Serialize/Deserialize structures")
     Dummy output;
 
     a << input;
-    s.commitData(a.getNumberOfPreWrittenBytes());
+    s.commitBuffer(a.getNumberOfPreWrittenBytes());
     SIREN_TEST_ASSERT(s.getDataSize() >= 1);
     a >> output;
     s.discardData(a.getNumberOfPreReadBytes());
@@ -56,7 +56,7 @@ SIREN_TEST("Serialize/Deserialize arrays")
     Archive a(&s);
     int in[3] = {123, 234, 456};
     a << in;
-    s.commitData(a.getNumberOfPreWrittenBytes());
+    s.commitBuffer(a.getNumberOfPreWrittenBytes());
     SIREN_TEST_ASSERT(s.getDataSize() >= 1);
     int out[3];
     a >> out;
@@ -75,7 +75,7 @@ SIREN_TEST("Serialize/Deserialize vectors")
     Archive a(&s);
     std::vector<int> in = {123, 234, 456};
     a << in;
-    s.commitData(a.getNumberOfPreWrittenBytes());
+    s.commitBuffer(a.getNumberOfPreWrittenBytes());
     SIREN_TEST_ASSERT(s.getDataSize() >= 1);
     std::vector<int> out;
     a >> out;
@@ -94,7 +94,7 @@ SIREN_TEST("Serialize/Deserialize variable-length integers")
     Stream s;
     Archive a(&s);
     a << VLI<int>(-6);
-    s.commitData(a.getNumberOfPreWrittenBytes());
+    s.commitBuffer(a.getNumberOfPreWrittenBytes());
     SIREN_TEST_ASSERT(s.getDataSize() == 1);
     VLI<int> t;
     a >> t;
