@@ -12,6 +12,9 @@
 #define SIREN__STR_HELPER(X) \
     #X
 
+#define SIREN_STRLEN(X) \
+    (sizeof(X) - 1)
+
 #define SIREN_CONCAT(X, Y) \
     SIREN__CONCAT_HELPER(X, Y)
 
@@ -135,7 +138,7 @@ ApplyFunction(T &&function, U &&arguments)
     constexpr std::size_t k = std::tuple_size<std::decay_t<U>>::value;
 
     return detail::ApplyFunctionHelper(std::forward<T>(function), std::forward<U>(arguments)
-                                        , std::make_index_sequence<k>());
+                                       , std::make_index_sequence<k>());
 }
 
 

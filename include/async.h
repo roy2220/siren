@@ -21,7 +21,8 @@ public:
     inline bool isValid() const noexcept;
 
     template <class T, class ...U>
-    std::enable_if_t<std::is_void<std::result_of_t<T(U ...)>>::value, void> callFunction(T &&, U ...);
+    std::enable_if_t<std::is_void<std::result_of_t<T(U ...)>>::value
+                     , void> callFunction(T &&, U ...);
 
     template <class T, class ...U>
     std::enable_if_t<!std::is_void<std::result_of_t<T(U ...)>>::value
@@ -89,7 +90,7 @@ Async::callFunction(T &&procedure, U ...argument)
         int errorNumber;
     } context = {
         std::forward<T>(procedure),
-        {argument...},
+        {std::move(argument)...},
         0,
     };
 
@@ -122,7 +123,7 @@ Async::callFunction(T &&function, U ...argument)
         int errorNumber;
     } context = {
         std::forward<T>(function),
-        {argument...},
+        {std::move(argument)...},
         {},
         0,
     };

@@ -64,14 +64,14 @@ Mutex::unlock()
 bool
 Mutex::tryLock() noexcept
 {
-    return semaphore_.tryUp();
+    return semaphore_.tryDown();
 }
 
 
 bool
 Mutex::tryUnlock() noexcept
 {
-    return semaphore_.tryDown();
+    return semaphore_.tryUp();
 }
 
 } // namespace siren
