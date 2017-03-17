@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 #include "config.h"
-#include "scope_guard.h"
 
 
 namespace siren {
@@ -237,32 +236,6 @@ ThreadPool::removeCompletedTask(Task *task) noexcept
 {
     std::unique_lock<std::mutex> uniqueLock(mutexes_[1]);
     task->remove();
-}
-
-
-void
-ThreadPool::removeCompletedTasks(std::vector<ThreadPool::Task *> *tasks)
-{
-    List list;
-
-    {
-        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
-        list = std::move(completedTaskList_);
-    }
-
-    Task *task;
-
-    auto scopeGuard = MakeScopeGuard([&] () -> void {
-        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
-        completedTaskList_.prependNodes(list.getHead(), task);
-    });
-
-    SIREN_LIST_FOREACH_REVERSE(listNode, list) {
-        task = static_cast<Task *>(listNode);
-        tasks->push_back(task);
-    }
-
-    scopeGuard.dismiss();
 }
 
 } // namespace siren

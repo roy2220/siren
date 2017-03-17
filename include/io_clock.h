@@ -2,7 +2,6 @@
 
 
 #include <chrono>
-#include <vector>
 
 #include "heap.h"
 
@@ -19,6 +18,9 @@ public:
 
     inline std::chrono::milliseconds getDueTime() const noexcept;
 
+    template <class T>
+    inline void removeExpiredTimers(T &&);
+
     explicit IOClock() noexcept;
     IOClock(IOClock &&) noexcept;
     IOClock &operator=(IOClock &&) noexcept;
@@ -29,7 +31,6 @@ public:
     void restart() noexcept;
     void addTimer(Timer *, std::chrono::milliseconds);
     void removeTimer(Timer *) noexcept;
-    void removeExpiredTimers(std::vector<Timer *> *);
 
 private:
     Heap timerHeap_;
@@ -81,6 +82,23 @@ IOClock::getDueTime() const noexcept
     } else {
         auto timer = static_cast<const IOTimer *>(timerHeap_.getTop());
         return std::max(timer->expiryTime_ - now_, std::chrono::milliseconds(0));
+    }
+}
+
+
+template <class T>
+void
+IOClock::removeExpiredTimers(T &&callback)
+{
+    while (!timerHeap_.isEmpty()) {
+        auto timer = static_cast<Timer *>(timerHeap_.getTop());
+
+        if (timer->expiryTime_ <= now_) {
+            callback(timer);
+            timerHeap_.removeTop();
+        } else {
+            return;
+        }
     }
 }
 

@@ -11,7 +11,6 @@
 
 #include <unistd.h>
 
-#include "assert.h"
 #include "io_clock.h"
 #include "scope_guard.h"
 
@@ -337,13 +336,9 @@ IOPoller::flushContexts()
 }
 
 
-void
-IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
+std::size_t
+IOPoller::pollEvents(Clock *clock)
 {
-    SIREN_ASSERT(isValid());
-    SIREN_ASSERT(clock != nullptr);
-    SIREN_ASSERT(watchers != nullptr);
-    flushContexts();
     std::size_t eventCount = 0;
     clock->start();
     int timeout = std::min(clock->getDueTime()
@@ -377,22 +372,7 @@ IOPoller::getReadyWatchers(Clock *clock, std::vector<Watcher *> *watchers)
         }
     }
 
-    for (std::size_t i = 0; i < eventCount; ++i) {
-        epoll_event *event = &events_[i];
-        auto context = static_cast<Context *>(event->data.ptr);
-
-        SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherList) {
-            auto watcher = static_cast<Watcher *>(listNode);
-            Condition readyConditions
-                      = static_cast<Condition>(event->events
-                                               & static_cast<int>(watcher->conditions_));
-
-            if (readyConditions != Condition::No) {
-                watcher->readyConditions_ = readyConditions;
-                watchers->push_back(watcher);
-            }
-        }
-    }
+    return eventCount;
 }
 
 } // namespace siren

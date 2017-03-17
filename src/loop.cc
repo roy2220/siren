@@ -47,7 +47,9 @@ namespace {
 struct MyIOWatcher
   : IOWatcher
 {
-    std::function<void ()> callback;
+    typedef IOCondition Condition;
+
+    std::function<void (Condition)> callback;
 };
 
 
@@ -75,31 +77,22 @@ Loop::Loop(std::size_t defaultFiberSize)
 void
 Loop::run()
 {
-    std::vector<IOWatcher *> ioWatchers;
-    std::vector<IOTimer *> ioTimers;
-
     for (;;) {
         scheduler_.run();
 
         if (scheduler_.getNumberOfForegroundFibers() == 0) {
             return;
         } else {
-            ioPoller_.getReadyWatchers(&ioClock_, &ioWatchers);
-
-            for (IOWatcher *ioWatcher : ioWatchers) {
+            ioPoller_.getReadyWatchers(&ioClock_, [] (IOWatcher *ioWatcher
+                                                      , IOCondition readyIOConditions) -> void {
                 auto myIOWatcher = static_cast<MyIOWatcher *>(ioWatcher);
-                myIOWatcher->callback();
-            }
+                myIOWatcher->callback(readyIOConditions);
+            });
 
-            ioWatchers.clear();
-            ioClock_.removeExpiredTimers(&ioTimers);
-
-            for (IOTimer *ioTimer : ioTimers) {
+            ioClock_.removeExpiredTimers([] (IOTimer *ioTimer) -> void {
                 auto myIOTimer = static_cast<MyIOTimer *>(ioTimer);
                 myIOTimer->callback();
-            }
-
-            ioTimers.clear();
+            });
         }
     }
 }
@@ -797,80 +790,77 @@ Loop::waitForFile(int fd, IOCondition ioConditions, IOCondition *readyIOConditio
 {
     if (timeout.count() < 0) {
         struct {
-            MyIOWatcher myIOWatcher;
-            IOPoller *ioPoller;
+            IOCondition *readyIOConditions;
             void *fiberHandle;
             Scheduler *scheduler;
         } context;
 
-        context.myIOWatcher.callback = [&context] () -> void {
-            context.ioPoller->removeWatcher(&context.myIOWatcher);
+        MyIOWatcher myIOWatcher;
+
+        myIOWatcher.callback = [&context] (IOCondition readyIOConditions) -> void {
+            if (context.readyIOConditions != nullptr) {
+                *context.readyIOConditions = readyIOConditions;
+            }
+
             context.scheduler->resumeFiber(context.fiberHandle);
         };
 
-        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioConditions);
+        ioPoller_.addWatcher(&myIOWatcher, fd, ioConditions);
 
         auto scopeGuard = MakeScopeGuard([&] () -> void {
-            context.ioPoller->removeWatcher(&context.myIOWatcher);
+            ioPoller_.removeWatcher(&myIOWatcher);
         });
 
-        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
-                                                        = scheduler_.getCurrentFiber());
-
-        if (readyIOConditions != nullptr) {
-            *readyIOConditions = context.myIOWatcher.getReadyConditions();
-        }
-
-        scopeGuard.dismiss();
+        context.readyIOConditions = readyIOConditions;
+        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle = scheduler_
+                                                                              .getCurrentFiber());
         return true;
     } else if (timeout.count() == 0) {
         return false;
     } else {
         struct {
-            MyIOWatcher myIOWatcher;
-            IOPoller *ioPoller;
-            MyIOTimer myIOTimer;
-            IOClock *ioClock;
+            IOCondition *readyIOConditions;
+            bool isTimedOut;
             void *fiberHandle;
             Scheduler *scheduler;
-            bool ok;
         } context;
 
-        context.myIOWatcher.callback = [&context] () -> void {
-            context.ioPoller->removeWatcher(&context.myIOWatcher);
-            context.ioClock->removeTimer(&context.myIOTimer);
+        MyIOWatcher myIOWatcher;
+
+        myIOWatcher.callback = [&context] (IOCondition readyIOConditions) -> void {
+            if (context.readyIOConditions != nullptr) {
+                *context.readyIOConditions = readyIOConditions;
+            }
+
             context.scheduler->resumeFiber(context.fiberHandle);
-            context.ok = true;
         };
 
-        (context.ioPoller = &ioPoller_)->addWatcher(&context.myIOWatcher, fd, ioConditions);
+        ioPoller_.addWatcher(&myIOWatcher, fd, ioConditions);
 
         auto scopeGuard1 = MakeScopeGuard([&] () -> void {
-            context.ioPoller->removeWatcher(&context.myIOWatcher);
+            ioPoller_.removeWatcher(&myIOWatcher);
         });
 
-        context.myIOTimer.callback = [&context] () -> void {
-            context.ioPoller->removeWatcher(&context.myIOWatcher);
+        MyIOTimer myIOTimer;
+
+        myIOTimer.callback = [&context] () -> void {
+            context.isTimedOut = true;
             context.scheduler->resumeFiber(context.fiberHandle);
-            context.ok = false;
         };
 
-        (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, timeout);
+        ioClock_.addTimer(&myIOTimer, timeout);
 
         auto scopeGuard2 = MakeScopeGuard([&] () -> void {
-            context.ioClock->removeTimer(&context.myIOTimer);
+            if (!context.isTimedOut) {
+                ioClock_.removeTimer(&myIOTimer);
+            }
         });
 
-        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
-                                                        = scheduler_.getCurrentFiber());
-
-        if (context.ok && readyIOConditions != nullptr) {
-            *readyIOConditions = context.myIOWatcher.getReadyConditions();
-        }
-
-        scopeGuard1.dismiss();
-        scopeGuard2.dismiss();
-        return context.ok;
+        context.readyIOConditions = readyIOConditions;
+        context.isTimedOut = false;
+        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle = scheduler_
+                                                                              .getCurrentFiber());
+        return !context.isTimedOut;
     }
 }
 
@@ -882,25 +872,29 @@ Loop::setDelay(std::chrono::milliseconds duration)
         scheduler_.suspendFiber(scheduler_.getCurrentFiber());
     } else {
         struct {
-            MyIOTimer myIOTimer;
-            IOClock *ioClock;
+            bool isTimedOut;
             void *fiberHandle;
             Scheduler *scheduler;
         } context;
 
-        context.myIOTimer.callback = [&context] () -> void {
+        MyIOTimer myIOTimer;
+
+        myIOTimer.callback = [&context] () -> void {
+            context.isTimedOut = true;
             context.scheduler->resumeFiber(context.fiberHandle);
         };
 
-        (context.ioClock = &ioClock_)->addTimer(&context.myIOTimer, duration);
+        ioClock_.addTimer(&myIOTimer, duration);
 
         auto scopeGuard = MakeScopeGuard([&] () -> void {
-            context.ioClock->removeTimer(&context.myIOTimer);
+            if (!context.isTimedOut) {
+                ioClock_.removeTimer(&myIOTimer);
+            }
         });
 
-        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle
-                                                        = scheduler_.getCurrentFiber());
-        scopeGuard.dismiss();
+        context.isTimedOut = false;
+        (context.scheduler = &scheduler_)->suspendFiber(context.fiberHandle = scheduler_
+                                                                              .getCurrentFiber());
     }
 }
 

@@ -65,8 +65,8 @@ public:
 private:
     typedef detail::FileOptions FileOptions;
 
-    IOPoller ioPoller_;
     IOClock ioClock_;
+    IOPoller ioPoller_;
     Scheduler scheduler_;
 
     const FileOptions *getFileOptions(int) const noexcept;

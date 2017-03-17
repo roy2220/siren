@@ -56,11 +56,13 @@ public:
     template <class T>
     inline std::enable_if_t<!std::is_same<T, nullptr_t>::value, void> addTask(Task *, T &&);
 
+    template <class T>
+    void removeCompletedTasks(T &&);
+
     explicit ThreadPool(std::size_t = 0);
     ~ThreadPool();
 
     void removeTask(Task *, bool *) noexcept;
-    void removeCompletedTasks(std::vector<Task *> *);
 
 private:
     typedef detail::ThreadPoolTaskState TaskState;
@@ -100,6 +102,7 @@ private:
 #include <utility>
 
 #include "assert.h"
+#include "scope_guard.h"
 
 
 namespace siren {
@@ -143,6 +146,33 @@ ThreadPool::addTask(Task *task, T &&procedure)
     task->state_.store(TaskState::Uncompleted, std::memory_order_relaxed);
     task->procedure_ = std::forward<T>(procedure);
     addWaitingTask(task);
+}
+
+
+template <class T>
+void
+ThreadPool::removeCompletedTasks(T &&callback)
+{
+    List list;
+
+    {
+        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
+        list = std::move(completedTaskList_);
+    }
+
+    Task *task;
+
+    auto scopeGuard = MakeScopeGuard([&] () -> void {
+        std::lock_guard<std::mutex> lockGuard(mutexes_[1]);
+        completedTaskList_.prependNodes(list.getHead(), task);
+    });
+
+    SIREN_LIST_FOREACH_REVERSE(listNode, list) {
+        task = static_cast<Task *>(listNode);
+        callback(task);
+    }
+
+    scopeGuard.dismiss();
 }
 
 } // namespace siren

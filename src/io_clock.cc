@@ -114,24 +114,6 @@ IOClock::removeTimer(Timer *timer) noexcept
 }
 
 
-void
-IOClock::removeExpiredTimers(std::vector<Timer *> *timers)
-{
-    SIREN_ASSERT(timers != nullptr);
-
-    while (!timerHeap_.isEmpty()) {
-        auto timer = static_cast<Timer *>(timerHeap_.getTop());
-
-        if (timer->expiryTime_ <= now_) {
-            timers->push_back(timer);
-            timerHeap_.removeTop();
-        } else {
-            return;
-        }
-    }
-}
-
-
 bool
 IOTimer::OrderHeapNode(const HeapNode *HeapNode1, const HeapNode *HeapNode2) noexcept
 {

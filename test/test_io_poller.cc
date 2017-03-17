@@ -38,10 +38,18 @@ SIREN_TEST("Add/Remove io watchers")
     ioPoller.createContext(fds[0]);
     ioPoller.addWatcher(&ioWatcherContext, fds[0], IOCondition::In);
     std::vector<IOWatcher *> readyWatchers;
-    ioPoller.getReadyWatchers(&ioClock, &readyWatchers);
+
+    ioPoller.getReadyWatchers(&ioClock, [&] (IOWatcher *x, IOCondition) -> void {
+        readyWatchers.push_back(x);
+    });
+
     SIREN_TEST_ASSERT(readyWatchers.size() == 0);
     std::vector<IOTimer *> expiredTimers;
-    ioClock.removeExpiredTimers(&expiredTimers);
+
+    ioClock.removeExpiredTimers([&] (IOTimer *x) -> void {
+        expiredTimers.push_back(x);
+    });
+
     SIREN_TEST_ASSERT(expiredTimers.size() == 1);
     SIREN_TEST_ASSERT(expiredTimers[0] == &ioTimerContext);
     char c;
@@ -56,7 +64,10 @@ SIREN_TEST("Add/Remove io watchers")
         SIREN_ASSERT(r == 1);
     });
 
-    ioPoller.getReadyWatchers(&ioClock, &readyWatchers);
+    ioPoller.getReadyWatchers(&ioClock, [&] (IOWatcher *x, IOCondition) -> void {
+        readyWatchers.push_back(x);
+    });
+
     SIREN_TEST_ASSERT(readyWatchers.size() == 1);
     SIREN_TEST_ASSERT(readyWatchers[0] == &ioWatcherContext);
     t.join();

@@ -26,8 +26,6 @@ struct AsyncTask
 void
 Async::EventTrigger(ThreadPool *threadPool, Loop *loop) noexcept
 {
-    std::vector<ThreadPoolTask *> threadPoolTasks;
-
     for (;;) {
         try {
             std::uint64_t dummy;
@@ -40,14 +38,10 @@ Async::EventTrigger(ThreadPool *threadPool, Loop *loop) noexcept
             return;
         }
 
-        threadPool->removeCompletedTasks(&threadPoolTasks);
-
-        for (ThreadPoolTask *threadPoolTask : threadPoolTasks) {
+        threadPool->removeCompletedTasks([] (ThreadPoolTask *threadPoolTask) -> void {
             auto task = static_cast<Task *>(threadPoolTask);
             task->event->trigger();
-        }
-
-        threadPoolTasks.clear();
+        });
     }
 }
 

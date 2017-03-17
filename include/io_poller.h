@@ -2,7 +2,6 @@
 
 
 #include <cstddef>
-#include <vector>
 
 #include <sys/epoll.h>
 
@@ -55,6 +54,9 @@ public:
     inline bool isValid() const noexcept;
     inline bool contextExists(int) const noexcept;
 
+    template <class T>
+    inline void getReadyWatchers(Clock *, T &&);
+
     explicit IOPoller(std::size_t = 0, std::size_t = 0);
     IOPoller(IOPoller &&) noexcept;
     ~IOPoller();
@@ -66,7 +68,6 @@ public:
     void *getContextTag(int) noexcept;
     void addWatcher(Watcher *, int, Condition) noexcept;
     void removeWatcher(Watcher *) noexcept;
-    void getReadyWatchers(Clock *, std::vector<Watcher *> *);
 
 private:
     typedef detail::IOContext Context;
@@ -86,6 +87,7 @@ private:
     const Context *findContext(int) const noexcept;
     Context *findContext(int) noexcept;
     void flushContexts();
+    std::size_t pollEvents(Clock *);
 };
 
 
@@ -94,8 +96,6 @@ class IOWatcher
 {
 public:
     typedef IOCondition Condition;
-
-    inline Condition getReadyConditions() const noexcept;
 
 protected:
     inline explicit IOWatcher() noexcept;
@@ -107,7 +107,6 @@ private:
 
     Context *context_;
     Condition conditions_;
-    Condition readyConditions_;
 
     IOWatcher(const IOWatcher &) = delete;
     IOWatcher &operator=(const IOWatcher &) = delete;
@@ -138,6 +137,9 @@ SIREN_ENUM_CLASS_AS_FLAG(IOCondition)
  */
 
 
+#include "assert.h"
+
+
 namespace siren {
 
 bool
@@ -154,18 +156,38 @@ IOPoller::contextExists(int fd) const noexcept
 }
 
 
+template <class T>
+void
+IOPoller::getReadyWatchers(Clock *clock, T &&callback)
+{
+    SIREN_ASSERT(isValid());
+    SIREN_ASSERT(clock != nullptr);
+    flushContexts();
+    std::size_t numberOfEvents = pollEvents(clock);
+
+    for (std::size_t i = 0; i < numberOfEvents; ++i) {
+        epoll_event *event = &events_[i];
+        auto context = static_cast<Context *>(event->data.ptr);
+
+        SIREN_LIST_FOREACH_REVERSE(listNode, context->watcherList) {
+            auto watcher = static_cast<Watcher *>(listNode);
+            Condition readyConditions
+                      = static_cast<Condition>(event->events
+                                               & static_cast<int>(watcher->conditions_));
+
+            if (readyConditions != Condition::No) {
+                callback(watcher, readyConditions);
+            }
+        }
+    }
+}
+
+
 IOWatcher::IOWatcher() noexcept
 #ifdef SIREN_WITH_DEBUG
   : context_(nullptr)
 #endif
 {
-}
-
-
-IOCondition
-IOWatcher::getReadyConditions() const noexcept
-{
-    return readyConditions_;
 }
 
 } // namespace siren
