@@ -27,6 +27,20 @@
 
 namespace siren {
 
+template <class T, template <class ...> class U>
+struct TestInstantiation
+{
+    static constexpr bool Result = false;
+};
+
+
+template <class ...T, template <class ...> class U>
+struct TestInstantiation<U<T ...>, U>
+{
+    static constexpr bool Result = true;
+};
+
+
 inline std::size_t AlignSize(std::size_t, std::size_t) noexcept;
 
 template <class T>
