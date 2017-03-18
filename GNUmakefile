@@ -82,7 +82,7 @@ endif
 
 $(BUILDDIR)/siren-test: $(testobjs)
 	@mkdir --parents $(@D)
-	$(CXX) -o $@ $^ -lpthread
+	$(CXX) -o $@ $^ -ldl -lpthread
 
 
 ifneq ($(filter $(BUILDDIR)/siren-test test,$(MAKECMDGOALS)),)

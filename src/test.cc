@@ -5,6 +5,8 @@
 #include <list>
 #include <utility>
 
+#include "stack_trace.h"
+
 
 namespace siren {
 
@@ -34,6 +36,12 @@ RunTests() noexcept
         } catch (const std::exception &exception) {
             std::fprintf(stderr, "%s:%u: %s: %s\n", test->getFileName()
                          , test->getLineNumber(), test->getDescription(), exception.what());
+            std::fputs("Stack trace: \n", stderr);
+
+            ExtractStackTraceOfLastThrow([] (const char *executableFileName, void *instruction)
+                                         -> void {
+                std::fprintf(stderr, "  %s[%p]\n", executableFileName, instruction);
+            });
         }
     }
 

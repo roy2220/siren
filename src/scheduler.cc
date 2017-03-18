@@ -499,7 +499,7 @@ namespace {
 std::size_t
 GetSystemPageSize()
 {
-    static std::size_t systemPageSize = sysconf(_SC_PAGESIZE);
+    static const std::size_t systemPageSize = sysconf(_SC_PAGESIZE);
     return systemPageSize;
 }
 
