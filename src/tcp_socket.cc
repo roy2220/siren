@@ -110,11 +110,11 @@ TCPSocket::setNoDelay(bool noDelay)
 
 
 void
-TCPSocket::setLinger(bool linger1, int interval)
+TCPSocket::setLinger(bool linger1, int timeout)
 {
     linger value;
     value.l_onoff = linger1;
-    value.l_linger = interval;
+    value.l_linger = timeout;
 
     if (setsockopt(fd_, SOL_SOCKET, SO_LINGER, &value, sizeof(value)) < 0) {
         throw std::system_error(errno, std::system_category(), "setsockopt(SO_LINGER) failed");
@@ -123,7 +123,7 @@ TCPSocket::setLinger(bool linger1, int interval)
 
 
 void
-TCPSocket::setKeepAlive(bool keepAlive, int interval)
+TCPSocket::setKeepAlive(bool keepAlive, int timeout)
 {
     int onOff = keepAlive;
 
@@ -132,19 +132,20 @@ TCPSocket::setKeepAlive(bool keepAlive, int interval)
     }
 
     if (keepAlive) {
-        if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPIDLE, &interval, sizeof(interval)) < 0) {
+        if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)) < 0) {
             throw std::system_error(errno, std::system_category()
                                     , "setsockopt(TCP_KEEPIDLE) failed");
         }
 
-        int count = 3;
+        int numberOfRetries = 3;
 
-        if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)) < 0) {
+        if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPCNT, &numberOfRetries, sizeof(numberOfRetries))
+            < 0) {
             throw std::system_error(errno, std::system_category()
                                     , "setsockopt(TCP_KEEPCNT) failed");
         }
 
-        interval = std::max(interval / count, 1);
+        int interval = std::max(timeout / numberOfRetries, 1);
 
         if (setsockopt(fd_, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) < 0) {
             throw std::system_error(errno, std::system_category()
