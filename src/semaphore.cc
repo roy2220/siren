@@ -88,7 +88,9 @@ Semaphore::reset() noexcept
             downWaiterWakes();
         } else if (value_ == maxValue_) {
             upWaiterWakes();
-        } else if (initialValue_ == minValue_) {
+        }
+
+        if (initialValue_ == minValue_) {
             downWaiterSleeps();
         } else if (initialValue_ == maxValue_) {
             upWaiterSleeps();
