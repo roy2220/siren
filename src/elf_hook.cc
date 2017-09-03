@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "output_string.h"
 #include "scope_guard.h"
 
 
@@ -82,9 +83,9 @@ LocateFunctionPointer(const char *elfFileName, const char *functionName)
         const Elf_Rel *elfRelocation = &elfRelocations[i];
 
         if (ELF_R_SYM(elfRelocation->r_info) == functionNameIndex) {
-            auto FunctionPtr = reinterpret_cast<std::uintptr_t *>(elfModule
-                                                                  + elfRelocation->r_offset);
-            return FunctionPtr;
+            auto functionPointer = reinterpret_cast<std::uintptr_t *>(elfModule
+                                                                      + elfRelocation->r_offset);
+            return functionPointer;
         }
     }
 
@@ -185,7 +186,8 @@ FindELFSectionHeaderByType(const char *elfFileData, Elf_Word elfSectionType
         }
     }
 
-    throw std::invalid_argument("elf section not found");
+    throw std::invalid_argument(SIREN_OUTPUT_STRING("elf section of type@" << elfSectionType
+                                                    << " not found"));
 }
 
 
@@ -222,7 +224,8 @@ FindELFSectionHeaderByName(const char *elfFileData, const char *elfSectionName
         }
     }
 
-    throw std::invalid_argument("elf section not found");
+    throw std::invalid_argument(SIREN_OUTPUT_STRING("elf section `" << elfSectionName
+                                                    << "` not found"));
 }
 
 
@@ -249,7 +252,8 @@ FindELFSymbolByName(const char *elfFileData, const Elf_Shdr *elfSectionHeader
         }
     }
 
-    throw std::invalid_argument("elf symbol not found");
+    throw std::invalid_argument(SIREN_OUTPUT_STRING("elf symbol `" << elfSymbolName
+                                                    << "` not found"));
 }
 
 } // namespace

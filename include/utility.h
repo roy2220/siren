@@ -172,9 +172,9 @@ ApplyFunction(T &&function, U &&arguments)
 template <class T, class U>
 void IterateTuple(T &&tuple, U &&callback)
 {
-    ApplyFunction([&] (auto &&...values) {
+    ApplyFunction([&] (auto &&...value) {
         detail::IterateTupleHelper(std::forward<U>(callback)
-                                   , std::forward<decltype(values)>(values)...);
+                                   , std::forward<decltype(value)>(value)...);
     }, std::forward<T>(tuple));
 }
 
@@ -191,10 +191,10 @@ ApplyFunctionHelper(T &&function, U &&arguments, std::index_sequence<N...>)
 
 template <class T, class U, class ...V>
 void
-IterateTupleHelper(T &&callback, U &&value, V &&...values)
+IterateTupleHelper(T &&callback, U &&value, V &&...other_value)
 {
     callback(std::forward<U>(value));
-    IterateTupleHelper(std::forward<T>(callback), std::forward<V>(values)...);
+    IterateTupleHelper(std::forward<T>(callback), std::forward<V>(other_value)...);
 }
 
 
