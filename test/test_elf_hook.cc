@@ -1,4 +1,4 @@
-#ifdef SIREN_WITH_VALGRIND
+#ifndef SIREN_WITH_VALGRIND
 
 #include <sys/socket.h>
 #include <sys/types.h>

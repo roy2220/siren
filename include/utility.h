@@ -24,22 +24,11 @@
 #define SIREN_UNUSED(X) \
     (static_cast<void>(X))
 
+#define SIREN_TEST_INSTANTIATION(X, Y) \
+    (siren::detail::TestInstantiationHelper<std::decay_t<X>, Y>::Result)
+
 
 namespace siren {
-
-template <class T, template <class ...> class U>
-struct TestInstantiation
-{
-    static constexpr bool Result = false;
-};
-
-
-template <class ...T, template <class ...> class U>
-struct TestInstantiation<U<T ...>, U>
-{
-    static constexpr bool Result = true;
-};
-
 
 inline std::size_t AlignSize(std::size_t, std::size_t) noexcept;
 
@@ -64,10 +53,34 @@ inline std::enable_if_t<std::is_const<T>::value == std::is_const<U>::value
 template <class T, class U>
 inline decltype(auto) ApplyFunction(T &&, U &&);
 
+template <class T, class U>
+inline void IterateTuple(T &&, U &&);
+
+
 namespace detail {
+
+template <class T, template <class ...> class U>
+struct TestInstantiationHelper
+{
+    static constexpr bool Result = false;
+};
+
+
+template <class ...T, template <class ...> class U>
+struct TestInstantiationHelper<U<T ...>, U>
+{
+    static constexpr bool Result = true;
+};
+
 
 template <class T, class U, std::size_t ...N>
 inline decltype(auto) ApplyFunctionHelper(T &&, U &&, std::index_sequence<N...>);
+
+template <class T, class U, class ...V>
+inline void IterateTupleHelper(T &&, U &&, V &&...);
+
+template <class T>
+inline void IterateTupleHelper(T &&);
 
 } // namespace detail
 
@@ -156,6 +169,16 @@ ApplyFunction(T &&function, U &&arguments)
 }
 
 
+template <class T, class U>
+void IterateTuple(T &&tuple, U &&callback)
+{
+    ApplyFunction([&] (auto &&...values) {
+        detail::IterateTupleHelper(std::forward<U>(callback)
+                                   , std::forward<decltype(values)>(values)...);
+    }, std::forward<T>(tuple));
+}
+
+
 namespace detail {
 
 template <class T, class U, std::size_t ...N>
@@ -163,6 +186,23 @@ decltype(auto)
 ApplyFunctionHelper(T &&function, U &&arguments, std::index_sequence<N...>)
 {
     return function(std::get<N>(std::forward<U>(arguments))...);
+}
+
+
+template <class T, class U, class ...V>
+void
+IterateTupleHelper(T &&callback, U &&value, V &&...values)
+{
+    callback(std::forward<U>(value));
+    IterateTupleHelper(std::forward<T>(callback), std::forward<V>(values)...);
+}
+
+
+template <class T>
+void
+IterateTupleHelper(T &&callback)
+{
+    SIREN_UNUSED(callback);
 }
 
 } // namespace detail
