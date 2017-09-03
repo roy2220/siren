@@ -92,10 +92,10 @@ Async::operator=(Async &&other) noexcept
 void
 Async::initialize()
 {
-    loop_->registerFD(threadPool_->getEventFD());
+    loop_->manageFD(threadPool_->getEventFD());
 
     auto scopeGuard = MakeScopeGuard([&] () -> void {
-        loop_->unregisterFD(threadPool_->getEventFD());
+        loop_->unmanageFD(threadPool_->getEventFD());
     });
 
     fiberHandle_ = loop_->createFiber(std::bind(EventTrigger, threadPool_.get(), loop_), 0, true);
@@ -108,7 +108,7 @@ Async::finalize() noexcept
 {
     if (isValid()) {
         loop_->interruptFiber(fiberHandle_);
-        loop_->unregisterFD(threadPool_->getEventFD());
+        loop_->unmanageFD(threadPool_->getEventFD());
     }
 }
 

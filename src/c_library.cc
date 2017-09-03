@@ -353,4 +353,69 @@ siren_poll(struct pollfd *arg1, nfds_t arg2, int arg3) noexcept
     }
 }
 
+
+ssize_t
+maybe_siren_read(int arg1, void *arg2, size_t arg3) noexcept
+{
+    int fd = arg1;
+
+    if (siren_loop->fdIsManaged(fd)) {
+        return siren_read(arg1, arg2, arg3);
+    } else {
+        return read(arg1, arg2, arg3);
+    }
+}
+
+
+ssize_t
+maybe_siren_write(int arg1, const void *arg2, size_t arg3) noexcept
+{
+    int fd = arg1;
+
+    if (siren_loop->fdIsManaged(fd)) {
+        return siren_write(arg1, arg2, arg3);
+    } else {
+        return write(arg1, arg2, arg3);
+    }
+}
+
+
+ssize_t
+maybe_siren_readv(int arg1, const struct iovec *arg2, int arg3) noexcept
+{
+    int fd = arg1;
+
+    if (siren_loop->fdIsManaged(fd)) {
+        return siren_readv(arg1, arg2, arg3);
+    } else {
+        return readv(arg1, arg2, arg3);
+    }
+}
+
+
+ssize_t
+maybe_siren_writev(int arg1, const struct iovec *arg2, int arg3) noexcept
+{
+    int fd = arg1;
+
+    if (siren_loop->fdIsManaged(fd)) {
+        return siren_writev(arg1, arg2, arg3);
+    } else {
+        return writev(arg1, arg2, arg3);
+    }
+}
+
+
+int
+maybe_siren_close(int arg1) noexcept
+{
+    int fd = arg1;
+
+    if (siren_loop->fdIsManaged(fd)) {
+        return siren_close(arg1);
+    } else {
+        return close(arg1);
+    }
+}
+
 } // extern "C"

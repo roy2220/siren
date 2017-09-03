@@ -17,11 +17,11 @@
 namespace siren {
 
 #ifdef SIREN_WITH_DEBUG
-#  define LOOP_CHECK_FD(FD) SIREN_ASSERT(ioContextExists((FD)))
+#  define LOOP_CHECK_FD(FD) SIREN_ASSERT(fdIsManaged((FD)))
 #else
 #  define LOOP_CHECK_FD(FD)           \
     do {                              \
-        if (!ioContextExists((FD))) { \
+        if (!fdIsManaged((FD))) { \
             errno = EBADF;            \
             return -1;                \
         }                             \
@@ -99,7 +99,7 @@ Loop::run()
 
 
 void
-Loop::registerFD(int fd)
+Loop::manageFD(int fd)
 {
     bool isSocket;
 
@@ -155,7 +155,7 @@ Loop::registerFD(int fd)
 
 
 void
-Loop::unregisterFD(int fd) noexcept
+Loop::unmanageFD(int fd) noexcept
 {
     FileOptions *fileOptions = getFileOptions(fd);
 
@@ -622,7 +622,7 @@ Loop::poll(pollfd *pollFDs, nfds_t numberOfPollFDs, int timeout)
         } else {
             pollfd *pollFD = &pollFDs[0];
 
-            if (ioContextExists(pollFD->fd)) {
+            if (fdIsManaged(pollFD->fd)) {
                 IOCondition ioConditions = IOCondition::No;
 
                 for (std::pair<int, IOCondition> x : {
@@ -758,13 +758,6 @@ void
 Loop::destroyIOContext(int fd) noexcept
 {
     ioPoller_.destroyContext(fd);
-}
-
-
-bool
-Loop::ioContextExists(int fd) const
-{
-    return ioPoller_.contextExists(fd);
 }
 
 

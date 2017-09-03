@@ -37,12 +37,13 @@ public:
     inline int usleep(useconds_t);
     inline int pipe(int [2]);
     inline int accept(int, sockaddr *, socklen_t *);
+    inline bool fdIsManaged(int) const noexcept;
 
     explicit Loop(std::size_t = 0);
 
     void run();
-    void registerFD(int);
-    void unregisterFD(int) noexcept;
+    void manageFD(int);
+    void unmanageFD(int) noexcept;
     int open(const char *, int, mode_t = 0);
     int fcntl(int, int, int = 0) noexcept;
     int pipe2(int [2], int);
@@ -73,7 +74,6 @@ private:
     FileOptions *getFileOptions(int) noexcept;
     void createIOContext(int, bool, bool, long = -1, long = -1);
     void destroyIOContext(int) noexcept;
-    bool ioContextExists(int) const;
     long getEffectiveReadTimeout(int) const noexcept;
     long getEffectiveWriteTimeout(int) const noexcept;
     bool waitForFile(int, IOCondition, IOCondition *, std::chrono::milliseconds);
@@ -181,6 +181,13 @@ int
 Loop::accept(int fd, sockaddr *name, socklen_t *nameSize)
 {
     return accept4(fd, name, nameSize, 0);
+}
+
+
+bool
+Loop::fdIsManaged(int fd) const noexcept
+{
+    return ioPoller_.contextExists(fd);
 }
 
 } // namespace siren

@@ -35,6 +35,11 @@ off_t siren_lseek(int, off_t, int) SIREN__NOEXCEPT;
 int siren_close(int) SIREN__NOEXCEPT;
 int siren_fs_close(int) SIREN__NOEXCEPT;
 int siren_usleep(useconds_t) SIREN__NOEXCEPT;
+ssize_t maybe_siren_read(int, void *, size_t) SIREN__NOEXCEPT;
+ssize_t maybe_siren_write(int, const void *, size_t) SIREN__NOEXCEPT;
+ssize_t maybe_siren_readv(int, const struct iovec *, int) SIREN__NOEXCEPT;
+ssize_t maybe_siren_writev(int, const struct iovec *, int) SIREN__NOEXCEPT;
+int maybe_siren_close(int) SIREN__NOEXCEPT;
 #  endif
 #endif
 
